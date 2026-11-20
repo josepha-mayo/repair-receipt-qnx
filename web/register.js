@@ -440,7 +440,13 @@ function showWorkOrder(report) {
 byId("view-work-order").addEventListener("click", () => action("file-status", async () => {
   showWorkOrder(await api(`work-order/${active}`));
 }));
-byId("close-work-order").addEventListener("click", () => workOrderDialog.close());
+function dismissWorkOrder(event) {
+  event.preventDefault();
+  workOrderDialog.close();
+  byId("view-work-order").focus();
+}
+byId("close-work-order").addEventListener("click", dismissWorkOrder);
+workOrderDialog.addEventListener("cancel", dismissWorkOrder);
 byId("print-work-order").addEventListener("click", () => window.print());
 byId("report-findings").addEventListener("click", event => {
   const button = event.target.closest("button[data-request]");

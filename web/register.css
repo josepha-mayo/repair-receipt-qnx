@@ -9,6 +9,18 @@
 #selected-state, #selected-rule { margin-top: 5px; }
 #file-receipt { min-height: 44px; }
 
+@media screen {
+  #work-order-dialog { scroll-padding-block-start: 5rem; }
+  #work-order-dialog .report-header {
+    position: sticky;
+    top: -22px;
+    z-index: 1;
+    margin: -22px -22px 0;
+    padding: 22px 22px 8px;
+    background: var(--card);
+  }
+}
+
 @media (min-width: 681px) {
   .intake-workspace { grid-template-columns: minmax(0, 1.16fr) minmax(0, .84fr); }
 }
