@@ -1,0 +1,297 @@
+{
+  "platform": "QNX SDP 8.0 x86-64 guest on QEMU",
+  "dataset": "Marc Weber, Automotive OBD-II Dataset (CC BY 4.0)",
+  "source": "https://publikationen.bibliothek.kit.edu/1000085073",
+  "signed_input_type": "published-road/v1",
+  "recordings": [
+    {
+      "recording": "2017-07-26_Seat_Leon_RT_S_Stau.csv",
+      "normalized_sha256": "7d6cb65f17c9ec8e787bbdcfb34946f2d4027ecd4dfbf4d782d3d33643ee5715"
+    },
+    {
+      "recording": "2017-07-27_Seat_Leon_KA_KA_2_Normal.csv",
+      "normalized_sha256": "0cc230ac5746b6f257980404806ff6a2776599e6019a71acd73c0b677c3dbdbd"
+    }
+  ],
+  "signed_receipts_verified": 64,
+  "same_idle_and_different_moving_c": [
+    95,
+    98,
+    99,
+    100
+  ],
+  "thresholds": [
+    {
+      "threshold_c": 90,
+      "idle": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 91,
+      "idle": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 92,
+      "idle": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 93,
+      "idle": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 94,
+      "idle": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 95,
+      "idle": {
+        "findings": [
+          "observed",
+          "observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": false
+      }
+    },
+    {
+      "threshold_c": 96,
+      "idle": {
+        "findings": [
+          "observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": false
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": false
+      }
+    },
+    {
+      "threshold_c": 97,
+      "idle": {
+        "findings": [
+          "observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": false
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": false
+      }
+    },
+    {
+      "threshold_c": 98,
+      "idle": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": false
+      }
+    },
+    {
+      "threshold_c": 99,
+      "idle": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": false
+      }
+    },
+    {
+      "threshold_c": 100,
+      "idle": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": false
+      }
+    },
+    {
+      "threshold_c": 101,
+      "idle": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 102,
+      "idle": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 103,
+      "idle": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 104,
+      "idle": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    },
+    {
+      "threshold_c": 105,
+      "idle": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      },
+      "moving": {
+        "findings": [
+          "not_observed",
+          "not_observed"
+        ],
+        "byte_identical_receipts": true
+      }
+    }
+  ]
+}

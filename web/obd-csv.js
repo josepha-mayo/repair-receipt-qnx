@@ -116,3 +116,5 @@ const ObdCsv = (() => {
 
   return Object.freeze({reviewInput});
 })();
+
+if (typeof module !== "undefined" && module.exports) module.exports = ObdCsv;

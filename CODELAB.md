@@ -77,6 +77,30 @@ Open the downloaded HTML in a current Chromium browser. **Check idle receipts** 
 
 The archived run uses the normalized input hashes listed in the [paired-drive proof](replay/qnx-road-scope-proof.json). Importing the raw files through the driver page reproduces the findings and the equality comparison with an uploaded-CSV input label.
 
+### Vary the test threshold
+
+Use Node.js 24 and the same two raw CSVs. The command-line normalizer uses the driver page's parser. From the QNX SDK prompt, run these commands from the project root:
+
+```bat
+node normalize-obd.cjs "path\to\2017-07-26_Seat_Leon_RT_S_Stau.csv" first.normalized
+node normalize-obd.cjs "path\to\2017-07-27_Seat_Leon_KA_KA_2_Normal.csv" second.normalized
+python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --road-sweep first.normalized second.normalized
+```
+
+The harness verifies four QNX-signed receipts per whole-degree threshold. Each scope and threshold uses one request and issuer for both drives. The pairs below list July 26 first.
+
+| Test threshold | At idle | While moving |
+| --- | --- | --- |
+| 90–94 °C | Both observed | Both observed |
+| 95 °C | Both observed | Observed / Not observed |
+| 96–97 °C | Observed / Not observed | Observed / Not observed |
+| 98–100 °C | Both not observed | Observed / Not observed |
+| 101–105 °C | Both not observed | Both not observed |
+
+Equal findings within a scope produced byte-identical receipts. At 96–97 °C the requested idle findings differed and the receipts reflected it. These thresholds describe this test on the two published recordings. [Full QNX sweep](replay/qnx-road-threshold-sweep.json)
+
+### Run the native scope controls
+
 Run the included demo controls without a browser from Windows:
 
 ```bat

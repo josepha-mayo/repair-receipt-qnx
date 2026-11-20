@@ -5,6 +5,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import secrets
+import sys
 from tempfile import TemporaryDirectory
 
 from issuer_store import Issuer
@@ -144,8 +145,7 @@ def verify_scope_matrix(qemu):
     }
 
 
-def verify_road_pair(qemu, recordings, signed_evidence=None):
-    """Check the two documented KIT drives with a common idle-only request."""
+def load_road_pair(recordings):
     inputs = []
     for path, (name, expected_digest) in zip(recordings, KIT_ROAD_PAIR, strict=True):
         recording = path.read_bytes()
@@ -153,6 +153,12 @@ def verify_road_pair(qemu, recordings, signed_evidence=None):
         if digest != expected_digest:
             raise ValueError(f"Expected the normalized bytes of {name} (SHA-256 {expected_digest}).")
         inputs.append((name, recording, digest))
+    return inputs
+
+
+def verify_road_pair(qemu, recordings, signed_evidence=None):
+    """Check the two documented KIT drives with a common idle-only request."""
+    inputs = load_road_pair(recordings)
     seed = secrets.token_bytes(32)
     issuer = Issuer(seed)
     threshold = 95
@@ -197,12 +203,65 @@ def verify_road_pair(qemu, recordings, signed_evidence=None):
             "idle_receipt_bytes": len(idle_a), "idle_receipt_sha256": sha256(idle_a.encode("ascii")).hexdigest()}
 
 
+def verify_road_sweep(qemu, recordings):
+    """Measure scoped output across 90–105 °C on the two documented KIT drives."""
+    inputs = load_road_pair(recordings)
+    seed = secrets.token_bytes(32)
+    issuer = Issuer(seed)
+    issuer_key = issuer.public_hex.encode("ascii")
+
+    def approve(_preview, key):
+        if key != issuer_key:
+            raise RuntimeError("Unexpected issuer in KIT threshold sweep.")
+        return True
+
+    thresholds = []
+    with TemporaryDirectory(prefix="rr-road-thresholds-") as temporary:
+        workspace = Path(temporary)
+        image = build_template(workspace / "template")
+        for threshold in range(90, 106):
+            row = {"threshold_c": threshold}
+            for scope in ("idle", "moving"):
+                ticket = request_document(scope, secrets.token_hex(16), CURRENT_RECIPE, threshold)
+                signed = []
+                for index, (_, recording, _) in enumerate(inputs):
+                    with TemporaryDirectory(prefix=f"{threshold}-{scope}-{index}-", dir=workspace) as run:
+                        receipt = review_native(Path(run) / "guest", qemu, recording, approve, seed, ticket,
+                                                image=image, source=PUBLISHED_SOURCE)
+                    issuer.verify_receipt(receipt)
+                    signed.append(receipt)
+                findings = [json.loads(receipt)["claim"][scope] for receipt in signed]
+                identical = signed[0] == signed[1]
+                if identical != (findings[0] == findings[1]):
+                    raise RuntimeError(f"Signed bytes do not agree with the scoped findings at {threshold} C.")
+                row[scope] = {"findings": findings, "byte_identical_receipts": identical}
+            thresholds.append(row)
+            print(f"Verified {threshold} C on both drives and both scopes.", file=sys.stderr, flush=True)
+
+    reference = thresholds[95 - 90]
+    if (reference["idle"]["findings"] != ["observed", "observed"] or
+            reference["moving"]["findings"] != ["observed", "not_observed"]):
+        raise RuntimeError("The threshold sweep did not reproduce the archived 95 C control.")
+    separating = [row["threshold_c"] for row in thresholds
+                  if row["idle"]["byte_identical_receipts"] and not row["moving"]["byte_identical_receipts"]]
+    return {"platform": "QNX SDP 8.0 x86-64 guest on QEMU",
+            "dataset": "Marc Weber, Automotive OBD-II Dataset (CC BY 4.0)",
+            "source": "https://publikationen.bibliothek.kit.edu/1000085073",
+            "signed_input_type": PUBLISHED_SOURCE,
+            "recordings": [{"recording": name, "normalized_sha256": digest} for name, _, digest in inputs],
+            "signed_receipts_verified": len(thresholds) * 4,
+            "same_idle_and_different_moving_c": separating,
+            "thresholds": thresholds}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qemu", type=Path, required=True)
     controls = parser.add_mutually_exclusive_group()
     controls.add_argument("--road-pair", type=Path, nargs=2, metavar=("MOVING_OBSERVED", "MOVING_NOT_OBSERVED"),
                           help="two normalized KIT recordings listed in the codelab")
+    controls.add_argument("--road-sweep", type=Path, nargs=2, metavar=("FIRST_DRIVE", "SECOND_DRIVE"),
+                          help="test the documented KIT pair at every whole degree from 90 to 105 Celsius")
     controls.add_argument("--scope-matrix", action="store_true",
                           help="check both scopes, all findings, and coverage controls")
     parser.add_argument("--proof", type=Path)
@@ -213,6 +272,8 @@ if __name__ == "__main__":
     qemu = args.qemu.resolve(strict=True)
     if args.road_pair:
         report = verify_road_pair(qemu, args.road_pair, args.signed_evidence)
+    elif args.road_sweep:
+        report = verify_road_sweep(qemu, args.road_sweep)
     elif args.scope_matrix:
         report = verify_scope_matrix(qemu)
     else:

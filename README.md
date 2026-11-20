@@ -6,7 +6,7 @@ Give a repair shop the answer to a specific question without handing over a reco
 
 The first recipe distinguishes whether an intermittent coolant symptom appeared at idle or while moving. That gives a technician a starting point for reproducing the symptom. Each context is reported independently as observed, not observed, or insufficient evidence. The signed claim carries the recipe version and requested findings, with an opaque request ID for shop-initiated checks.
 
-The shop can request just one condition. A request carries an opaque job ID with the recipe and scope, and the signed answer is bound to that request. In a verified idle-only job, changing a trip's **moving** result leaves the signed file byte identical as long as the idle result, request, and issuer match.
+The shop can request just one condition. A request carries an opaque job ID with the recipe and scope, and the signed answer is bound to that request. In a verified idle-only job, changing a trip's **moving** result leaves the signed file byte identical as long as the idle result, request, issuer and input type match.
 
 The QNX evaluator computes findings only for the requested conditions. It still validates each row and checks recording coverage. An unknown interval can withhold a negative finding, and a fully observed crossing remains evidence. Six paired controls check byte equality across idle and moving requests, each with observed, not observed and insufficient-evidence outcomes. [Native scope controls](replay/qnx-scope-matrix-proof.json)
 
@@ -161,6 +161,8 @@ python import_kit.py path\to\OBD-II-Dataset.zip fixtures\kit-obd.csv
 The importer keeps elapsed milliseconds, RPM, speed, and coolant temperature, retaining complete rows at least one second apart. KIT logged these signals through an OBD-II dongle. The excerpt is a reference run while moving. It supplies no idle evidence.
 
 Two full KIT recordings showed the same idle finding and different moving findings in a test at 95 °C. Under one idle-only request and issuer, QNX returned exactly the same 342-byte signed receipt for both recordings. A separate moving-only request confirmed the difference. All four receipts carry the signed published-road input type. [Paired real-recording results](replay/qnx-road-scope-proof.json)
+
+A 64-receipt QNX sweep across 90–105 °C reproduced that pattern at 95 °C and at 98–100 °C. The idle findings were observed at 95 °C and not observed at 98–100 °C. At 96–97 °C, the idle findings differed and the signed idle receipts differed too. These results cover the two KIT recordings under the test recipe. [Complete results](replay/qnx-road-threshold-sweep.json) · [Reproduce the sweep](CODELAB.md#vary-the-test-threshold)
 
 ## Current scope
 

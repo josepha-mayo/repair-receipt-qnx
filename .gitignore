@@ -2,6 +2,7 @@
 /work/
 /.venv/
 __pycache__/
+*.normalized
 *.dpapi
 *.sqlite3
 *.sqlite3-shm
