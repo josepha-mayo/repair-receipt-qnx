@@ -138,6 +138,11 @@ function render() {
   status.className = "status " + (actionError || reconnecting || stage === "error" ? "bad" : stage === "shared" ? "good" : "");
 }
 
+function focusReceipt() {
+  receiptHeading.focus({preventScroll: true});
+  receiptHeading.scrollIntoView({block: "start"});
+}
+
 async function refresh() {
   const version = ++stateRead;
   let updated;
@@ -156,6 +161,7 @@ async function refresh() {
   if (version !== stateRead) return;
   const jobChanged = updated.job !== state.job;
   const stageChanged = updated.stage !== state.stage;
+  const resumeReview = reconnecting && updated.stage === "review" && document.activeElement === document.body;
   if (jobChanged || stageChanged) actionError = "";
   if (jobChanged) newSelection = false;
   if (unconfirmedAction && updated.job === unconfirmedAction.job && updated.stage === unconfirmedAction.stage) {
@@ -165,10 +171,7 @@ async function refresh() {
   reconnecting = false;
   state = updated;
   render();
-  if (stageChanged && state.stage !== "ready") {
-    receiptHeading.focus({preventScroll: true});
-    receiptHeading.scrollIntoView({block: "start"});
-  }
+  if ((stageChanged && state.stage !== "ready") || resumeReview) focusReceipt();
   if (keepPolling()) nextRefresh = setTimeout(refresh, 800);
 }
 
@@ -214,6 +217,9 @@ async function send(path, body, type) {
   } finally {
     changing = false;
     render();
+    if (!starting && !reconnecting && state.stage === "review" && document.activeElement === document.body) {
+      focusReceipt();
+    }
   }
 }
 

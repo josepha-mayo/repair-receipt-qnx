@@ -53,7 +53,7 @@ The shop can use [the one-file offline verifier](replay/verify-receipt.html) wit
 
 After verification, the shop can print the requested finding, test rule, input type, full request ID and verified issuer fingerprint for a work order. An unattended driver review expires after five minutes and requires a new approval.
 
-If the browser loses contact with the local app, it pauses approval and download while checking the current review. Each decision is sent once per click. If QEMU exits during the preview, the app ends that review so the driver can start another. If the app itself restarts, open the new Driver link printed in the console.
+If the browser loses contact with the local app, it pauses approval and download while checking the current review. A decision is sent once per explicit activation. If QNX is still waiting and the interruption leaves no focused control, the page returns focus to the receipt so the driver can review it and choose again. If QEMU exits during the preview, the app ends that review so the driver can start another. If the app itself restarts, open the new Driver link printed in the console.
 
 ### File a receipt against a shop request
 
