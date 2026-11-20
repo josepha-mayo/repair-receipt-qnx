@@ -53,6 +53,8 @@ If the browser loses contact with the local app, it pauses approval and download
 
 In the local shop intake, choose a file under **Find a request from a returned receipt**. The register uses the full request ID to look up the original job, including older requests outside the visible list. It verifies the scope and Ed25519 signature against the key pinned to that request. Review the matching job and findings, then choose **File verified receipt**. Selecting a file alone leaves the register unchanged. The first accepted answer stays on file, and selecting the same file again confirms it is already filed.
 
+When a different return verifies for an already filed request, **Two verified receipts** shows the filed and returned findings for each requested condition. It also shows both input types when they differ. The shop can use a new request to file a fresh recording while keeping the original work order evidence.
+
 Use the optional **Work order reference** to match the request to the shop's own record. The reference stays in the local register and carries forward to follow-up requests. The portable request, signed receipt, and verification packet contain no work order reference.
 
 Use **Find by work order** to recover requests by their full saved reference, including older requests outside the recent list. Enter it as saved, including letter case. Results list each matching request and follow-up. Open a request to inspect its own signed findings.

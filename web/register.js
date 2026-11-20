@@ -86,11 +86,33 @@ function renderJobs() {
   }
 }
 
+function renderConflict(filed, returned) {
+  const comparison = byId("receipt-conflict");
+  comparison.hidden = !filed || !returned;
+  const list = byId("conflict-findings");
+  list.replaceChildren();
+  if (comparison.hidden) return;
+  const rows = Object.entries(conditions)
+    .filter(([condition]) => Object.hasOwn(filed, condition))
+    .map(([condition, label]) => [label, findings[filed[condition]], findings[returned[condition]]]);
+  if (filed.source !== returned.source) {
+    rows.push(["Input type", ShopRequest.sourceLabel(filed.source), ShopRequest.sourceLabel(returned.source)]);
+  }
+  for (const [label, previous, incoming] of rows) {
+    const row = byId("conflict-row").content.cloneNode(true);
+    row.querySelector("dt").textContent = label;
+    row.querySelector(".conflict-filed").textContent = previous;
+    row.querySelector(".conflict-returned").textContent = incoming;
+    list.append(row);
+  }
+}
+
 function renderSelection() {
   const job = current();
   byId("selected").hidden = !job;
   if (job) {
     const verified = matchedReceipt?.state === "ready";
+    const conflict = matchedReceipt?.state === "conflict";
     const claim = job.claim || (verified ? matchedReceipt.claim : null);
     byId("selected-title").textContent = `Request ${job.request.id.slice(-8)}`;
     const workOrder = byId("selected-work-order");
@@ -101,8 +123,8 @@ function renderSelection() {
       : `${ShopRequest.scopes[job.request.scope]} · ${verified ? "Ready to file" : "Awaiting a receipt"}`;
     byId("selected-key").textContent = `Enrolled issuer ${job.fingerprint.match(/.{8}/g).join(" ")}`;
     byId("selected-rule").textContent = ShopRequest.rule(job.request);
-    byId("filed-findings").hidden = !claim;
-    byId("filed-source").hidden = !claim;
+    byId("filed-findings").hidden = !claim || conflict;
+    byId("filed-source").hidden = !claim || (conflict && claim.source !== matchedReceipt.claim.source);
     if (claim) byId("filed-source").textContent = "Input · " + ShopRequest.sourceLabel(claim.source);
     byId("save-request").hidden = !!job.claim;
     byId("save-packet").hidden = !job.claim;
@@ -131,6 +153,7 @@ function renderSelection() {
       byId(condition + "-value").textContent = findings[value] || "";
     }
   }
+  renderConflict(job?.claim, matchedReceipt?.state === "conflict" ? matchedReceipt.claim : null);
   for (const row of byId("jobs").querySelectorAll("button")) {
     row.setAttribute("aria-pressed", String(row.dataset.request === active));
   }
@@ -240,6 +263,23 @@ byId("clear-search").addEventListener("click", () => action("history-status", as
     orderReference.focus();
   }
 }));
+async function showMatchedReceipt(text) {
+  const {job, claim, state} = await api("match", {receipt: text});
+  const id = job.request.id;
+  if (search !== null && job.workOrder !== search) await showRecentRequests();
+  jobs.set(id, job);
+  renderJobs();
+  choose(id, {text, claim, state});
+  const message = {
+    ready: "Signature verified. Review the matching request below.",
+    alreadyFiled: "This exact receipt is already filed.",
+    conflict: "A different signed receipt has already been filed for this request.",
+  }[state];
+  status("match-status", message, state === "conflict");
+  if (state === "ready") byId("selected-title").focus();
+  if (state === "conflict") byId("conflict-heading").focus();
+}
+
 receiptFile.addEventListener("change", () => {
   matchedReceipt = null;
   status("match-status", "");
@@ -249,20 +289,7 @@ receiptFile.addEventListener("change", () => {
   action("match-status", async () => {
     const file = receiptFile.files[0];
     if (file.size > 1024) throw new Error("Choose a signed receipt JSON file up to 1 KiB.");
-    const text = await file.text();
-    const result = await api("match", {receipt: text});
-    const id = result.job.request.id;
-    if (search !== null && result.job.workOrder !== search) await showRecentRequests();
-    jobs.set(id, result.job);
-    renderJobs();
-    choose(id, {text, claim: result.claim, state: result.state});
-    const message = {
-      ready: "Signature verified. Review the matching request below.",
-      alreadyFiled: "This exact receipt is already filed.",
-      conflict: "A different signed receipt has already been filed for this request.",
-    }[result.state];
-    status("match-status", message, result.state === "conflict");
-    if (result.state === "ready") byId("selected-title").focus();
+    await showMatchedReceipt(await file.text());
   });
 });
 
@@ -429,13 +456,11 @@ byId("file-receipt").addEventListener("click", () => action("file-status", async
     status("file-status", alreadyFiled ? "This exact receipt is already filed." : "Signature verified and receipt filed.");
   } catch (error) {
     if (error.status === 409) {
-      const {job} = await api(`files/${active}`);
-      jobs.set(active, job);
       matchedReceipt = null;
-      receiptFile.value = "";
       status("match-status", "");
-      renderJobs();
       renderSelection();
+      await showMatchedReceipt(receipt);
+      return;
     }
     throw error;
   }

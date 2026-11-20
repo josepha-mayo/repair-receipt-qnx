@@ -93,6 +93,10 @@ dd { text-align: right; margin: 0; font-weight: 750; }
 .intake-detail h3 { margin: 0; font-size: 1rem; }
 .follow-up { margin-top: 15px; border: 1px solid var(--line); border-radius: 8px; padding: 13px; background: var(--paper); }
 .follow-up .help { margin-top: 4px; }
+#conflict-findings > div { display: block; }
+#conflict-findings dt { margin-bottom: 4px; font-weight: 700; }
+#conflict-findings dd { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; text-align: left; }
+.conflict-label { display: block; color: var(--quiet); font-size: .82rem; font-weight: 600; }
 #open-original { margin-top: 12px; }
 dialog { width: min(680px, calc(100% - 30px)); max-height: calc(100% - 30px); border: 1px solid var(--line); border-radius: 12px; padding: 22px; color: var(--ink); background: var(--card); }
 dialog::backdrop { background: rgb(23 37 31 / .45); }

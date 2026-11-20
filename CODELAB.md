@@ -19,6 +19,8 @@ Open the printed shop and driver URLs. In the driver, save the public key under 
 
 In the driver page, load that request, run **Trip A** and review the preview. Approve and download the signed receipt. In the shop register, open it under **Find a request from a returned receipt**. The register opens the matching job and previews the verified finding. Choose **File verified receipt** and load the file again to observe repeat handling. In the standalone verifier, try a freshly generated idle-only request against the same valid receipt to see the request mismatch.
 
+Run **Missing samples** under the same request, approve it and open the returned receipt in the shop. **Two verified receipts** compares the filed threshold observation with the returned insufficient-evidence finding. Open the filed receipt again to verify the work order still holds the original answer.
+
 Choose **View work-order findings** to open a print view directly from the filed request. The idle-only printout gives the finding, test rule, input source, filing time and full receipt request ID.
 
 From this filed request choose **Create recheck request**, download it and use **Hot while moving** as the second fixture in the driver view. The original idle test observed a crossing and the recheck reports **Threshold not observed**. File the recheck and open **View work-order findings** to compare the two receipts under the same idle rule. Their request IDs and receipt digests appear separately on the printout.

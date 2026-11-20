@@ -65,6 +65,11 @@
             <div id="moving-entry"><dt>While moving</dt><dd id="moving-value"></dd></div>
           </dl>
           <p id="filed-source" class="help" hidden></p>
+          <section id="receipt-conflict" class="follow-up" aria-labelledby="conflict-heading" hidden>
+            <h3 id="conflict-heading" tabindex="-1">Two verified receipts</h3>
+            <p class="help">The filed answer stays on the work order. Use a new request for a fresh recording.</p>
+            <dl id="conflict-findings"></dl>
+          </section>
           <section id="follow-up" class="follow-up" aria-labelledby="follow-up-heading" hidden>
             <h3 id="follow-up-heading">Follow-up recording</h3>
             <p id="follow-up-note" class="help"></p>
@@ -105,6 +110,15 @@
           <span class="job-name"></span><span class="job-state"></span>
         </button>
       </li>
+    </template>
+    <template id="conflict-row">
+      <div>
+        <dt></dt>
+        <dd>
+          <span><span class="conflict-label">Filed</span><span class="conflict-filed"></span></span>
+          <span><span class="conflict-label">Returned</span><span class="conflict-returned"></span></span>
+        </dd>
+      </div>
     </template>
   </main>
   <dialog id="work-order-dialog" aria-labelledby="report-title">
