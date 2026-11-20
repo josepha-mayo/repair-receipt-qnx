@@ -1,0 +1,27 @@
+{
+  "dataset": "Marc Weber, Automotive OBD-II Dataset (CC BY 4.0)",
+  "source": "https://publikationen.bibliothek.kit.edu/1000085073",
+  "test_threshold_c": 95,
+  "signed_input_type": "published-road/v1",
+  "recordings": [
+    {
+      "recording": "2017-07-26_Seat_Leon_RT_S_Stau.csv",
+      "normalized_bytes": 872379,
+      "normalized_sha256": "7d6cb65f17c9ec8e787bbdcfb34946f2d4027ecd4dfbf4d782d3d33643ee5715",
+      "idle": "observed",
+      "moving": "observed"
+    },
+    {
+      "recording": "2017-07-27_Seat_Leon_KA_KA_2_Normal.csv",
+      "normalized_bytes": 290043,
+      "normalized_sha256": "0cc230ac5746b6f257980404806ff6a2776599e6019a71acd73c0b677c3dbdbd",
+      "idle": "observed",
+      "moving": "not_observed"
+    }
+  ],
+  "same_request_and_issuer": true,
+  "byte_identical_idle_receipts": true,
+  "different_moving_receipts": true,
+  "idle_receipt_bytes": 342,
+  "idle_receipt_sha256": "46447eabcf92f16b31911be4b95cb3202d801d2920d1f5f4052695749e925df1"
+}

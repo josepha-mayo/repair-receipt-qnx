@@ -1,0 +1,11 @@
+{
+  "interrupted_at_qnx_preview": true,
+  "native_authenticated_input": true,
+  "encrypted_staging_bytes": 89,
+  "encrypted_job_disk_bytes": 8225280,
+  "files_inspected": 150,
+  "plaintext_samples_found": false,
+  "private_preview_found": false,
+  "issuer_public_key_found": false,
+  "receipt_issued": false
+}

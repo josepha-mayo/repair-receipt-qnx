@@ -1,0 +1,469 @@
+"""Local browser workflow for a QNX-issued Repair Receipt."""
+
+import argparse
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
+from pathlib import Path
+import os
+import re
+import secrets
+import shutil
+import socket
+import sqlite3
+import subprocess
+from tempfile import TemporaryDirectory
+from threading import Event, Lock, Thread
+import time
+from urllib.parse import parse_qs, urlsplit
+import webbrowser
+
+from pack_shop import standalone
+from run_qnx import MAX_RECORDING, ROOT, build_template, review_native
+from shop_request import DEMO_SOURCE, PUBLISHED_SOURCE, UPLOADED_SOURCE, canonical, parse_request
+
+try:
+    from issuer_store import Issuer, default_store, load_or_create_seed
+    from shop_register import ReceiptConflict, ShopRegister
+except ModuleNotFoundError as error:
+    if error.name != "cryptography":
+        raise
+    raise SystemExit("Install the local app dependencies with: python -m pip install -r requirements-live.txt") from None
+
+CONSENT_SECONDS = 300
+ACTIVE_STAGES = {"booting", "review", "finishing"}
+SESSION_HEADER = "X-Repair-Session"
+SAMPLES = {"trip-a", "trip-b", "moving", "gap", "kit-obd", "scope-control"}
+ASSETS = {
+    "/driver.js": ("driver.js", "text/javascript"),
+    "/obd-csv.js": ("obd-csv.js", "text/javascript"),
+    "/shop.js": ("shop.js", "text/javascript"),
+    "/request.js": ("request.js", "text/javascript"),
+    "/register.js": ("register.js", "text/javascript"),
+    "/shared.css": ("shared.css", "text/css"),
+    "/shop": ("shop.html", "text/html"),
+}
+
+
+def prepare_live_template(path):
+    try:
+        return build_template(path)
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
+        print(f"QNX image preparation failed: {error}. Build log: {path / 'image-build.log'}", flush=True)
+        raise
+
+
+def startup_check(qemu_path):
+    qemu = qemu_path or shutil.which("qemu-system-x86_64")
+    if not qemu and os.name == "nt":
+        qemu = r"C:\QNX\qemu\qemu-system-x86_64.exe"
+    if not qemu or not Path(qemu).is_file():
+        raise ValueError("Install QEMU for x86-64 and put it on PATH, or pass its executable with --qemu.")
+    qemu = Path(qemu).resolve(strict=True)
+    missing = [tool for tool in ("mkqnximage", "mkqnx6fsimg") if not shutil.which(tool)]
+    if missing:
+        raise ValueError(f"Missing SDK tools ({', '.join(missing)}). Load the QNX SDP 8.0 environment.")
+    artifacts = [ROOT / "build" / name for name in ("repair-receipt", "secpol.bin")]
+    if any(not path.is_file() or path.stat().st_size == 0 for path in artifacts):
+        raise ValueError("Run build-qnx.cmd to compile the QNX app and security policy.")
+    info = subprocess.run([qemu, "--version"], stdin=subprocess.DEVNULL,
+                          capture_output=True, text=True, timeout=5)
+    version = info.stdout.partition("\n")[0].strip()
+    if info.returncode or not version.startswith("QEMU emulator version "):
+        raise ValueError("The selected QEMU executable did not report a version. Check --qemu.")
+    machines = subprocess.run([qemu, "-machine", "help"], stdin=subprocess.DEVNULL,
+                              capture_output=True, text=True, timeout=5)
+    if machines.returncode or not re.search(r"^pc\s", machines.stdout, re.MULTILINE):
+        raise ValueError("Choose QEMU for x86-64 with PC machine support.")
+    return qemu, version
+
+
+class Review:
+    def __init__(self, qemu, issuer, template):
+        self.qemu = qemu
+        self.issuer = issuer
+        self.template = template
+        self.lock = Lock()
+        self.state = {"stage": "ready"}
+        self.owner = None
+        self.response = Event()
+        self.decision = None
+        self.deadline = None
+        self.worker = None
+
+    def owns_session(self, session):
+        return session is not None and self.owner is not None and secrets.compare_digest(session, self.owner)
+
+    def snapshot(self, session):
+        with self.lock:
+            if self.owns_session(session):
+                return dict(self.state)
+            return {"stage": "occupied" if self.state["stage"] in ACTIVE_STAGES else "ready"}
+
+    def start(self, session, recording, request, *, bench=None, source=None):
+        with self.lock:
+            if self.state["stage"] in ACTIVE_STAGES:
+                return False
+            job = secrets.token_urlsafe(12)
+            self.owner = session
+            self.state = {"stage": "booting", "job": job, "bench": bench is not None}
+            self.response = Event()
+            self.decision = None
+            self.deadline = None
+            self.worker = Thread(target=self.run, args=(recording, request, bench, source))
+            self.worker.start()
+        return True
+
+    def decide(self, session, job, choice):
+        with self.lock:
+            if not self.owns_session(session) or self.state["stage"] != "review" or self.state["job"] != job:
+                return False
+            timely = time.monotonic() < self.deadline
+            self.decision = choice if timely else "expired"
+            self.state["stage"] = "finishing"
+            self.response.set()
+            return timely
+
+    def wait_for_decision(self, preview, issuer, guest_closed):
+        if not secrets.compare_digest(self.issuer.public_hex.encode("ascii"), issuer):
+            raise RuntimeError("The guest presented a key different from the enrolled issuer.")
+        with self.lock:
+            self.deadline = time.monotonic() + CONSENT_SECONDS
+            self.state.update(stage="review", claim=json.loads(preview), issuer=issuer.decode("ascii"))
+        self.response.wait(timeout=CONSENT_SECONDS)
+        with self.lock:
+            if guest_closed.is_set():
+                raise RuntimeError("QNX disconnected while waiting for the driver's decision.")
+            if self.decision is None:
+                self.decision = "expired"
+            self.state["stage"] = "finishing"
+            return self.decision == "share"
+
+    def run(self, recording, request, bench, source):
+        guest_closed = Event()
+        response = self.response
+
+        def disconnect():
+            guest_closed.set()
+            response.set()
+
+        try:
+            image = self.template.result()
+            with TemporaryDirectory(prefix="repair-receipt-") as directory:
+                receipt = review_native(Path(directory) / "guest", self.qemu, recording,
+                                        lambda preview, issuer: self.wait_for_decision(preview, issuer, guest_closed),
+                                        self.issuer.seed, request, bench, image=image, on_disconnect=disconnect,
+                                        source=source)
+                result = {"stage": "expired" if self.decision == "expired" else "declined"}
+                if receipt is not None:
+                    self.issuer.verify_receipt(receipt)
+                    result = {"stage": "shared", "receipt": receipt.decode("ascii")}
+        except ValueError:
+            message = ("QNX could not complete the simulated OBD capture." if bench else
+                       "QNX rejected this recording. Check the CSV columns and timestamps.")
+            result = {"stage": "error", "message": message}
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            print(f"Repair Receipt guest error: {error}", flush=True)
+            result = {"stage": "error", "message": "QNX could not complete this review. Start a fresh review and check the local console."}
+        with self.lock:
+            self.state.update(result)
+
+    def close(self):
+        with self.lock:
+            if self.decision is None:
+                self.decision = "decline"
+            self.response.set()
+            worker = self.worker
+        if worker:
+            worker.join()
+
+
+class Handler(BaseHTTPRequestHandler):
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(10)
+
+    def log_message(self, *_args):
+        pass
+
+    def send(self, status, body, mime, filename=None):
+        self.send_body_headers(status, mime, len(body), filename)
+        self.wfile.write(body)
+
+    def send_body_headers(self, status, mime, size, filename=None):
+        self.send_response(status)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(size))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy",
+                         "default-src 'none'; script-src 'self'; style-src 'self'; "
+                         "connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+        if filename is not None:
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.end_headers()
+
+    def json(self, status, body):
+        self.send(status, json.dumps(body).encode(), "application/json")
+
+    def driver_session(self):
+        values = self.headers.get_all(SESSION_HEADER, [])
+        return values[0] if len(values) == 1 and re.fullmatch(r"[a-f0-9]{32}", values[0]) else None
+
+    def do_GET(self):
+        if self.headers.get("Host") != self.server.host:
+            self.json(400, {"message": "Invalid local host."})
+            return
+        if self.path == "/verify-receipt.html":
+            self.send(200, standalone(), "application/octet-stream")
+            return
+        asset = ASSETS.get(self.path)
+        if self.path == self.server.driver:
+            asset = ("driver.html", "text/html")
+        elif self.path == self.server.shop_path:
+            asset = ("register.html", "text/html")
+        if asset:
+            name, mime = asset
+            self.send(200, (ROOT / "web" / name).read_bytes(), mime + "; charset=utf-8")
+        elif self.path == self.server.driver + "state":
+            body = self.server.review.snapshot(self.driver_session())
+            template = self.server.review.template
+            body["template"] = ("building" if not template.done() else
+                                "failed" if template.exception() else "ready")
+            self.json(200, body)
+        elif self.path == self.server.driver + "issuer":
+            self.json(200, self.server.review.issuer.public_profile())
+        elif self.path.startswith(self.server.shop_path):
+            self.shop_get()
+        else:
+            self.json(404, {"message": "Page unavailable."})
+
+    def shop_get(self):
+        try:
+            path = urlsplit(self.path.removeprefix(self.server.shop_path))
+            if path.path == "jobs":
+                query = parse_qs(path.query, keep_blank_values=True)
+                if not query:
+                    before = None
+                elif set(query) == {"before"} and len(query["before"]) == 1 and re.fullmatch(
+                    r"[1-9][0-9]{0,17}", query["before"][0]
+                ):
+                    before = int(query["before"][0])
+                else:
+                    raise ValueError("Invalid page cursor.")
+                self.json(200, self.server.register.list(before))
+            elif not path.query and re.fullmatch(r"files/[a-f0-9]{32}", path.path):
+                row = self.server.register.fetch(path.path[6:])
+                self.json(200, {
+                    "job": self.server.register.job(row),
+                    "receipt": row["receipt"],
+                    "issuer": canonical({"format": "repair-receipt-issuer/v1", "ed25519": row["issuer"].hex()}),
+                })
+            elif not path.query and re.fullmatch(r"work-order/[a-f0-9]{32}", path.path):
+                self.json(200, self.server.register.work_order_findings(path.path.split("/")[1]))
+            elif not path.query and re.fullmatch(r"work-order/[a-f0-9]{32}/evidence", path.path):
+                original, archive = self.server.register.work_order_archive(path.path.split("/")[1])
+                self.send(200, archive, "application/zip", f"repair-work-order-{original}.zip")
+            elif path.path == "backup" and not path.query:
+                self.shop_backup()
+            else:
+                self.json(404, {"message": "Page unavailable."})
+        except ValueError as error:
+            self.json(400, {"message": str(error)})
+        except KeyError as error:
+            self.json(404, {"message": error.args[0]})
+        except sqlite3.Error:
+            self.json(503, {"message": "The local shop register is unavailable. Try again."})
+
+    def shop_backup(self):
+        with ExitStack() as files:
+            try:
+                temporary = files.enter_context(TemporaryDirectory(prefix="repair-receipt-backup-"))
+                snapshot = Path(temporary) / "shop.sqlite3"
+                self.server.register.backup(snapshot)
+                stream = files.enter_context(snapshot.open("rb"))
+                size = os.fstat(stream.fileno()).st_size
+            except (OSError, sqlite3.Error):
+                self.send(503, b"Could not prepare a register backup. Check the local register and try again.",
+                          "text/plain; charset=utf-8")
+                return
+            stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+            try:
+                self.send_body_headers(200, "application/octet-stream", size, f"repair-receipt-shop-{stamp}.sqlite3")
+                shutil.copyfileobj(stream, self.wfile)
+            except OSError:
+                self.close_connection = True
+
+    def shop_post(self, body):
+        if self.headers.get_content_type() != "application/json":
+            self.json(415, {"message": "Choose a request or signed receipt from the shop page."})
+            return
+        action = self.path.removeprefix(self.server.shop_path)
+        try:
+            value = json.loads(body)
+            fields = value.keys() if isinstance(value, dict) else set()
+            if action == "jobs" and {"scope", "issuer"} <= fields <= {"scope", "issuer", "workOrder", "thresholdC"}:
+                self.json(201, self.server.register.create(value["scope"], value["issuer"], value.get("workOrder"),
+                                                          value.get("thresholdC")))
+            elif action == "lookup" and {"workOrder"} <= fields <= {"workOrder", "before"}:
+                self.json(200, self.server.register.lookup(value["workOrder"], value.get("before")))
+            elif action == "follow-up" and isinstance(value, dict) and set(value) == {"request"}:
+                self.json(200, self.server.register.follow_up(value["request"]))
+            elif action == "recheck" and fields == {"request"}:
+                self.json(200, self.server.register.repeat(value["request"], recheck=True))
+            elif action == "file" and isinstance(value, dict) and set(value) == {"request", "receipt"}:
+                self.json(200, self.server.register.attach(value["request"], value["receipt"]))
+            elif action == "match" and isinstance(value, dict) and set(value) == {"receipt"}:
+                self.json(200, self.server.register.match(value["receipt"]))
+            else:
+                self.json(400, {"message": "Invalid shop register action."})
+        except ReceiptConflict as error:
+            self.json(409, {"message": str(error)})
+        except KeyError as error:
+            self.json(404, {"message": error.args[0]})
+        except json.JSONDecodeError:
+            self.json(400, {"message": "Choose a valid JSON request, key or receipt file."})
+        except ValueError as error:
+            self.json(400, {"message": str(error)})
+        except sqlite3.Error:
+            self.json(503, {"message": "The local shop register is unavailable. Try again."})
+
+    def do_POST(self):
+        if (self.headers.get("Host") != self.server.host or
+                self.headers.get("Origin") != "http://" + self.server.host):
+            self.json(403, {"message": "Open the local app to continue."})
+            return
+        if self.headers.get("Transfer-Encoding") or len(self.headers.get_all("Content-Length") or []) != 1:
+            self.json(400, {"message": "Invalid request length."})
+            return
+        try:
+            size = int(self.headers["Content-Length"])
+            shop_action = self.path.startswith(self.server.shop_path)
+            limit = 2048 if shop_action else MAX_RECORDING
+            if not 0 < size <= limit:
+                message = "Choose a supported request or receipt file." if shop_action else "Choose a recording under 4 MiB."
+                self.json(413, {"message": message})
+                return
+            body = self.rfile.read(size)
+            if len(body) != size:
+                raise ValueError("Incomplete body")
+        except (ValueError, socket.timeout):
+            self.json(400, {"message": "The request could not be read."})
+            return
+        if shop_action:
+            self.shop_post(body)
+            return
+        path = self.path.removeprefix(self.server.driver) if self.path.startswith(self.server.driver) else None
+        session = self.driver_session()
+        if path in {"import", "sample", "decision"} and session is None:
+            self.json(403, {"message": "Open the driver page to start a private review."})
+            return
+        request = None
+        request_headers = self.headers.get_all("X-Repair-Request")
+        if path in {"import", "sample"} and request_headers:
+            try:
+                if len(request_headers) != 1:
+                    raise ValueError("Duplicate request header.")
+                request = parse_request(request_headers[0])
+            except ValueError:
+                self.json(400, {"message": "Choose a request file created by Repair Receipt."})
+                return
+        if path == "import" and self.headers.get_content_type() == "application/octet-stream":
+            ok = self.server.review.start(session, body, request, source=UPLOADED_SOURCE)
+        elif path == "sample" and size <= 32:
+            name = body.decode("ascii", errors="replace")
+            if name == "obd-bench":
+                if request is None:
+                    self.json(400, {"message": "Load a shop request before starting the OBD bench."})
+                    return
+                ok = self.server.review.start(session, None, request, bench="normal")
+            elif name not in SAMPLES:
+                self.json(400, {"message": "Unknown sample recording."})
+                return
+            else:
+                source = PUBLISHED_SOURCE if name == "kit-obd" else DEMO_SOURCE
+                ok = self.server.review.start(session, (ROOT / "fixtures" / f"{name}.csv").read_bytes(),
+                                              request, source=source)
+        elif path == "decision" and size <= 256:
+            try:
+                value = json.loads(body)
+                job, choice = value["job"], value["choice"]
+                if not isinstance(job, str) or choice not in ("share", "decline"):
+                    raise ValueError("Invalid decision")
+            except (ValueError, KeyError, TypeError):
+                self.json(400, {"message": "Invalid decision."})
+                return
+            ok = self.server.review.decide(session, job, choice)
+        else:
+            self.json(404, {"message": "Action unavailable."})
+            return
+        self.json(202 if ok else 409, {} if ok else {"message": "Refresh the page and check the current review."})
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("qemu_path", nargs="?", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument("--qemu", type=Path, help="path to qemu-system-x86_64")
+    setup = parser.add_mutually_exclusive_group()
+    setup.add_argument("--check", action="store_true", help="check available SDK tools, QEMU and the build")
+    setup.add_argument("--self-test", action="store_true", help="boot QNX and verify the scoped signing and consent controls")
+    parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--open", action="store_true", help="open the driver page in your browser")
+    parser.add_argument("--shop-register", type=Path, help="path for the local SQLite shop register")
+    issuer_options = parser.add_mutually_exclusive_group()
+    issuer_options.add_argument("--issuer-store", type=Path, help="path for the Windows-protected issuer")
+    issuer_options.add_argument("--ephemeral-issuer", action="store_true", help="use a temporary issuer for this launch")
+    args = parser.parse_args()
+    if args.qemu and args.qemu_path:
+        parser.error("Supply one QEMU executable path.")
+    try:
+        qemu, version = startup_check(args.qemu or args.qemu_path)
+        if args.check:
+            print(f"Ready to start Repair Receipt. {version}\nQEMU: {qemu}")
+            return
+        if args.self_test:
+            from verify_requests import verify
+
+            print(f"Running Repair Receipt's QNX self-test. {version}", flush=True)
+            verify(qemu)
+            print("Passed. Four signatures verified, the idle receipts matched, the moving receipts differed, "
+                  "and declining produced no receipt.")
+            return
+        seed = secrets.token_bytes(32) if args.ephemeral_issuer else load_or_create_seed(
+            (args.issuer_store or default_store()).resolve()
+        )
+        issuer = Issuer(seed, durable=not args.ephemeral_issuer)
+        app_data = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share"))
+        register_path = args.shop_register or (
+            args.issuer_store.with_name("shop.sqlite3") if args.issuer_store else app_data / "RepairReceipt" / "shop.sqlite3"
+        )
+        register = ShopRegister(register_path.resolve())
+    except (OSError, ValueError, RuntimeError, KeyError, sqlite3.Error, subprocess.SubprocessError) as error:
+        parser.exit(1, f"Repair Receipt could not start: {error}\n")
+    with ThreadingHTTPServer(("127.0.0.1", args.port), Handler) as server, \
+            TemporaryDirectory(prefix="repair-receipt-template-") as workspace, \
+            ThreadPoolExecutor(max_workers=1) as builds:
+        server.host = f"127.0.0.1:{server.server_port}"
+        server.driver = f"/review/{secrets.token_urlsafe(24)}/"
+        server.shop_path = f"/intake/{secrets.token_urlsafe(24)}/"
+        server.register = register
+        template = builds.submit(prepare_live_template, Path(workspace) / "reference")
+        server.review = Review(qemu, issuer, template)
+        driver_url = f"http://{server.host}{server.driver}"
+        print(f"Driver: {driver_url}", flush=True)
+        print(f"Shop:   http://{server.host}{server.shop_path}", flush=True)
+        print(f"Offline verifier: http://{server.host}/shop", flush=True)
+        if args.open:
+            webbrowser.open(driver_url)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.review.close()
+
+
+if __name__ == "__main__":
+    main()

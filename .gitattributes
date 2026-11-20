@@ -1,0 +1,4 @@
+* text=auto eol=lf
+
+# Preserve captured traces, signed samples and the generated offline verifier.
+replay/** -text

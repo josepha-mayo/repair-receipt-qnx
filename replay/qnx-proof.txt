@@ -1,0 +1,18 @@
+RR_PLATFORM QNX 8.0.0
+RR_CONTROL authorized_raw_read
+RR_UNAPPROVED refused
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_RECEIPT trip-a {"recipe":"coolant-context-demo/v1","idle":"observed","moving":"not_observed"}
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_RECEIPT trip-b {"recipe":"coolant-context-demo/v1","idle":"observed","moving":"not_observed"}
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_RECEIPT moving {"recipe":"coolant-context-demo/v1","idle":"not_observed","moving":"observed"}
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_RECEIPT gap {"recipe":"coolant-context-demo/v1","idle":"insufficient_evidence","moving":"insufficient_evidence"}
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_RECEIPT kit-obd {"recipe":"coolant-context-demo/v1","idle":"insufficient_evidence","moving":"not_observed"}
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_RECEIPT scope-control {"recipe":"coolant-context-demo/v1","idle":"observed","moving":"observed"}
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_DONE
+RR_EXIT=0

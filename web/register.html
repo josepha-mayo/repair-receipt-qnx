@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Repair Receipt | Shop intake</title>
+  <link rel="stylesheet" href="/shared.css">
+  <script defer src="/request.js"></script>
+  <script defer src="/register.js"></script>
+</head>
+<body>
+  <main>
+    <nav><span class="brand">Repair Receipt</span><a href="/shop">Offline verifier</a></nav>
+    <header>
+      <h1>Shop intake</h1>
+      <p class="lede">Request one coolant finding and file the driver’s signed answer against it.</p>
+    </header>
+    <div class="workspace intake-workspace">
+      <section class="card" aria-labelledby="new-heading">
+        <h2 id="new-heading">New diagnostic request</h2>
+        <label for="trusted-key">Enrolled issuer key</label>
+        <input id="trusted-key" type="file" accept=".json,application/json" aria-describedby="issuer-note">
+        <p id="issuer-note" class="help input-note" role="status">Use a key whose fingerprint you have confirmed with the issuer.</p>
+        <label for="condition">Coolant test condition</label>
+        <select id="condition">
+          <option value="idle">At idle only</option>
+          <option value="moving">While moving only</option>
+          <option value="both">At idle and while moving</option>
+        </select>
+        <label for="threshold">Test threshold in °C (optional)</label>
+        <input id="threshold" type="number" min="-40" max="200" step="1" placeholder="105" aria-describedby="new-rule">
+        <p id="new-rule" class="help"></p>
+        <label for="work-order">Work order reference (optional)</label>
+        <input id="work-order" type="text" maxlength="64" autocomplete="off" aria-describedby="work-order-note">
+        <p id="work-order-note" class="help input-note">Stays in this shop register.</p>
+        <div class="actions">
+          <button id="new-request" type="button" disabled>Create request</button>
+        </div>
+        <p id="new-status" class="status" role="status"></p>
+      </section>
+      <section class="card receipt" aria-labelledby="history-heading">
+        <h2 id="history-heading">Requests</h2>
+        <label for="returned-receipt">Find a request from a returned receipt</label>
+        <input id="returned-receipt" type="file" accept=".json,application/json" aria-describedby="match-status">
+        <p id="match-status" class="help input-note" role="status"></p>
+        <form id="search-orders" role="search" aria-label="Work orders">
+          <label for="order-reference">Find by work order</label>
+          <div class="search-fields">
+            <input id="order-reference" type="text" placeholder="Full work order reference" maxlength="64" autocomplete="off" required>
+            <button id="find-order" class="secondary" type="submit">Find</button>
+          </div>
+        </form>
+        <button id="clear-search" type="button" class="link-button" hidden>Show recent requests</button>
+        <p id="history-status" class="status" role="status">Loading requests.</p>
+        <ul id="jobs" class="intake-list"></ul>
+        <button id="older-jobs" type="button" class="secondary" hidden>Load earlier requests</button>
+        <div id="selected" class="intake-detail" hidden>
+          <h3 id="selected-title" tabindex="-1"></h3>
+          <p id="selected-work-order" class="help input-note" hidden></p>
+          <p id="selected-state" class="help"></p>
+          <p id="selected-rule" class="help"></p>
+          <p id="selected-key" class="fingerprint"></p>
+          <dl id="filed-findings" hidden>
+            <div id="idle-entry"><dt>At idle</dt><dd id="idle-value"></dd></div>
+            <div id="moving-entry"><dt>While moving</dt><dd id="moving-value"></dd></div>
+          </dl>
+          <p id="filed-source" class="help" hidden></p>
+          <section id="follow-up" class="follow-up" aria-labelledby="follow-up-heading" hidden>
+            <h3 id="follow-up-heading">Follow-up recording</h3>
+            <p id="follow-up-note" class="help"></p>
+            <div class="actions">
+              <button id="new-follow-up" type="button">Create follow-up request</button>
+              <button id="open-follow-up" type="button" class="secondary">Open follow-up request</button>
+            </div>
+          </section>
+          <button id="open-original" type="button" class="link-button" hidden></button>
+          <div class="actions">
+            <button id="save-request" type="button" class="secondary">Download request</button>
+            <button id="save-packet" type="button" class="secondary" hidden>Download verification packet</button>
+            <button id="view-work-order" type="button" class="secondary" hidden>View work-order findings</button>
+          </div>
+          <details id="individual-files" class="issuer-enrollment" hidden>
+            <summary>Individual verification files</summary>
+            <div class="actions">
+              <button id="save-filed-request" type="button" class="secondary">Download original request</button>
+              <button id="save-original" type="button" class="secondary">Download filed receipt</button>
+              <button id="save-pin" type="button" class="secondary">Download issuer key</button>
+            </div>
+          </details>
+          <div class="actions" id="filing-actions" hidden>
+            <button id="file-receipt" type="button" disabled>File verified receipt</button>
+          </div>
+          <p id="file-status" class="status" role="status"></p>
+        </div>
+      </section>
+    </div>
+    <details class="issuer-enrollment">
+      <summary>Register backup</summary>
+      <p class="help">The backup includes work order references, enrolled public keys and filed receipts. Store it with your private shop records.</p>
+      <div class="actions"><a href="backup">Download register backup</a></div>
+    </details>
+    <template id="job-row">
+      <li>
+        <button type="button" class="intake-row" aria-pressed="false">
+          <span class="job-name"></span><span class="job-state"></span>
+        </button>
+      </li>
+    </template>
+  </main>
+  <dialog id="work-order-dialog" aria-labelledby="report-title">
+    <div class="report-header">
+      <h2 id="report-title" tabindex="-1" autofocus>Work-order findings</h2>
+      <button id="close-work-order" type="button" class="secondary">Close</button>
+    </div>
+    <p id="report-reference" class="help"></p>
+    <div id="report-findings" class="report-findings"></div>
+    <p class="help">Each finding describes the samples in its source recording. Keep the original requests and signed receipts with this work order.</p>
+    <p id="report-issuer" class="print-only fingerprint"></p>
+    <div class="actions report-actions">
+      <button id="print-work-order" type="button">Print work order</button>
+      <a id="download-work-evidence" hidden>Download verification files</a>
+    </div>
+  </dialog>
+  <template id="report-condition">
+    <section class="report-condition">
+      <h3></h3>
+      <p class="report-comparison report-outcome" hidden></p>
+      <p class="report-rule help" hidden></p>
+      <div class="report-readings"></div>
+      <p class="report-pending help" hidden></p>
+    </section>
+  </template>
+  <template id="report-reading">
+    <div class="report-reading">
+      <h4 hidden></h4>
+      <p class="report-outcome"></p>
+      <p class="report-source help" hidden></p>
+      <p class="report-filing help" hidden></p>
+      <p class="report-request print-only" hidden></p>
+      <p class="report-digest print-only" hidden></p>
+      <button type="button" class="secondary report-receipt" hidden></button>
+    </div>
+  </template>
+</body>
+</html>

@@ -1,0 +1,176 @@
+{
+  "dataset": "Marc Weber, Automotive OBD-II Dataset (CC BY 4.0)",
+  "source": "https://publikationen.bibliothek.kit.edu/1000085073",
+  "verification": "Brave HTTP request bytes compared with a separate Python CSV conversion, then signed on QNX 8.0 in QEMU and checked against a reference evaluation.",
+  "recipe": "coolant-duration-demo/v2",
+  "archiveProjection": {
+    "csvFiles": 81,
+    "accepted": 81,
+    "recoveredWithClockGaps": 5,
+    "rejected": 0
+  },
+  "checks": [
+    {
+      "file": "2017-07-05_Seat_Leon_RT_S_Stau.csv",
+      "rows": 46346,
+      "durationMs": 3945350,
+      "findings": {
+        "idle": "not_observed",
+        "moving": "not_observed"
+      },
+      "maxGap": 180,
+      "sourceBytes": 3025723,
+      "projectedBytes": 853415,
+      "sourceSha256": "250e9ff68162cdc2dc22e0037fed3886bcee82f89d0899a778fdcaf74853db33",
+      "projectedSha256": "d8464ccfedae4357bf6bc253f2a2ab179e9aa38453e97e257d19a632b8252518"
+    },
+    {
+      "file": "2017-07-14_Seat_Leon_KA_KA_Frei.csv",
+      "rows": 6826,
+      "durationMs": 731282,
+      "findings": {
+        "idle": "insufficient_evidence",
+        "moving": "insufficient_evidence"
+      },
+      "maxGap": 62070,
+      "sourceBytes": 445777,
+      "projectedBytes": 118481,
+      "sourceSha256": "a5430dbfad877991546d2a23322386a123100a883fc21e5fb5c30953525c3020",
+      "projectedSha256": "dd99657b84ac9f97ac31e2d66fae8f09b332fcf5fde9dbebf90d8a0345e7a79f"
+    },
+    {
+      "file": "2018-03-29_Seat_Leon_KA_RT_Stau.csv",
+      "rows": 86651,
+      "durationMs": 8083974,
+      "findings": {
+        "idle": "insufficient_evidence",
+        "moving": "insufficient_evidence"
+      },
+      "maxGap": 80331,
+      "sourceBytes": 5503423,
+      "projectedBytes": 1583419,
+      "sourceSha256": "296a43ea5b9dea2e010298a8362fce4dcdbfda3c826c1338596af536f791fcc9",
+      "projectedSha256": "27c12275abb4f61cc659e8f975f721a02f34f8b7814102a32351523e579a97f4"
+    },
+    {
+      "file": "2017-07-11_Seat_Leon_KA_S_Normal.csv",
+      "rows": 41046,
+      "durationMs": 3521633,
+      "findings": {
+        "idle": "insufficient_evidence",
+        "moving": "insufficient_evidence"
+      },
+      "clockBreaks": 1,
+      "rollbackMs": 42,
+      "omittedRows": 2,
+      "sourceBytes": 2651123,
+      "projectedBytes": 763292,
+      "sourceSha256": "a55456c3a7e474789c4882a204f76cb42010935fad77268f73dca11af9e45a08",
+      "projectedSha256": "1de85f48dbedbec6ae23add33097b117a1a1a6e9f13773a04adbb595735b38d4"
+    },
+    {
+      "file": "2017-07-24_Seat_Leon_RT_KA_Normal.csv",
+      "rows": 54854,
+      "durationMs": 4663890,
+      "findings": {
+        "idle": "insufficient_evidence",
+        "moving": "insufficient_evidence"
+      },
+      "clockBreaks": 1,
+      "rollbackMs": 396,
+      "omittedRows": 10,
+      "sourceBytes": 3557097,
+      "projectedBytes": 1036028,
+      "sourceSha256": "b3899b9507f512df9b7e2b7437b0f48a7c39e2d417040d4d0ef53a12906e757e",
+      "projectedSha256": "eebce3ad428bc2758adec5d1cb52fb3457bbb730e41388d55b4404eb2a232ef3"
+    },
+    {
+      "file": "2017-08-01_Seat_Leon_KA_KA_Frei.csv",
+      "rows": 14502,
+      "durationMs": 1239237,
+      "findings": {
+        "idle": "insufficient_evidence",
+        "moving": "insufficient_evidence"
+      },
+      "clockBreaks": 1,
+      "rollbackMs": 181,
+      "omittedRows": 6,
+      "sourceBytes": 919123,
+      "projectedBytes": 248825,
+      "sourceSha256": "fcd86f5e4538de004ab3dbf42cdc234c388cb47ea52b1054ef157ed9cdb0c34f",
+      "projectedSha256": "e04d55984cfd5b9520cf398599e5cc38d59589317d4162b6aa1f4885e60aab90"
+    },
+    {
+      "file": "2017-08-02_Seat_Leon_RT_S_Normal.csv",
+      "rows": 38511,
+      "durationMs": 3282635,
+      "findings": {
+        "idle": "insufficient_evidence",
+        "moving": "insufficient_evidence"
+      },
+      "clockBreaks": 1,
+      "rollbackMs": 466,
+      "omittedRows": 11,
+      "sourceBytes": 2478403,
+      "projectedBytes": 708316,
+      "sourceSha256": "b5550761c52cb8c12332bd5aa70ae8ee758e6363cb27df0fec8af5bbce158612",
+      "projectedSha256": "46c89b102c580c5967188ae1632c02c5cccfaae177cbbb30e2668e9c156e83c5"
+    },
+    {
+      "file": "2017-08-09_Seat_Leon_RT_S_Normal.csv",
+      "rows": 38651,
+      "durationMs": 3292147,
+      "findings": {
+        "idle": "insufficient_evidence",
+        "moving": "insufficient_evidence"
+      },
+      "clockBreaks": 1,
+      "rollbackMs": 363,
+      "omittedRows": 9,
+      "sourceBytes": 2527776,
+      "projectedBytes": 711790,
+      "sourceSha256": "188da85a2c78fc7a0a66f433116fdbac8ff2c23a8756bf198c846ee46504f722",
+      "projectedSha256": "f43c18384420a77d82541fa5f7045862ebc67567f14984b510bfec495f3cab71"
+    }
+  ],
+  "recoveryRule": {
+    "maxBackwardMs": 1000,
+    "dropOverlappingRows": true,
+    "markMissingSample": true,
+    "showDriverNotice": true
+  },
+  "clockGapControls": [
+    {
+      "file": "hot-run-crossing-clock-break.csv",
+      "rows": 6,
+      "durationMs": 4000,
+      "findings": {
+        "idle": "insufficient_evidence",
+        "moving": "insufficient_evidence"
+      },
+      "clockBreaks": 1,
+      "rollbackMs": 500,
+      "omittedRows": 2,
+      "sourceBytes": 307,
+      "projectedBytes": 85,
+      "sourceSha256": "a79f12a9e4ee588f86030fde7f3ba8cec64ac3da066d17c36dbac5b11439f7f5",
+      "projectedSha256": "20cbe494b37b39dad77199ff0a6c7663f7a64d468ebc479c2f6e9d20c4a12c54"
+    },
+    {
+      "file": "hot-run-after-clock-break.csv",
+      "rows": 6,
+      "durationMs": 4000,
+      "findings": {
+        "idle": "observed",
+        "moving": "insufficient_evidence"
+      },
+      "clockBreaks": 1,
+      "rollbackMs": 500,
+      "omittedRows": 2,
+      "sourceBytes": 307,
+      "projectedBytes": 85,
+      "sourceSha256": "0f08a63982a761dbb3b4712598387d8cc8b18a126ca6192f4893030ed9aa76c8",
+      "projectedSha256": "b03a772b8f7f57602c092aabcd461ec0a25bea6a0a1be0543dfd1467a8c708ab"
+    }
+  ]
+}

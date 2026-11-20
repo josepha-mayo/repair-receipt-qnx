@@ -1,0 +1,106 @@
+[
+  {
+    "control": "legacy_burst",
+    "recipe": "coolant-context-demo/v1",
+    "finding": "observed",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "sustained_burst",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "not_observed",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "before_two_seconds",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "not_observed",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "exactly_two_seconds",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "observed",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "short_idle_segments",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "insufficient_evidence",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "interrupted_hot_samples",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "insufficient_evidence",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "explicit_missing_reading",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "insufficient_evidence",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "leading_gap_two_seconds",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "not_observed",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "leading_gap_over_two_seconds",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "insufficient_evidence",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "trailing_gap_two_seconds",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "not_observed",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "trailing_gap_over_two_seconds",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "insufficient_evidence",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "observed_run_before_gap",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "observed",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "engine_stop_breaks_hot_run",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "not_observed",
+    "signed_format": "repair-receipt/v2"
+  },
+  {
+    "control": "driver_started_burst",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "not_observed",
+    "signed_format": "repair-receipt/v4"
+  },
+  {
+    "control": "driver_started_sustained",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "observed",
+    "signed_format": "repair-receipt/v4"
+  },
+  {
+    "control": "shop_threshold_106",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "observed",
+    "signed_format": "repair-receipt/v2",
+    "thresholdC": 106
+  },
+  {
+    "control": "shop_threshold_108",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "not_observed",
+    "signed_format": "repair-receipt/v2",
+    "thresholdC": 108
+  }
+]

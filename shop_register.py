@@ -1,0 +1,364 @@
+"""Persistent shop requests and first-receipt acceptance."""
+
+from contextlib import closing
+from datetime import datetime, timezone
+from hashlib import sha256
+from io import BytesIO
+import json
+from pathlib import Path
+import re
+import secrets
+import sqlite3
+from time import monotonic
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+from shop_request import (
+    BENCH_SOURCE, CURRENT_RECIPE, FILE_SOURCES, MAX_TEMPERATURE_C, MIN_TEMPERATURE_C, RECEIPT_VERSIONS, RECIPE, SCOPES,
+    canonical, matches_claim, request_document, valid_threshold,
+)
+
+PAGE_SIZE = 40
+RECIPE_COLUMN = (
+    f"recipe TEXT NOT NULL DEFAULT '{RECIPE}' "
+    f"CHECK(recipe IN ('{RECIPE}', '{CURRENT_RECIPE}'))"
+)
+WORK_ORDER_COLUMN = "work_order TEXT CHECK(length(work_order) BETWEEN 1 AND 64)"
+RECHECK_COLUMN = "recheck INTEGER NOT NULL DEFAULT 0 CHECK(recheck IN (0, 1) AND (recheck = 0 OR repeats IS NOT NULL))"
+THRESHOLD_COLUMN = (
+    "threshold_c INTEGER CHECK(threshold_c IS NULL OR "
+    f"(typeof(threshold_c) = 'integer' AND threshold_c BETWEEN {MIN_TEMPERATURE_C} AND {MAX_TEMPERATURE_C}))"
+)
+JOB_SELECT = """SELECT request.*, child.id AS follow_up
+    FROM intake_requests AS request
+    LEFT JOIN intake_requests AS child ON child.repeats = request.id"""
+
+
+class ReceiptConflict(ValueError):
+    """A request already has a different signed receipt."""
+
+
+def utc_time():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def read_issuer(text):
+    if not isinstance(text, str) or len(text) > 512:
+        raise ValueError("Choose the enrolled issuer public key file.")
+    pin = json.loads(text)
+    if (not isinstance(pin, dict) or set(pin) != {"format", "ed25519"} or
+            pin["format"] != "repair-receipt-issuer/v1" or not isinstance(pin["ed25519"], str) or
+            not re.fullmatch(r"[a-f0-9]{64}", pin["ed25519"])):
+        raise ValueError("The issuer key file is invalid.")
+    return bytes.fromhex(pin["ed25519"])
+
+
+def read_receipt(text):
+    if not isinstance(text, str) or not 0 < len(text) <= 1024:
+        raise ValueError("Choose a signed receipt JSON file.")
+    record = json.loads(text)
+    if not isinstance(record, dict) or record.get("format") not in (
+            "repair-receipt/v2", "repair-receipt/v3", "repair-receipt/v5"):
+        raise ValueError("Choose a signed receipt issued for a shop request.")
+    claim = record.get("claim")
+    request_id = claim.get("request") if isinstance(claim, dict) else None
+    if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+        raise ValueError("The receipt has an invalid shop request ID.")
+    return record
+
+
+def check_receipt(text, record, request, key):
+    signature = record.get("signature")
+    if not isinstance(signature, str) or not re.fullmatch(r"[a-f0-9]{128}", signature):
+        raise ValueError("The receipt signature is invalid.")
+    claim = record["claim"]
+    version = RECEIPT_VERSIONS[record["format"]]
+    source = None
+    if version == 3:
+        source = BENCH_SOURCE
+    elif version == 5:
+        source = claim.get("source")
+        if not isinstance(source, str) or source not in FILE_SOURCES:
+            raise ValueError("The receipt has an invalid recording source.")
+    if not matches_claim(canonical(claim).encode("ascii"), request, source):
+        raise ValueError("This receipt does not match the selected request or scope.")
+    if text != canonical({"format": record["format"], "claim": claim, "signature": signature}):
+        raise ValueError("The receipt contains unexpected fields or bytes.")
+    try:
+        domain = f"Repair Receipt v{version}\n".encode("ascii")
+        Ed25519PublicKey.from_public_bytes(key).verify(bytes.fromhex(signature), domain + canonical(claim).encode("ascii"))
+    except InvalidSignature as error:
+        raise ValueError("The receipt signature does not match the issuer enrolled for this request.") from error
+    return claim
+
+
+def missing_scope(claim):
+    if claim is None:
+        return None
+    missing = [condition for condition in SCOPES[claim["scope"]][1]
+               if claim[condition] == "insufficient_evidence"]
+    return "both" if len(missing) == 2 else next(iter(missing), None)
+
+
+def normalize_work_order(reference):
+    if not isinstance(reference, str):
+        raise ValueError("Enter a shop work order reference as text.")
+    reference = reference.strip()
+    if len(reference) > 64 or not reference.isprintable():
+        raise ValueError("Use up to 64 printable characters for the work order reference.")
+    return reference or None
+
+
+class ShopRegister:
+    def __init__(self, path: Path):
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with closing(self.connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute(f"""CREATE TABLE IF NOT EXISTS intake_requests (
+                number INTEGER PRIMARY KEY,
+                id TEXT NOT NULL UNIQUE,
+                scope TEXT NOT NULL CHECK(scope IN ('idle', 'moving', 'both')),
+                issuer BLOB NOT NULL CHECK(length(issuer) = 32),
+                created_at TEXT NOT NULL,
+                receipt TEXT,
+                accepted_at TEXT,
+                {RECIPE_COLUMN},
+                repeats TEXT REFERENCES intake_requests(id),
+                {WORK_ORDER_COLUMN},
+                {THRESHOLD_COLUMN},
+                {RECHECK_COLUMN},
+                CHECK ((receipt IS NULL) = (accepted_at IS NULL))
+            )""")
+            columns = {column["name"] for column in db.execute("PRAGMA table_info(intake_requests)")}
+            if "recipe" not in columns:
+                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {RECIPE_COLUMN}")
+            if "repeats" not in columns:
+                db.execute("ALTER TABLE intake_requests ADD COLUMN repeats TEXT REFERENCES intake_requests(id)")
+            if "work_order" not in columns:
+                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {WORK_ORDER_COLUMN}")
+            if "threshold_c" not in columns:
+                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {THRESHOLD_COLUMN}")
+            if "recheck" not in columns:
+                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {RECHECK_COLUMN}")
+            db.execute("CREATE UNIQUE INDEX IF NOT EXISTS intake_one_follow_up ON intake_requests(repeats)")
+            db.execute("""CREATE INDEX IF NOT EXISTS intake_work_order_lookup
+                ON intake_requests(work_order, number) WHERE work_order IS NOT NULL""")
+
+    def connect(self):
+        db = sqlite3.connect(self.path)
+        db.row_factory = sqlite3.Row
+        db.execute("PRAGMA foreign_keys = ON")
+        return db
+
+    def backup(self, destination: Path):
+        with destination.open("xb"):
+            pass
+        deadline = monotonic() + 20
+
+        def check_progress(_status, _remaining, _total):
+            if monotonic() >= deadline:
+                raise TimeoutError("The register backup did not finish in time.")
+
+        try:
+            with closing(self.connect()) as source, closing(sqlite3.connect(destination)) as snapshot:
+                source.backup(snapshot, pages=128, progress=check_progress)
+        except (OSError, sqlite3.Error):
+            destination.unlink(missing_ok=True)
+            raise
+
+    @staticmethod
+    def request(row):
+        return request_document(row["scope"], row["id"], row["recipe"], row["threshold_c"])
+
+    @classmethod
+    def job(cls, row):
+        claim = json.loads(row["receipt"])["claim"] if row["receipt"] else None
+        return {
+            "request": cls.request(row),
+            "createdAt": row["created_at"],
+            "acceptedAt": row["accepted_at"],
+            "fingerprint": sha256(row["issuer"]).hexdigest(),
+            "claim": claim,
+            "repeats": row["repeats"],
+            "recheck": bool(row["recheck"]),
+            "followUp": row["follow_up"],
+            "missingScope": missing_scope(claim),
+            "workOrder": row["work_order"],
+        }
+
+    @staticmethod
+    def find(db, request_id):
+        row = db.execute(JOB_SELECT + " WHERE request.id = ?", (request_id,)).fetchone()
+        if row is None:
+            raise KeyError("This request was not found in the shop register.")
+        return row
+
+    def create(self, scope, issuer_file, work_order=None, threshold=None):
+        if not isinstance(scope, str) or scope not in SCOPES:
+            raise ValueError("Choose a supported operating condition.")
+        key = read_issuer(issuer_file)
+        if work_order is not None:
+            work_order = normalize_work_order(work_order)
+        if threshold is not None and not valid_threshold(threshold):
+            raise ValueError(f"Enter a whole temperature between {MIN_TEMPERATURE_C} and {MAX_TEMPERATURE_C} °C.")
+        request_id = secrets.token_hex(16)
+        with closing(self.connect()) as db, db:
+            db.execute("""INSERT INTO intake_requests(id, scope, issuer, created_at, recipe, work_order, threshold_c)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""", (request_id, scope, key, utc_time(), CURRENT_RECIPE, work_order, threshold))
+            return self.job(self.find(db, request_id))
+
+    def follow_up(self, request_id):
+        return self.repeat(request_id, recheck=False)
+
+    def repeat(self, request_id, *, recheck):
+        if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+            raise ValueError("Choose a request from the shop register.")
+        with closing(self.connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            row = self.find(db, request_id)
+            text = row["receipt"]
+            prior = self.request(row)
+            claim = check_receipt(text, read_receipt(text), prior, row["issuer"]) if text else None
+            missing = missing_scope(claim)
+            if recheck and (claim is None or missing):
+                raise ValueError("A recheck requires a filed receipt with a finding for every requested condition.")
+            if not recheck and missing is None:
+                raise ValueError("A follow-up requires a filed receipt with insufficient evidence.")
+            if row["follow_up"]:
+                child = self.find(db, row["follow_up"])
+                if bool(child["recheck"]) != recheck:
+                    raise ValueError("The saved repeat has a different purpose.")
+                return self.job(child)
+            scope = prior["scope"] if recheck else missing
+            follow_up = secrets.token_hex(16)
+            db.execute("""INSERT INTO intake_requests(
+                id, scope, issuer, created_at, recipe, repeats, work_order, threshold_c, recheck)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", (follow_up, scope, row["issuer"], utc_time(), row["recipe"],
+                    request_id, row["work_order"], row["threshold_c"], recheck))
+            return self.job(self.find(db, follow_up))
+
+    def list(self, before=None, work_order=None):
+        filters, values = [], []
+        if work_order is not None:
+            filters.append("request.work_order = ?")
+            values.append(work_order)
+        if before is not None:
+            filters.append("request.number < ?")
+            values.append(before)
+        where = " WHERE " + " AND ".join(filters) if filters else ""
+        with closing(self.connect()) as db:
+            rows = db.execute(JOB_SELECT + where + " ORDER BY request.number DESC LIMIT ?",
+                              (*values, PAGE_SIZE + 1)).fetchall()
+        visible = rows[:PAGE_SIZE]
+        return {"jobs": [self.job(row) for row in visible],
+                "before": visible[-1]["number"] if len(rows) > PAGE_SIZE else None}
+
+    def lookup(self, reference, before=None):
+        work_order = normalize_work_order(reference)
+        if work_order is None:
+            raise ValueError("Enter the full work order reference.")
+        if before is not None and (type(before) is not int or not 1 <= before < 10**18):
+            raise ValueError("Invalid page cursor.")
+        return self.list(before, work_order)
+
+    def fetch(self, request_id):
+        with closing(self.connect()) as db:
+            return self.find(db, request_id)
+
+    def checked_work_order(self, request_id):
+        with closing(self.connect()) as db:
+            rows = db.execute("""WITH RECURSIVE
+                ancestors(id, repeats) AS (
+                    SELECT id, repeats FROM intake_requests WHERE id = ?
+                    UNION
+                    SELECT parent.id, parent.repeats FROM intake_requests AS parent
+                        JOIN ancestors ON parent.id = ancestors.repeats
+                ),
+                linked(id) AS (
+                    SELECT id FROM ancestors WHERE repeats IS NULL
+                    UNION
+                    SELECT child.id FROM intake_requests AS child JOIN linked ON child.repeats = linked.id
+                )
+                SELECT request.* FROM intake_requests AS request JOIN linked USING(id)
+                ORDER BY request.number""", (request_id,)).fetchall()
+        if not rows:
+            raise KeyError("This request was not found in the shop register.")
+        root = rows[0]
+        same_fields = ("issuer", "recipe", "threshold_c", "work_order")
+        checked = []
+        for row in rows:
+            request = self.request(row)
+            if checked:
+                _, previous, preceding_claim = checked[-1]
+                scope = missing_scope(preceding_claim)
+                if row["recheck"]:
+                    scope = previous["scope"] if preceding_claim is not None and scope is None else None
+                if (row["repeats"] != previous["id"] or request["scope"] != scope or
+                        any(row[field] != root[field] for field in same_fields)):
+                    raise ValueError("A saved follow-up does not match its preceding receipt.")
+            text = row["receipt"]
+            claim = check_receipt(text, read_receipt(text), request, row["issuer"]) if text else None
+            checked.append((row, request, claim))
+        return checked
+
+    def work_order_findings(self, request_id):
+        chain = self.checked_work_order(request_id)
+        root, _, _ = chain[0]
+        contexts = {condition: {"condition": condition, "evidence": None, "pendingRequest": None}
+                    for condition in SCOPES[root["scope"]][1]}
+        for row, request, claim in chain:
+            receipt_digest = sha256(row["receipt"].encode("ascii")).hexdigest() if claim else None
+            for condition in SCOPES[request["scope"]][1]:
+                context = contexts[condition]
+                if row["recheck"]:
+                    context["baseline"] = context["evidence"]
+                    context["evidence"] = None
+                context["pendingRequest"] = None if claim else request["id"]
+                if claim:
+                    context["evidence"] = {"finding": claim[condition], "request": request["id"],
+                                           "recipe": request["recipe"], "source": claim.get("source"),
+                                           "thresholdC": claim.get("thresholdC"),
+                                           "filedAt": row["accepted_at"], "receiptSha256": receipt_digest}
+        return {"workOrder": root["work_order"], "originalRequest": root["id"],
+                "fingerprint": sha256(root["issuer"]).hexdigest(), "contexts": list(contexts.values())}
+
+    def work_order_archive(self, request_id):
+        chain = self.checked_work_order(request_id)
+        root, _, root_claim = chain[0]
+        if root_claim is None:
+            raise ValueError("File a signed receipt before downloading work-order evidence.")
+        output = BytesIO()
+        fingerprint = sha256(root["issuer"]).hexdigest()
+        with ZipFile(output, "w") as archive:
+            for row, request, claim in chain:
+                if claim is None:
+                    continue
+                packet = {"format": "repair-receipt-verification/v1", "request": request,
+                          "receipt": row["receipt"], "fingerprint": fingerprint}
+                filename = ZipInfo(f"repair-verification-{request['id']}.json")
+                archive.writestr(filename, canonical(packet), compress_type=ZIP_DEFLATED)
+        return root["id"], output.getvalue()
+
+    def match(self, text):
+        record = read_receipt(text)
+        row = self.fetch(record["claim"]["request"])
+        claim = check_receipt(text, record, self.request(row), row["issuer"])
+        state = "ready" if row["receipt"] is None else "alreadyFiled" if row["receipt"] == text else "conflict"
+        return {"job": self.job(row), "claim": claim, "state": state}
+
+    def attach(self, request_id, text):
+        if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+            raise ValueError("Choose a request from the shop register.")
+        job = self.fetch(request_id)
+        check_receipt(text, read_receipt(text), self.request(job), job["issuer"])
+        with closing(self.connect()) as db, db:
+            written = db.execute("""UPDATE intake_requests
+                SET receipt = ?, accepted_at = ?
+                WHERE id = ? AND receipt IS NULL""", (text, utc_time(), request_id)).rowcount
+            current = self.find(db, request_id)
+            if not written and current["receipt"] != text:
+                raise ReceiptConflict("A different signed receipt has already been filed for this request.")
+            return {"job": self.job(current), "alreadyFiled": not written}

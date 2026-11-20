@@ -1,0 +1,12 @@
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_ISSUER d6ab9da9a02c9d001c8450dd401f70caf2d69add627d06c83cc1d09d89fe0dde
+RR_PREVIEW {"recipe":"coolant-context-demo/v1","request":"8b95d3c9a04185e8e95210c9e5929e7d","scope":"idle","idle":"observed"}
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import {"format":"repair-receipt/v2","claim":{"recipe":"coolant-context-demo/v1","request":"8b95d3c9a04185e8e95210c9e5929e7d","scope":"idle","idle":"observed"},"signature":"342de9c7e30bd529fbd63093549dc69ed34acc27837313905cd8045ed72a1ac62a1de6e6617c2c1b89bc3b608302d5b6fa49c973072e9866053a8b4bdae06f03"}
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0

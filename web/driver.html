@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Repair Receipt | Driver</title>
+  <link rel="stylesheet" href="/shared.css">
+  <script defer src="/request.js"></script>
+  <script defer src="/obd-csv.js"></script>
+  <script defer src="/driver.js"></script>
+</head>
+<body>
+  <main class="driver-page">
+    <nav><a class="brand" href="./">Repair Receipt</a><a href="/shop">Shop verification</a></nav>
+    <header class="driver-intro">
+      <p class="eyebrow">Driver review</p>
+      <h1>Share a coolant finding.</h1>
+      <p class="lede">Review what your repair shop will receive. Your recording stays on this computer.</p>
+    </header>
+    <div class="workspace" id="driver-workspace">
+      <section class="card" id="recording-panel" aria-labelledby="recording-heading">
+        <h2 id="recording-heading">Recording</h2>
+        <p id="guest-preparation" class="help" hidden>Preparing QNX for this app session.</p>
+        <label for="shop-request">Shop request file (optional)</label>
+        <input id="shop-request" type="file" accept=".json,application/json" aria-describedby="request-status">
+        <p id="request-status" class="help input-note" role="status">Without a shop request, the review covers both conditions.</p>
+        <button id="clear-request" class="link-button" type="button" hidden>Remove request</button>
+        <label for="file">Import an OBD-II recording</label>
+        <input id="file" type="file" accept=".csv,text/csv" aria-describedby="recording-formats recording-reselection">
+        <p id="recording-formats" class="help input-note">Use a normalized CSV or a metric OBD Auto Doctor export with RPM, speed and coolant temperature.</p>
+        <p id="recording-reselection" class="help input-note" role="status" hidden>Previous recording cleared. Choose a recording for this review.</p>
+        <button id="import" type="button" disabled>Review recording</button>
+        <div class="samples">
+          <label for="sample">Try a sample recording</label>
+          <select id="sample">
+            <option value="trip-a">Trip A · Hot at idle</option>
+            <option value="trip-b">Trip B · Same finding, different drive</option>
+            <option value="scope-control">Trip C · Same idle result, warmer moving</option>
+            <option value="moving">Hot while moving</option>
+            <option value="gap">Missing samples</option>
+            <option value="kit-obd">KIT · Published road recording</option>
+            <option value="obd-bench">Simulated OBD-II adapter · Live QNX capture</option>
+          </select>
+          <p id="bench-help" class="help" hidden>Load a shop request to capture from the simulated adapter.</p>
+          <button class="secondary" id="sample-run" type="button">Run sample on QNX</button>
+        </div>
+        <details class="issuer-enrollment" id="issuer-enrollment" hidden>
+          <summary>Enroll your issuer key at the shop</summary>
+          <p class="help" id="issuer-policy"></p>
+          <p class="fingerprint" id="issuer-fingerprint"></p>
+          <button class="secondary" id="key-enroll" type="button">Save issuer key for enrollment</button>
+        </details>
+      </section>
+      <section class="card receipt" aria-labelledby="receipt-heading">
+        <div class="receipt-title">
+          <h2 id="receipt-heading" tabindex="-1">Coolant receipt</h2>
+        </div>
+        <p id="status" class="status" role="status">Choose a recording to start.</p>
+        <p id="receipt-scope" class="help input-note" hidden></p>
+        <p id="recipe-rule" class="help input-note"></p>
+        <p id="capture-source" class="help input-note" hidden></p>
+        <dl id="findings" hidden>
+          <div id="idle-row"><dt>At idle</dt><dd id="idle"></dd></div>
+          <div id="moving-row"><dt>While moving</dt><dd id="moving"></dd></div>
+        </dl>
+        <p id="recording-coverage" class="help input-note" hidden>Conflicting or reversed timestamps interrupted coverage. QNX treats the affected samples as missing.</p>
+        <div id="actions" hidden>
+          <p class="help">QNX signs the findings, test rule and any request ID or capture source shown. Trip samples and timestamps stay on this computer.</p>
+          <div class="actions">
+            <button id="share" type="button">Approve and issue</button>
+            <button class="secondary" id="decline" type="button">Decline</button>
+          </div>
+        </div>
+        <div id="exports" hidden>
+          <div class="actions">
+            <button id="download" type="button">Download signed receipt</button>
+            <button class="secondary" id="key" type="button">Save issuer public key</button>
+          </div>
+          <p class="help">The shop should get the public key through a trusted channel, separately from the receipt.</p>
+        </div>
+      </section>
+    </div>
+    <footer>QNX 8.0 · <a href="https://publikationen.bibliothek.kit.edu/1000085073">KIT dataset · CC BY 4.0</a></footer>
+  </main>
+</body>
+</html>

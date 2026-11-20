@@ -1,0 +1,33 @@
+{
+  "issuer": {
+    "key": "8c30e8ac55f7c5536f4c7eb9d2c307e4dc98bba44bbd267bcd6ec278768335b8",
+    "fingerprint": "ae4e43ab8af2c531ac58c69a20afba1bddbac0cf82bbdf9af0b23f91e817edb5",
+    "durable": false
+  },
+  "requests": {
+    "idle": {
+      "format": "repair-receipt-request/v2",
+      "recipe": "coolant-duration-demo/v2",
+      "scope": "idle",
+      "id": "8fd9158019ec3d702c2c1191b09f1e4e",
+      "thresholdC": 95
+    },
+    "moving": {
+      "format": "repair-receipt-request/v2",
+      "recipe": "coolant-duration-demo/v2",
+      "scope": "moving",
+      "id": "38eb17b8e7ca31d6248e518d14c12ea2",
+      "thresholdC": 95
+    }
+  },
+  "receipts": {
+    "idle": [
+      "{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"8fd9158019ec3d702c2c1191b09f1e4e\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"f93c79c252bb739e340730ede4e126bc6ded63699d173e9a8a60dbeb392feb509166e62f330746ee9a8b3fb0646385cc233ff71ef3a3b2833a1380a9cc878d08\"}",
+      "{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"8fd9158019ec3d702c2c1191b09f1e4e\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"f93c79c252bb739e340730ede4e126bc6ded63699d173e9a8a60dbeb392feb509166e62f330746ee9a8b3fb0646385cc233ff71ef3a3b2833a1380a9cc878d08\"}"
+    ],
+    "moving": [
+      "{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"38eb17b8e7ca31d6248e518d14c12ea2\",\"scope\":\"moving\",\"moving\":\"observed\"},\"signature\":\"a41a95cd42d068fdc67dcbb4a72c563b9a1fcf1719e0c0a0c49c39fd0ec904ee29a83e5fa4bfa03950a8b727c89b9f98e3746985f4c97dd97ea878f0a6f7b20a\"}",
+      "{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"38eb17b8e7ca31d6248e518d14c12ea2\",\"scope\":\"moving\",\"moving\":\"not_observed\"},\"signature\":\"335e296ab0cd639d727b4681f6c9e59bcb5a31be96b4b8e3897137d281bff4a9dc30800f76d2dd5b694f461ebdb3e2fcd8b7c14280d49651489cab90a12eb50a\"}"
+    ]
+  }
+}

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repair Receipt</title>
+<style>
+  :root{color-scheme:light;--ink:#202923;--muted:#4d5d52;--paper:#faf9f2;--line:#d5d9ce;--green:#215542;--surface:#fffef9}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+  main{max-width:1100px;margin:auto;padding:48px 28px}
+  header{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:26px}
+  h1,h2,p{margin:0}
+  h1{font-family:Georgia,serif;font-size:clamp(2.65rem,7vw,4.7rem);font-weight:500;line-height:1.05;letter-spacing:-.055em}
+  h2{font-size:1.1rem;margin-bottom:12px}
+  header p{margin-top:12px;max-width:58ch}
+  .note,.muted{color:var(--muted);font-size:.9rem}
+  .eyebrow{color:var(--green);font-size:.79rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+  .layout{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}
+  section{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;min-width:0}
+  fieldset{border:0;margin:0 0 20px;padding:0;min-inline-size:0}
+  legend{font-size:.88rem;font-weight:650;margin-bottom:7px}
+  select,button{font:inherit;border-radius:6px;border:1px solid #a2ab9f;padding:8px 12px;color:var(--ink);background:white;max-width:100%}
+  select{width:100%}
+  button{background:var(--green);color:white;border-color:var(--green);font-weight:650;cursor:pointer}
+  button:disabled{color:#525b54;background:#e9ece5;border-color:#d5dbd2;cursor:default}
+  :focus-visible{outline:3px solid #ae6506;outline-offset:3px}
+  canvas{display:block;width:100%;height:224px;margin:0 0 10px;background:#f4f6ef;border-radius:6px}
+  .key{display:flex;gap:6px 16px;flex-wrap:wrap;margin-bottom:5px}
+  .key span::before{content:"";display:inline-block;width:.55rem;height:.55rem;margin-right:6px;border-radius:50%;background:var(--sample)}
+  dl{margin:0 0 18px}
+  dl div{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+  dl div:last-child{border-bottom:1px solid var(--line)}
+  dt{font-weight:650}
+  dd{margin:0;text-align:right;color:var(--green);font-weight:650}
+  details{margin:14px 0}
+  summary{cursor:pointer;font-weight:600}
+  pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.79rem;background:#f4f6ef;padding:12px;border-radius:6px}
+  .approval{display:flex;align-items:flex-start;gap:9px;margin:16px 0 10px}
+  input{width:17px;height:17px;accent-color:var(--green);flex-shrink:0;margin:4px 0}
+  footer{padding-top:18px;display:flex;gap:8px 20px;flex-wrap:wrap}
+  a{color:var(--green);text-underline-offset:3px}
+  @media(max-width:720px){main{padding:30px 15px}.layout{grid-template-columns:1fr}section{padding:17px}}
+</style>
+<main>
+  <header>
+    <div class="eyebrow">Verified QNX replay</div>
+    <h1>Repair Receipt</h1>
+    <p>Share whether coolant temperature reached the test threshold at idle or while moving.</p>
+  </header>
+  <div class="layout">
+    <section aria-labelledby="recording-heading">
+      <h2 id="recording-heading">Driver’s recording</h2>
+      <fieldset>
+        <legend>Choose a recording</legend>
+        <select id="recording">
+          <option value="trip-a">Trip A</option>
+          <option value="trip-b">Trip B · different recording, same finding</option>
+          <option value="moving">Moving · different finding</option>
+          <option value="gap">Missing samples</option>
+          <option value="kit-obd">KIT road recording (OBD-II)</option>
+          <option value="scope-control">Trip C · Hot at idle and while moving</option>
+        </select>
+      </fieldset>
+      <canvas id="trace" role="img" aria-label="Coolant temperature in Celsius over time"></canvas>
+      <div class="key note"><span style="--sample:#95470a">At idle</span><span style="--sample:#215542">Moving</span><span style="--sample:#69746b">Engine off</span></div>
+      <p class="note">Test threshold 105 °C for three consecutive samples. A break indicates missing samples.</p>
+      <details>
+        <summary>Recording samples</summary>
+        <pre id="samples"></pre>
+      </details>
+    </section>
+    <section aria-labelledby="receipt-heading">
+      <h2 id="receipt-heading">Receipt for the repair shop</h2>
+      <dl aria-live="polite">
+        <div><dt>At idle</dt><dd id="idle"></dd></div>
+        <div><dt>While moving</dt><dd id="moving"></dd></div>
+      </dl>
+      <p class="muted" id="comparison"></p>
+      <details>
+        <summary>View exact receipt bytes</summary>
+        <pre id="bytes"></pre>
+      </details>
+      <label class="approval"><input type="checkbox" id="approval">Approve this receipt for sharing</label>
+      <button id="download" disabled>Download receipt</button>
+    </section>
+  </div>
+  <footer class="note">
+    <span>Offline replay of QNX 8.0.0 results. Only the KIT excerpt is a published road recording.</span>
+    <a href="qnx-proof.txt">Read the native run trace</a>
+    <a href="https://publikationen.bibliothek.kit.edu/1000085073">KIT dataset &middot; Marc Weber, CC BY 4.0</a>
+  </footer>
+</main>
+<script type="application/json" id="data">__VERIFIED_RUN__</script>
+<script>
+  const recordings = JSON.parse(document.getElementById("data").textContent);
+  const select = document.getElementById("recording");
+  const approval = document.getElementById("approval");
+  const download = document.getElementById("download");
+  const canvas = document.getElementById("trace");
+  const temperatures = Object.values(recordings).flatMap(entry => entry.samples.map(row => row[3]));
+  const minimum = Math.floor(Math.min(...temperatures) / 5) * 5 - 5;
+  const maximum = Math.ceil(Math.max(...temperatures) / 5) * 5 + 5;
+  const names = {
+    observed: "Observed",
+    not_observed: "Not observed",
+    insufficient_evidence: "Insufficient evidence",
+  };
+
+  function plot() {
+    const {samples, duration_ms} = recordings[select.value];
+    const {width, height} = canvas.getBoundingClientRect();
+    const scale = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+    const x = ms => 43 + (width - 61) * ms / duration_ms;
+    const y = c => height - 32 - (height - 50) * (c - minimum) / (maximum - minimum);
+    ctx.font = "12px system-ui";
+    ctx.fillStyle = "#4d5d52";
+    ctx.strokeStyle = "#d0d9ce";
+    for (const c of [minimum, 105, maximum]) {
+      ctx.fillText(c + "°", 9, y(c) + 4);
+      ctx.beginPath();
+      ctx.setLineDash(c === 105 ? [4, 4] : []);
+      ctx.moveTo(x(0), y(c));
+      ctx.lineTo(x(duration_ms), y(c));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.fillText("0 s", x(0), height - 10);
+    const endLabel = duration_ms / 1000 + " s";
+    ctx.fillText(endLabel, x(duration_ms) - ctx.measureText(endLabel).width, height - 10);
+    ctx.strokeStyle = "#a3aa9f";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let previous = null;
+    for (const [ms, , , c] of samples) {
+      if (previous === null || ms - previous > 2000) ctx.moveTo(x(ms), y(c));
+      else ctx.lineTo(x(ms), y(c));
+      previous = ms;
+    }
+    ctx.stroke();
+    for (const [ms, rpm, speed, c] of samples) {
+      ctx.fillStyle = rpm === 0 ? "#69746b" : speed > 0 ? "#215542" : "#95470a";
+      ctx.beginPath();
+      ctx.arc(x(ms), y(c), 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function render() {
+    const entry = recordings[select.value];
+    const receipt = JSON.parse(entry.receipt);
+    document.getElementById("idle").textContent = names[receipt.idle];
+    document.getElementById("moving").textContent = names[receipt.moving];
+    document.getElementById("bytes").textContent = entry.receipt;
+    document.getElementById("samples").textContent =
+      "ms,rpm,km/h,°C\n" + entry.samples.map(row => row.join(",")).join("\n");
+    document.getElementById("comparison").textContent =
+      entry.sha256 === recordings["trip-a"].sha256
+        ? "Trips A and B produce byte-identical receipts."
+        : "This receipt differs from Trips A and B.";
+    approval.checked = false;
+    download.disabled = true;
+    plot();
+  }
+
+  select.addEventListener("change", render);
+  approval.addEventListener("change", () => { download.disabled = !approval.checked; });
+  download.addEventListener("click", () => {
+    if (!approval.checked) return;
+    const url = URL.createObjectURL(new Blob([recordings[select.value].receipt], {type: "application/json"}));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "repair-receipt.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  new ResizeObserver(plot).observe(canvas);
+  render();
+</script>
+</html>

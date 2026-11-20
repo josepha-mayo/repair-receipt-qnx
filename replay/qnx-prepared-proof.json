@@ -1,0 +1,20 @@
+{
+  "template_build_seconds": 18.659,
+  "full_build_to_preview_seconds": 20.239,
+  "prepared_to_preview_seconds": 2.183,
+  "second_prepared_to_preview_seconds": 2.202,
+  "maximum_input_to_preview_seconds": 2.633,
+  "maximum_input_bytes": 4194304,
+  "maximum_input_source_verified": true,
+  "private_job_disk_bytes": 8225280,
+  "same_signed_receipt": true,
+  "shared_image_unchanged": true,
+  "shared_image_sampled_inputs_absent": true,
+  "job_disk_access_denied": true,
+  "distinct_job_boot_tokens": true,
+  "staged_plaintext_and_keys_absent": true,
+  "private_preview_and_receipt_absent_from_guest_workspace": true,
+  "distinct_recording_keys": true,
+  "native_rejected_corrupted_tag_before_preview": true,
+  "native_rejected_altered_source_before_preview": true
+}

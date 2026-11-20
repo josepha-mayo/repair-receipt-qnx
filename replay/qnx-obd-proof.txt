@@ -1,0 +1,103 @@
+normal: idle=observed, moving=not_observed
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_COMPLETE 7 0
+RR_EVALUATION_US 2802
+RR_ISSUER [issuer key]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+gapped: idle=insufficient_evidence, moving=insufficient_evidence
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_COMPLETE 5 2
+RR_EVALUATION_US 3430
+RR_ISSUER [issuer key]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+motion-change: idle=insufficient_evidence, moving=insufficient_evidence
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_CONTEXT_CHANGED 1
+RR_CAPTURE_COMPLETE 6 1
+RR_EVALUATION_US 2144
+RR_ISSUER [issuer key]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+late-reply: idle=insufficient_evidence, moving=insufficient_evidence
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_COMPLETE 2 1
+RR_EVALUATION_US 9250
+RR_ISSUER [issuer key]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+link-loss: idle=observed, moving=insufficient_evidence
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_COMPLETE 4 1
+RR_EVALUATION_US 2317
+RR_ISSUER [issuer key]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+setup-failure: no receipt
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_INVALID adapter_unavailable

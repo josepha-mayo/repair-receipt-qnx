@@ -1,0 +1,48 @@
+{
+  "platform": "QNX SDP 8.0 x86-64 guest on QEMU",
+  "recipe": "coolant-duration-demo/v2",
+  "paired_checks": [
+    {
+      "scope": "idle",
+      "finding": "observed",
+      "byte_identical_receipts": true
+    },
+    {
+      "scope": "idle",
+      "finding": "not_observed",
+      "byte_identical_receipts": true
+    },
+    {
+      "scope": "idle",
+      "finding": "insufficient_evidence",
+      "byte_identical_receipts": true
+    },
+    {
+      "scope": "moving",
+      "finding": "observed",
+      "byte_identical_receipts": true
+    },
+    {
+      "scope": "moving",
+      "finding": "not_observed",
+      "byte_identical_receipts": true
+    },
+    {
+      "scope": "moving",
+      "finding": "insufficient_evidence",
+      "byte_identical_receipts": true
+    }
+  ],
+  "both_conditions_control": {
+    "idle": "observed",
+    "moving": [
+      "not_observed",
+      "observed"
+    ]
+  },
+  "idle_with_unknown_coverage": {
+    "before_gap_not_observed": "insufficient_evidence",
+    "observed_run_before_gap": "observed"
+  },
+  "invalid_out_of_scope_row_rejected_before_preview": true
+}

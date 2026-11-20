@@ -1,0 +1,52 @@
+{
+  "environment": "QNX 8.0 guest on the same Windows PC under QEMU x86-64 TCG",
+  "runs_per_build": 5,
+  "measurement": "Native evaluation uses the QNX monotonic clock after authentication. Host preview time includes encrypted staging and fresh guest boot.",
+  "before": {
+    "input_bytes": 4194304,
+    "input_samples": 131071,
+    "qnx_evaluation_us": [
+      3213509,
+      3727865,
+      3462745,
+      3180052,
+      3273930
+    ],
+    "median_qnx_evaluation_us": 3273930,
+    "host_to_preview_seconds": [
+      5.714,
+      5.913,
+      5.733,
+      5.44,
+      5.449
+    ],
+    "signed_receipt_sha256": "6dca7c3f3aa19b00643d727aabd3a63d62e13449445963b02cfe5b759684f9d8",
+    "crlf_and_no_final_newline": true,
+    "embedded_nul_and_long_line_rejected": true,
+    "median_host_to_preview_seconds": 5.714
+  },
+  "after": {
+    "input_bytes": 4194304,
+    "input_samples": 131071,
+    "qnx_evaluation_us": [
+      402073,
+      383255,
+      399241,
+      429946,
+      400513
+    ],
+    "median_qnx_evaluation_us": 400513,
+    "host_to_preview_seconds": [
+      2.968,
+      2.55,
+      2.605,
+      2.627,
+      2.655
+    ],
+    "signed_receipt_sha256": "6dca7c3f3aa19b00643d727aabd3a63d62e13449445963b02cfe5b759684f9d8",
+    "crlf_and_no_final_newline": true,
+    "embedded_nul_and_long_line_rejected": true,
+    "median_host_to_preview_seconds": 2.627
+  },
+  "median_qnx_evaluation_speedup": 8.17
+}

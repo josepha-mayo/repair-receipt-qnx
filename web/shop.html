@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Repair Receipt | Shop</title>
+  <link rel="stylesheet" href="shared.css">
+  <script defer src="request.js"></script>
+  <script defer src="shop.js"></script>
+</head>
+<body>
+  <main>
+    <nav><span class="brand">Repair Receipt</span><span>Shop verification</span></nav>
+    <header>
+      <p class="eyebrow">Repair shop</p>
+      <h1 id="shop-heading">Request a symptom check.</h1>
+      <p class="lede" id="shop-intro">Choose which operating condition you need to investigate. Verify the driver’s signed answer against that request.</p>
+    </header>
+    <section id="road-example" class="card road-example" aria-labelledby="road-heading" hidden>
+      <h2 id="road-heading">Two drives, one shop question</h2>
+      <p class="help">Each pair uses the same shop request, example issuer key, and 95 °C test threshold.</p>
+      <div class="actions">
+        <button id="check-idle" type="button" aria-pressed="false">Check idle receipts</button>
+        <button id="check-moving" class="secondary" type="button" aria-pressed="false">Check moving receipts</button>
+      </div>
+      <p id="road-status" class="status" role="status"></p>
+      <dl id="road-findings" hidden>
+        <div><dt>KIT drive · 26 July 2017</dt><dd id="road-first"></dd></div>
+        <div><dt>KIT drive · 27 July 2017</dt><dd id="road-second"></dd></div>
+      </dl>
+      <p id="road-source" class="help" hidden></p>
+      <details id="road-downloads" class="issuer-enrollment" hidden>
+        <summary>Download proof files</summary>
+        <div class="actions">
+          <button id="save-road-first" class="secondary" type="button">Save July 26 packet</button>
+          <button id="save-road-second" class="secondary" type="button">Save July 27 packet</button>
+          <button id="save-road-key" class="secondary" type="button">Save example issuer key</button>
+        </div>
+      </details>
+      <p class="help">Source: Marc Weber, Automotive OBD-II Dataset (CC BY 4.0), DOI 10.5445/IR/1000085073.</p>
+    </section>
+    <section class="card request-card" aria-labelledby="request-heading">
+      <div>
+        <h2 id="request-heading">Create a shop request</h2>
+        <p class="help">Send this file to the driver to ask whether coolant reached the test threshold.</p>
+      </div>
+      <div>
+        <label for="offline-threshold">Test threshold in °C (optional)</label>
+        <input id="offline-threshold" type="number" min="-40" max="200" step="1" placeholder="105">
+        <label for="scope-select">Findings to request</label>
+        <div class="request-actions">
+          <select id="scope-select">
+            <option value="idle">At idle only</option>
+            <option value="moving">While moving only</option>
+            <option value="both">At idle and while moving</option>
+          </select>
+          <button id="create-request" type="button">Save request file</button>
+        </div>
+      </div>
+    </section>
+    <div class="workspace">
+      <section class="card" aria-labelledby="file-heading">
+        <h2 id="file-heading">Verification files</h2>
+        <label for="receipt-file">Receipt or verification packets</label>
+        <input id="receipt-file" type="file" accept=".json,application/json" aria-describedby="verification-file-help" multiple>
+        <p id="verification-file-help" class="help input-note">For a work order, extract the downloaded ZIP and select its packet files together.</p>
+        <label for="issuer-file">Trusted issuer public key</label>
+        <input id="issuer-file" type="file" accept=".json,application/json" aria-describedby="pin-fingerprint">
+        <p id="pin-fingerprint" class="fingerprint" hidden></p>
+        <div id="request-selection">
+          <label for="expected-request">Original shop request</label>
+          <input id="expected-request" type="file" accept=".json,application/json" aria-describedby="expected-status">
+          <p class="help input-note" id="expected-status" role="status"></p>
+        </div>
+        <button id="verify" type="button" disabled>Verify receipt</button>
+      </section>
+      <section class="card receipt" id="result-card" aria-labelledby="result-heading">
+        <div class="receipt-title">
+          <p class="eyebrow">Coolant temperature</p>
+          <h2 id="result-heading">Verification result</h2>
+        </div>
+        <p id="result" class="status" role="status">Waiting for a receipt and key.</p>
+        <ul id="batch-results" aria-label="Verification results by file" hidden></ul>
+        <dl id="findings" hidden>
+          <div id="idle-row"><dt>At idle</dt><dd id="idle"></dd></div>
+          <div id="moving-row"><dt>While moving</dt><dd id="moving"></dd></div>
+        </dl>
+        <p id="matched-request" class="help" hidden></p>
+        <section id="evidence-details" class="evidence-details" aria-labelledby="evidence-heading" hidden>
+          <h3 id="evidence-heading">How to read this finding</h3>
+          <dl class="evidence-meta">
+            <div><dt>Test rule</dt><dd id="evidence-rule"></dd></div>
+            <div><dt>Input</dt><dd id="evidence-input"></dd></div>
+          </dl>
+          <p id="coverage-note" class="help" hidden></p>
+          <p class="help">The signature verifies the receipt against your supplied issuer key. The finding describes the recorded samples.</p>
+        </section>
+        <div id="intake-actions" class="actions" hidden>
+          <button id="print-finding" class="secondary" type="button">Print for the work order</button>
+        </div>
+        <p class="print-only" id="print-request" hidden></p>
+        <p class="print-only fingerprint" id="print-digest" hidden></p>
+        <p class="print-only" id="print-issuer" hidden></p>
+        <p class="print-only">Retain the verification packet or original files and use the trusted issuer key to verify this finding again.</p>
+      </section>
+    </div>
+    <footer>Ed25519 signature · Coolant context test recipe · No recording required <a href="verify-receipt.html" download>Save offline verifier</a></footer>
+    <template id="batch-result">
+      <li>
+        <p class="batch-file"></p>
+        <p class="batch-summary help"></p>
+        <p class="batch-rule help" hidden></p>
+        <p class="batch-source help" hidden></p>
+        <p class="batch-digest fingerprint" hidden></p>
+      </li>
+    </template>
+  </main>
+</body>
+</html>

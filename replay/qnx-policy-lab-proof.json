@@ -1,0 +1,13 @@
+{
+  "platform": "QNX SDP 8.0 x86-64 guest on QEMU",
+  "guest_executable_sha256": "d852d15869aa36775b41aea2cc474697bede9d5236ef19c971ec56ec40f6ee5a",
+  "same_recording_request_and_issuer": true,
+  "signed_input_type": "demo-fixture/v1",
+  "grant_removed": "allow receipt_export_t receipt_owner_t:channel connect;",
+  "approved_preview_before_denial": true,
+  "export_denial": "RR_FAIL connect to receipt channel errno=1",
+  "receipt_emitted_without_grant": false,
+  "receipt_emitted_after_decline": false,
+  "receipt_verified_with_grant_and_approval": true,
+  "raw_channel_file_disk_and_vault_memory_denied_with_grant": true
+}

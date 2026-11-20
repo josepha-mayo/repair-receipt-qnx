@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repair Receipt</title>
+<style>
+  :root{color-scheme:light;--ink:#202923;--muted:#4d5d52;--paper:#faf9f2;--line:#d5d9ce;--green:#215542;--surface:#fffef9}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+  main{max-width:1100px;margin:auto;padding:48px 28px}
+  header{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:26px}
+  h1,h2,p{margin:0}
+  h1{font-family:Georgia,serif;font-size:clamp(2.65rem,7vw,4.7rem);font-weight:500;line-height:1.05;letter-spacing:-.055em}
+  h2{font-size:1.1rem;margin-bottom:12px}
+  header p{margin-top:12px;max-width:58ch}
+  .note,.muted{color:var(--muted);font-size:.9rem}
+  .eyebrow{color:var(--green);font-size:.79rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+  .layout{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}
+  section{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;min-width:0}
+  fieldset{border:0;margin:0 0 20px;padding:0;min-inline-size:0}
+  legend{font-size:.88rem;font-weight:650;margin-bottom:7px}
+  select,button{font:inherit;border-radius:6px;border:1px solid #a2ab9f;padding:8px 12px;color:var(--ink);background:white;max-width:100%}
+  select{width:100%}
+  button{background:var(--green);color:white;border-color:var(--green);font-weight:650;cursor:pointer}
+  button:disabled{color:#525b54;background:#e9ece5;border-color:#d5dbd2;cursor:default}
+  :focus-visible{outline:3px solid #ae6506;outline-offset:3px}
+  canvas{display:block;width:100%;height:224px;margin:0 0 10px;background:#f4f6ef;border-radius:6px}
+  .key{display:flex;gap:6px 16px;flex-wrap:wrap;margin-bottom:5px}
+  .key span::before{content:"";display:inline-block;width:.55rem;height:.55rem;margin-right:6px;border-radius:50%;background:var(--sample)}
+  dl{margin:0 0 18px}
+  dl div{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+  dl div:last-child{border-bottom:1px solid var(--line)}
+  dt{font-weight:650}
+  dd{margin:0;text-align:right;color:var(--green);font-weight:650}
+  details{margin:14px 0}
+  summary{cursor:pointer;font-weight:600}
+  pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.79rem;background:#f4f6ef;padding:12px;border-radius:6px}
+  .approval{display:flex;align-items:flex-start;gap:9px;margin:16px 0 10px}
+  input{width:17px;height:17px;accent-color:var(--green);flex-shrink:0;margin:4px 0}
+  footer{padding-top:18px;display:flex;gap:8px 20px;flex-wrap:wrap}
+  a{color:var(--green);text-underline-offset:3px}
+  @media(max-width:720px){main{padding:30px 15px}.layout{grid-template-columns:1fr}section{padding:17px}}
+</style>
+<main>
+  <header>
+    <div class="eyebrow">Verified QNX replay</div>
+    <h1>Repair Receipt</h1>
+    <p>Share whether coolant temperature reached the test threshold at idle or while moving.</p>
+  </header>
+  <div class="layout">
+    <section aria-labelledby="recording-heading">
+      <h2 id="recording-heading">Driver’s recording</h2>
+      <fieldset>
+        <legend>Choose a recording</legend>
+        <select id="recording">
+          <option value="trip-a">Trip A</option>
+          <option value="trip-b">Trip B · different recording, same finding</option>
+          <option value="moving">Moving · different finding</option>
+          <option value="gap">Missing samples</option>
+          <option value="kit-obd">KIT road recording (OBD-II)</option>
+          <option value="scope-control">Trip C · Hot at idle and while moving</option>
+        </select>
+      </fieldset>
+      <canvas id="trace" role="img" aria-label="Coolant temperature in Celsius over time"></canvas>
+      <div class="key note"><span style="--sample:#95470a">At idle</span><span style="--sample:#215542">Moving</span><span style="--sample:#69746b">Engine off</span></div>
+      <p class="note">Test threshold 105 °C for three consecutive samples. A break indicates missing samples.</p>
+      <details>
+        <summary>Recording samples</summary>
+        <pre id="samples"></pre>
+      </details>
+    </section>
+    <section aria-labelledby="receipt-heading">
+      <h2 id="receipt-heading">Receipt for the repair shop</h2>
+      <dl aria-live="polite">
+        <div><dt>At idle</dt><dd id="idle"></dd></div>
+        <div><dt>While moving</dt><dd id="moving"></dd></div>
+      </dl>
+      <p class="muted" id="comparison"></p>
+      <details>
+        <summary>View exact receipt bytes</summary>
+        <pre id="bytes"></pre>
+      </details>
+      <label class="approval"><input type="checkbox" id="approval">Approve this receipt for sharing</label>
+      <button id="download" disabled>Download receipt</button>
+    </section>
+  </div>
+  <footer class="note">
+    <span>Offline replay of QNX 8.0.0 results. Only the KIT excerpt is a published road recording.</span>
+    <a href="qnx-proof.txt">Read the native run trace</a>
+    <a href="https://publikationen.bibliothek.kit.edu/1000085073">KIT dataset &middot; Marc Weber, CC BY 4.0</a>
+  </footer>
+</main>
+<script type="application/json" id="data">{"trip-a":{"receipt":"{\"recipe\":\"coolant-context-demo/v1\",\"idle\":\"observed\",\"moving\":\"not_observed\"}","sha256":"740ffcabc9c8754fee93111534d27393779efe6a0a3ea1901589d8700a203a58","fixture_sha256":"6e0bb9e09a1caa72cd1c941491d07b20d72780799c25163e43e7ef3b28eca42f","duration_ms":9000,"samples":[[0,780,0,102],[1000,810,0,106],[2000,810,0,108],[3000,790,0,107],[4000,1240,11,101],[5000,1780,19,100],[6000,1970,28,98],[7000,1850,25,97],[8000,2120,39,96]]},"trip-b":{"receipt":"{\"recipe\":\"coolant-context-demo/v1\",\"idle\":\"observed\",\"moving\":\"not_observed\"}","sha256":"740ffcabc9c8754fee93111534d27393779efe6a0a3ea1901589d8700a203a58","fixture_sha256":"db6608bf11877c09dbc9dc5c2eb19d8a0c5ab6939122c57d4e34545688e09733","duration_ms":11000,"samples":[[0,1800,23,97],[1000,2100,41,98],[2000,2500,47,99],[3000,1710,29,101],[4000,1650,14,102],[5000,930,0,106],[6000,880,0,106],[7000,900,0,107],[8000,820,0,104],[9000,1600,12,100],[10000,2060,40,97]]},"moving":{"receipt":"{\"recipe\":\"coolant-context-demo/v1\",\"idle\":\"not_observed\",\"moving\":\"observed\"}","sha256":"0eb7644c2445cabcfac6aec4eb34fedaa9552faccc51d5712a5f940448d27647","fixture_sha256":"82b7b71351b3c5408547b0c8f3f83ed81d4538bfb280276fe72af074b4ae24ad","duration_ms":9000,"samples":[[0,780,0,92],[1000,810,0,93],[2000,810,0,96],[3000,790,0,97],[4000,1240,11,105],[5000,1780,19,106],[6000,1970,28,107],[7000,1850,25,104],[8000,2120,39,101]]},"gap":{"receipt":"{\"recipe\":\"coolant-context-demo/v1\",\"idle\":\"insufficient_evidence\",\"moving\":\"insufficient_evidence\"}","sha256":"d3e5d72e212841e7fe2b07f9783621a22927549b3b90623c394e8976d2bcb183","fixture_sha256":"7f2e1b7d3de22ac1a83629ee068a7145023c290fa8ead4566f822411360ac3b9","duration_ms":12000,"samples":[[0,780,0,99],[1000,810,0,101],[2000,810,0,106],[8000,790,0,108],[9000,1240,11,103],[10000,1780,19,101],[11000,1970,28,99]]},"kit-obd":{"receipt":"{\"recipe\":\"coolant-context-demo/v1\",\"idle\":\"insufficient_evidence\",\"moving\":\"not_observed\"}","sha256":"f0d30d797d693680bbf7dfbd4e1bd83d42e1f2c4fc02cac5b2b0e275d7e638cd","fixture_sha256":"73b484d96d69600a223410d34122141223ca6d22e04247dcf4b30bd4d551fb4b","duration_ms":90000,"samples":[[28,2110,125,91],[1108,2111,125,91],[2187,2108,125,91],[3207,2110,125,91],[4287,2108,125,91],[5368,2105,125,91],[6447,2108,125,91],[7527,2109,125,91],[8547,2110,125,91],[9631,2110,125,91],[10707,2110,125,91],[11788,2114,125,91],[12807,2113,125,91],[13827,2115,125,91],[14847,2115,125,91],[15927,2120,126,91],[17007,2116,125,91],[18087,2119,126,91],[19167,2116,125,91],[20248,2116,125,91],[21331,2116,125,91],[22408,2115,125,91],[23427,2116,125,91],[24447,2119,125,91],[25498,2119,125,91],[26577,2118,125,91],[27627,2119,125,91],[28707,2113,125,91],[29728,2111,125,91],[30748,2110,125,91],[31768,2110,125,91],[32787,2113,125,91],[33807,2110,125,91],[34828,2110,125,91],[35847,2108,125,91],[36928,2110,125,91],[38007,2112,125,91],[39088,2114,125,91],[40138,2116,125,91],[41218,2117,125,91],[42268,2113,125,91],[43347,2111,125,91],[44397,2113,125,91],[45477,2111,125,91],[46497,2108,125,91],[47547,2112,125,91],[48599,2112,125,91],[49650,2109,125,90],[50667,2112,125,90],[51688,2110,125,90],[52708,2108,125,90],[53758,2110,125,90],[54809,2110,125,90],[55858,2108,125,90],[56911,2109,125,90],[57960,2111,125,90],[59009,2109,125,90],[60059,2107,125,90],[61109,2104,125,90],[62160,2087,124,90],[63209,2072,123,90],[64259,2029,120,90],[65309,2006,119,90],[66358,1955,116,90],[67378,1927,114,90],[68398,1906,113,90],[69451,1888,112,90],[70499,1855,110,90],[71550,1847,109,90],[72601,1825,109,90],[73708,1830,108,90],[74788,1822,108,90],[75838,1827,108,90],[76888,1830,108,90],[77908,1836,109,90],[78988,1861,110,90],[80038,1873,111,90],[81088,1897,112,90],[82138,1933,114,90],[83188,1943,115,90],[84239,1966,116,90],[85288,1972,117,90],[86338,1983,118,90],[87388,1992,118,90],[88438,1997,118,90],[89488,1998,118,90]]},"scope-control":{"receipt":"{\"recipe\":\"coolant-context-demo/v1\",\"idle\":\"observed\",\"moving\":\"observed\"}","sha256":"7b565a0ecd6f9733951e36276d33498452c79d845cc25f3dcf8757705ffba49e","fixture_sha256":"ca63feb055478644f5840ae65d7b55fcf4a55e4dc16325a0beac5edbb6648f2e","duration_ms":9000,"samples":[[0,780,0,102],[1000,810,0,106],[2000,810,0,108],[3000,790,0,107],[4000,1240,11,107],[5000,1780,19,110],[6000,1970,28,109],[7000,1850,25,98],[8000,2120,39,96]]}}</script>
+<script>
+  const recordings = JSON.parse(document.getElementById("data").textContent);
+  const select = document.getElementById("recording");
+  const approval = document.getElementById("approval");
+  const download = document.getElementById("download");
+  const canvas = document.getElementById("trace");
+  const temperatures = Object.values(recordings).flatMap(entry => entry.samples.map(row => row[3]));
+  const minimum = Math.floor(Math.min(...temperatures) / 5) * 5 - 5;
+  const maximum = Math.ceil(Math.max(...temperatures) / 5) * 5 + 5;
+  const names = {
+    observed: "Observed",
+    not_observed: "Not observed",
+    insufficient_evidence: "Insufficient evidence",
+  };
+
+  function plot() {
+    const {samples, duration_ms} = recordings[select.value];
+    const {width, height} = canvas.getBoundingClientRect();
+    const scale = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+    const x = ms => 43 + (width - 61) * ms / duration_ms;
+    const y = c => height - 32 - (height - 50) * (c - minimum) / (maximum - minimum);
+    ctx.font = "12px system-ui";
+    ctx.fillStyle = "#4d5d52";
+    ctx.strokeStyle = "#d0d9ce";
+    for (const c of [minimum, 105, maximum]) {
+      ctx.fillText(c + "°", 9, y(c) + 4);
+      ctx.beginPath();
+      ctx.setLineDash(c === 105 ? [4, 4] : []);
+      ctx.moveTo(x(0), y(c));
+      ctx.lineTo(x(duration_ms), y(c));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.fillText("0 s", x(0), height - 10);
+    const endLabel = duration_ms / 1000 + " s";
+    ctx.fillText(endLabel, x(duration_ms) - ctx.measureText(endLabel).width, height - 10);
+    ctx.strokeStyle = "#a3aa9f";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let previous = null;
+    for (const [ms, , , c] of samples) {
+      if (previous === null || ms - previous > 2000) ctx.moveTo(x(ms), y(c));
+      else ctx.lineTo(x(ms), y(c));
+      previous = ms;
+    }
+    ctx.stroke();
+    for (const [ms, rpm, speed, c] of samples) {
+      ctx.fillStyle = rpm === 0 ? "#69746b" : speed > 0 ? "#215542" : "#95470a";
+      ctx.beginPath();
+      ctx.arc(x(ms), y(c), 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function render() {
+    const entry = recordings[select.value];
+    const receipt = JSON.parse(entry.receipt);
+    document.getElementById("idle").textContent = names[receipt.idle];
+    document.getElementById("moving").textContent = names[receipt.moving];
+    document.getElementById("bytes").textContent = entry.receipt;
+    document.getElementById("samples").textContent =
+      "ms,rpm,km/h,°C\n" + entry.samples.map(row => row.join(",")).join("\n");
+    document.getElementById("comparison").textContent =
+      entry.sha256 === recordings["trip-a"].sha256
+        ? "Trips A and B produce byte-identical receipts."
+        : "This receipt differs from Trips A and B.";
+    approval.checked = false;
+    download.disabled = true;
+    plot();
+  }
+
+  select.addEventListener("change", render);
+  approval.addEventListener("change", () => { download.disabled = !approval.checked; });
+  download.addEventListener("click", () => {
+    if (!approval.checked) return;
+    const url = URL.createObjectURL(new Blob([recordings[select.value].receipt], {type: "application/json"}));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "repair-receipt.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  new ResizeObserver(plot).observe(canvas);
+  render();
+</script>
+</html>
