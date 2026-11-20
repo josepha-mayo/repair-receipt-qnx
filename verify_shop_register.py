@@ -15,7 +15,9 @@ from zipfile import ZipFile
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from shop_register import PAGE_SIZE, ReceiptConflict, ShopRegister
-from shop_request import CURRENT_RECIPE, DEFAULT_THRESHOLD_C, RECIPE, canonical, guest_bytes, parse_request
+from shop_request import (
+    CURRENT_RECIPE, DEFAULT_THRESHOLD_C, RECIPE, canonical, guest_bytes, parse_request, verification_packet,
+)
 
 
 def pin(key):
@@ -132,6 +134,18 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     assert matched["state"] == "ready" and matched["job"]["workOrder"] == local_reference
     assert matched["job"]["acceptedAt"] is None and register.fetch(incomplete["id"])["receipt"] is None
     assert local_reference not in original and "workOrder" not in incomplete
+    packet = verification_packet(incomplete, original, matched["job"]["fingerprint"])
+    assert register.match(packet["receipt"], packet=packet) == matched
+    for changed, message in (
+        ({"request": {**incomplete, "thresholdC": threshold + 1}}, "does not match the original shop request"),
+        ({"fingerprint": "0" * 64}, "does not match the enrolled issuer"),
+    ):
+        try:
+            register.match(original, packet={**packet, **changed})
+        except ValueError as error:
+            assert message in str(error)
+        else:
+            raise AssertionError("A changed packet binding matched the work order.")
     try:
         register.match(sign({**incomplete, "thresholdC": threshold + 1},
                             {"idle": "observed", "moving": "insufficient_evidence"}, owner))

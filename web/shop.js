@@ -48,7 +48,7 @@ async function publicVerifier(issuer) {
 }
 
 async function verify(receipt, issuer, ticket) {
-  const [evidence, verifier] = await Promise.all([readEvidence(receipt), publicVerifier(issuer)]);
+  const [evidence, verifier] = await Promise.all([ShopRequest.readEvidence(receipt), publicVerifier(issuer)]);
   return verifyEvidence(evidence, verifier, ticket);
 }
 
@@ -123,28 +123,6 @@ async function verifyEvidence(evidence, {key, issuerFingerprint}, ticket) {
   }
   const receiptSha256 = await ShopRequest.fingerprint(new TextEncoder().encode(receiptText));
   return {claim: canonicalClaim, issuerFingerprint, receiptSha256, matchedIncludedRequest, driverStarted};
-}
-
-async function readEvidence(file) {
-  if (file.size > 4096) throw new Error("This file exceeds the verification packet size limit.");
-  const text = await file.text();
-  let packet;
-  try {
-    packet = JSON.parse(text);
-  } catch {
-    throw new Error("Choose a signed receipt or verification packet in JSON format.");
-  }
-  if (packet?.format !== ShopRequest.packetFormat) {
-    if (file.size > 1024) throw new Error("This file exceeds the signed receipt size limit.");
-    return {receiptText: text};
-  }
-  if (Object.keys(packet).length !== 4 || typeof packet.receipt !== "string" || packet.receipt.length > 1024 ||
-      typeof packet.fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(packet.fingerprint) ||
-      !Object.hasOwn(packet, "request")) {
-    throw new Error("The verification packet is invalid.");
-  }
-  return {receiptText: packet.receipt, packetRequest: ShopRequest.parse(JSON.stringify(packet.request)),
-    fingerprint: packet.fingerprint};
 }
 
 function resetVerification() {
@@ -225,7 +203,7 @@ async function verifyBatch(files, issuer, attempt) {
     const heading = row.querySelector(".batch-file");
     const summary = row.querySelector(".batch-summary");
     try {
-      const evidence = await readEvidence(file);
+      const evidence = await ShopRequest.readEvidence(file);
       if (!evidence.packetRequest) throw new Error("This file needs a verification packet with the original request.");
       const {claim, receiptSha256} = await verifyEvidence(evidence, verifier, null);
       heading.textContent = `Request ${claim.request}`;

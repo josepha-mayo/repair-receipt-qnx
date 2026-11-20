@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from shop_request import (
     BENCH_SOURCE, CURRENT_RECIPE, FILE_SOURCES, MAX_TEMPERATURE_C, MIN_TEMPERATURE_C, RECEIPT_VERSIONS, RECIPE, SCOPES,
-    canonical, matches_claim, request_document, valid_threshold,
+    canonical, matches_claim, request_document, valid_threshold, verification_packet,
 )
 
 PAGE_SIZE = 40
@@ -336,16 +336,21 @@ class ShopRegister:
             for row, request, claim in chain:
                 if claim is None:
                     continue
-                packet = {"format": "repair-receipt-verification/v1", "request": request,
-                          "receipt": row["receipt"], "fingerprint": fingerprint}
+                packet = verification_packet(request, row["receipt"], fingerprint)
                 filename = ZipInfo(f"repair-verification-{request['id']}.json")
                 archive.writestr(filename, canonical(packet), compress_type=ZIP_DEFLATED)
         return root["id"], output.getvalue()
 
-    def match(self, text):
+    def match(self, text, *, packet=None):
         record = read_receipt(text)
         row = self.fetch(record["claim"]["request"])
-        claim = check_receipt(text, record, self.request(row), row["issuer"])
+        request = self.request(row)
+        if packet is not None:
+            if canonical(packet["request"]) != canonical(request):
+                raise ValueError("The packet request does not match the original shop request.")
+            if packet["fingerprint"] != sha256(row["issuer"]).hexdigest():
+                raise ValueError("The packet fingerprint does not match the enrolled issuer for this request.")
+        claim = check_receipt(text, record, request, row["issuer"])
         state = "ready" if row["receipt"] is None else "alreadyFiled" if row["receipt"] == text else "conflict"
         return {"job": self.job(row), "claim": claim, "state": state}
 

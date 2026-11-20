@@ -10,6 +10,7 @@ DEFAULT_THRESHOLD_C = 105
 MIN_TEMPERATURE_C, MAX_TEMPERATURE_C = -40, 200
 REQUEST_FORMAT = "repair-receipt-request/v1"
 THRESHOLD_REQUEST_FORMAT = "repair-receipt-request/v2"
+PACKET_FORMAT = "repair-receipt-verification/v1"
 BENCH_SOURCE = "obd-bench/v1"
 UPLOADED_SOURCE = "uploaded-csv/v1"
 DEMO_SOURCE = "demo-fixture/v1"
@@ -23,6 +24,10 @@ FINDINGS = {"observed", "not_observed", "insufficient_evidence"}
 
 def canonical(value):
     return json.dumps(value, ensure_ascii=True, separators=(",", ":"))
+
+
+def verification_packet(request, receipt, fingerprint):
+    return {"format": PACKET_FORMAT, "request": request, "receipt": receipt, "fingerprint": fingerprint}
 
 
 def valid_threshold(value):

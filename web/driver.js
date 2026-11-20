@@ -99,6 +99,9 @@ function render() {
   byId("findings").hidden = !claim || stage === "error" || stage === "expired";
   showCoverage(byId("findings").hidden ? null : claim, state.coverage);
   byId("exports").hidden = stage !== "shared" || newSelection || reconnecting || changing;
+  byId("download-packet").hidden = !state.packet;
+  byId("packet-note").hidden = !state.packet;
+  byId("download").classList.toggle("secondary", !!state.packet);
   const requestStatus = byId("request-status");
   requestStatus.textContent = requestError || (loadingRequest ? "Reading the request." : ticket
     ? `${ShopRequest.scopes[ticket.scope]} · Request ${ticket.id.slice(-8)}`
@@ -271,6 +274,12 @@ for (const choice of ["share", "decline"]) {
   byId(choice).addEventListener("click", () => send("decision", JSON.stringify({job: state.job, choice}), "application/json"));
 }
 byId("download").addEventListener("click", () => ShopRequest.save("repair-receipt.json", state.receipt));
+byId("download-packet").addEventListener("click", () => {
+  const packet = state.packet;
+  if (packet && !byId("exports").hidden) {
+    ShopRequest.save(`repair-verification-${packet.request.id.slice(-8)}.json`, JSON.stringify(packet));
+  }
+});
 byId("key").addEventListener("click", () => ShopRequest.save("repair-receipt-issuer.json",
   JSON.stringify({format: "repair-receipt-issuer/v1", ed25519: state.issuer})));
 

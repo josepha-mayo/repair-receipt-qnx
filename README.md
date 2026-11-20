@@ -33,6 +33,8 @@ If Windows reports a path-length error while creating the Python environment, us
 
 Open the printed **Driver** URL to save its issuer public key. In the printed **Shop** URL, load the key after confirming its fingerprint and choose **At idle only**. Create and download the request. In the driver page load that file, run a sample or import a CSV, review the finding, then approve or decline. The browser exchanges consent with a private QNX VM over loopback. The VM has no network interface. Approval returns a signed receipt from QNX. The host removes the temporary staging files and job disk after review. Drivers can also initiate a broad review of both operating conditions from the driver page.
 
+After approving a shop-requested review, choose **Download verification packet** and send that file to the shop. It carries the original request, signed receipt and issuer fingerprint. The shop uses its enrolled public key to verify it. Individual receipt and key downloads are also available.
+
 The driver session that starts a review can see the preview, decide and download the issued receipt. Refreshing that tab keeps the session when browser session storage is available. A separate driver session sees only that a review is active until it finishes or expires.
 
 For an incomplete finding, **Recording guidance** explains which requested condition had gaps or too little continuous coverage. The driver sees this guidance in the local review. The shop receives the signed finding and test rule.
@@ -51,7 +53,7 @@ If the browser loses contact with the local app, it pauses approval and download
 
 ### File a receipt against a shop request
 
-In the local shop intake, choose a file under **Find a request from a returned receipt**. The register uses the full request ID to look up the original job, including older requests outside the visible list. It verifies the scope and Ed25519 signature against the key pinned to that request. Review the matching job and findings, then choose **File verified receipt**. Selecting a file alone leaves the register unchanged. The first accepted answer stays on file, and selecting the same file again confirms it is already filed.
+In the local shop intake, choose a file under **Find a request from a receipt or packet**. The register uses the full request ID to look up the original job, including older requests outside the visible list. It verifies the scope and Ed25519 signature against the key pinned to that request, and checks the request and fingerprint carried by any packet against its own record. Review the matching job and findings, then choose **File verified receipt**. Selecting a file alone leaves the register unchanged. The first accepted answer stays on file, and selecting the same file again confirms it is already filed.
 
 When a different return verifies for an already filed request, **Two verified receipts** shows the filed and returned findings for each requested condition. It also shows both input types when they differ. The shop can use a new request to file a fresh recording while keeping the original work order evidence.
 

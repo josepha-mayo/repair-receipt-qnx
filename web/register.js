@@ -263,13 +263,15 @@ byId("clear-search").addEventListener("click", () => action("history-status", as
     orderReference.focus();
   }
 }));
-async function showMatchedReceipt(text) {
-  const {job, claim, state} = await api("match", {receipt: text});
+async function showMatchedReceipt(evidence) {
+  const {receiptText, packetRequest, fingerprint} = evidence;
+  const match = packetRequest ? {receipt: receiptText, request: packetRequest, fingerprint} : {receipt: receiptText};
+  const {job, claim, state} = await api("match", match);
   const id = job.request.id;
   if (search !== null && job.workOrder !== search) await showRecentRequests();
   jobs.set(id, job);
   renderJobs();
-  choose(id, {text, claim, state});
+  choose(id, {evidence, claim, state});
   const message = {
     ready: "Signature verified. Review the matching request below.",
     alreadyFiled: "This exact receipt is already filed.",
@@ -287,9 +289,7 @@ receiptFile.addEventListener("change", () => {
   renderSelection();
   if (!receiptFile.files.length) return;
   action("match-status", async () => {
-    const file = receiptFile.files[0];
-    if (file.size > 1024) throw new Error("Choose a signed receipt JSON file up to 1 KiB.");
-    await showMatchedReceipt(await file.text());
+    await showMatchedReceipt(await ShopRequest.readEvidence(receiptFile.files[0]));
   });
 });
 
@@ -444,7 +444,8 @@ for (const [button, field, filename] of [
 
 byId("file-receipt").addEventListener("click", () => action("file-status", async () => {
   if (matchedReceipt?.state !== "ready") return;
-  const {text: receipt} = matchedReceipt;
+  const {evidence} = matchedReceipt;
+  const receipt = evidence.receiptText;
   try {
     const {job, alreadyFiled} = await api("file", {request: active, receipt});
     jobs.set(active, job);
@@ -459,7 +460,7 @@ byId("file-receipt").addEventListener("click", () => action("file-status", async
       matchedReceipt = null;
       status("match-status", "");
       renderSelection();
-      await showMatchedReceipt(receipt);
+      await showMatchedReceipt(evidence);
       return;
     }
     throw error;

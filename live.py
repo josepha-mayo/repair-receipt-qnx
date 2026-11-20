@@ -21,7 +21,9 @@ import webbrowser
 
 from pack_shop import standalone
 from run_qnx import MAX_RECORDING, ROOT, build_template, review_native
-from shop_request import DEMO_SOURCE, PUBLISHED_SOURCE, UPLOADED_SOURCE, canonical, parse_request
+from shop_request import (
+    DEMO_SOURCE, PUBLISHED_SOURCE, UPLOADED_SOURCE, canonical, parse_request, verification_packet,
+)
 
 try:
     from issuer_store import Issuer, default_store, load_or_create_seed
@@ -162,6 +164,8 @@ class Review:
                 if receipt is not None:
                     self.issuer.verify_receipt(receipt)
                     result = {"stage": "shared", "receipt": receipt.decode("ascii")}
+                    if request is not None:
+                        result["packet"] = verification_packet(request, result["receipt"], self.issuer.fingerprint)
         except ValueError:
             message = ("QNX could not complete the simulated OBD capture." if bench else
                        "QNX rejected this recording. Check the CSV columns and timestamps.")
@@ -318,8 +322,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.json(200, self.server.register.repeat(value["request"], recheck=True))
             elif action == "file" and isinstance(value, dict) and set(value) == {"request", "receipt"}:
                 self.json(200, self.server.register.attach(value["request"], value["receipt"]))
-            elif action == "match" and isinstance(value, dict) and set(value) == {"receipt"}:
-                self.json(200, self.server.register.match(value["receipt"]))
+            elif action == "match" and fields in ({"receipt"}, {"receipt", "request", "fingerprint"}):
+                packet = value if "request" in value else None
+                self.json(200, self.server.register.match(value["receipt"], packet=packet))
             else:
                 self.json(400, {"message": "Invalid shop register action."})
         except ReceiptConflict as error:

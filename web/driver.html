@@ -78,9 +78,11 @@
         </div>
         <div id="exports" hidden>
           <div class="actions">
+            <button id="download-packet" type="button" hidden>Download verification packet</button>
             <button id="download" type="button">Download signed receipt</button>
             <button class="secondary" id="key" type="button">Save issuer public key</button>
           </div>
+          <p id="packet-note" class="help" hidden>Send the packet to your shop. It includes their request and your signed finding.</p>
           <p class="help">The shop should get the public key through a trusted channel, separately from the receipt.</p>
         </div>
       </section>

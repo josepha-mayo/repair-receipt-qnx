@@ -71,6 +71,28 @@ const ShopRequest = (() => {
     return parse(await file.text());
   }
 
+  async function readEvidence(file) {
+    if (file.size > 4096) throw new Error("This file exceeds the verification packet size limit.");
+    const text = await file.text();
+    let packet;
+    try {
+      packet = JSON.parse(text);
+    } catch {
+      throw new Error("Choose a signed receipt or verification packet in JSON format.");
+    }
+    if (packet?.format !== packetFormat) {
+      if (file.size > 1024) throw new Error("This file exceeds the signed receipt size limit.");
+      return {receiptText: text};
+    }
+    if (Object.keys(packet).length !== 4 || typeof packet.receipt !== "string" || packet.receipt.length > 1024 ||
+        typeof packet.fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(packet.fingerprint) ||
+        !Object.hasOwn(packet, "request")) {
+      throw new Error("The verification packet is invalid.");
+    }
+    return {receiptText: packet.receipt, packetRequest: parse(JSON.stringify(packet.request)),
+      fingerprint: packet.fingerprint};
+  }
+
   function hexBytes(hex) {
     return Uint8Array.from(hex.match(/../g), byte => Number.parseInt(byte, 16));
   }
@@ -108,5 +130,5 @@ const ShopRequest = (() => {
   return Object.freeze({recipe, legacyRecipe, recipes, benchSource, publishedSource, fileSources, packetFormat, scopes,
     create, parse, load, rule, sourceLabel,
     save, validThreshold,
-    hexBytes, readIssuer, fingerprint});
+    hexBytes, readIssuer, fingerprint, readEvidence});
 })();
