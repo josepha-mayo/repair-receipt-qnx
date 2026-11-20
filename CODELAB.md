@@ -19,7 +19,7 @@ Open the printed shop and driver URLs. In the driver, save the public key under 
 
 In the driver page, load that request, run **Trip A** and review the preview. Approve and choose **Download verification packet**. In the shop register, open the packet under **Find a request from a receipt or packet**. The register opens the matching job and verifies it against the request and key on file. Choose **File verified receipt** and load the packet again to observe repeat handling. In the standalone verifier, try a freshly generated idle-only request against the same valid packet to see the request mismatch.
 
-Run **Missing samples** under the same request, approve it and open the returned receipt in the shop. **Two verified receipts** compares the filed threshold observation with the returned insufficient-evidence finding. Open the filed receipt again to verify the work order still holds the original answer.
+Run **Missing samples** under the same request, approve it and open the returned packet in the shop. **Two verified receipts** compares the filed threshold observation with the returned insufficient-evidence finding. Open the first packet again to verify the work order still holds the original answer. Load both packets in the offline verifier with the enrolled key. Both signatures verify, and the verifier flags the shared request ID. Use the filed work order's receipt digest to identify the filed answer.
 
 Choose **View work-order findings** to open a print view directly from the filed request. The idle-only printout gives the finding, test rule, input source, filing time and full receipt request ID.
 

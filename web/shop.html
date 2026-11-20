@@ -80,6 +80,7 @@
           <h2 id="result-heading">Verification result</h2>
         </div>
         <p id="result" class="status" role="status">Waiting for a receipt and key.</p>
+        <p id="batch-warning" class="status bad" role="status" hidden></p>
         <ul id="batch-results" aria-label="Verification results by file" hidden></ul>
         <dl id="findings" hidden>
           <div id="idle-row"><dt>At idle</dt><dd id="idle"></dd></div>
@@ -108,6 +109,7 @@
     <template id="batch-result">
       <li>
         <p class="batch-file"></p>
+        <p class="batch-conflict help" hidden></p>
         <p class="batch-summary help"></p>
         <p class="batch-rule help" hidden></p>
         <p class="batch-source help" hidden></p>

@@ -26,6 +26,7 @@ function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   result.textContent = text;
   result.className = "status " + outcome;
   byId("batch-results").hidden = true;
+  byId("batch-warning").hidden = true;
   byId("findings").hidden = !verifiedReceipt;
   byId("evidence-details").hidden = !verifiedReceipt;
   byId("intake-actions").hidden = !verifiedReceipt;
@@ -196,6 +197,7 @@ byId("print-finding").addEventListener("click", () => window.print());
 async function verifyBatch(files, issuer, attempt) {
   const verifier = await publicVerifier(issuer);
   const rows = document.createDocumentFragment();
+  const requests = new Map();
   let verified = 0;
   for (const file of files) {
     if (attempt !== generation) return;
@@ -218,6 +220,10 @@ async function verifyBatch(files, issuer, attempt) {
       const digest = row.querySelector(".batch-digest");
       digest.textContent = `Receipt SHA-256 ${receiptSha256}`;
       digest.hidden = false;
+      if (!requests.has(claim.request)) requests.set(claim.request, {digests: new Set(), notices: []});
+      const group = requests.get(claim.request);
+      group.digests.add(receiptSha256);
+      group.notices.push({field: row.querySelector(".batch-conflict"), filename: file.name});
       verified++;
     } catch (error) {
       heading.textContent = file.name;
@@ -227,7 +233,23 @@ async function verifyBatch(files, issuer, attempt) {
     rows.append(row);
   }
   if (attempt !== generation) return;
-  update(`Verified ${verified} of ${files.length} packets.`, verified === files.length ? "good" : "bad", false);
+  let conflicts = 0;
+  for (const {digests, notices} of requests.values()) {
+    if (digests.size < 2) continue;
+    conflicts++;
+    for (const {field, filename} of notices) {
+      field.textContent = `Compare attachment · ${filename}`;
+      field.hidden = false;
+    }
+  }
+  const outcome = verified !== files.length ? "bad" : conflicts ? "" : "good";
+  update(`Verified ${verified} of ${files.length} packets.`, outcome, false);
+  if (conflicts) {
+    const warning = byId("batch-warning");
+    const subject = conflicts === 1 ? "One request has" : `${conflicts} requests have`;
+    warning.textContent = `${subject} different signed receipts. Match the receipt SHA-256 to the filed work order.`;
+    warning.hidden = false;
+  }
   const list = byId("batch-results");
   list.replaceChildren(rows);
   list.hidden = false;

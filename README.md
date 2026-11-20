@@ -69,6 +69,8 @@ After filing, choose **View work-order findings** from the request. Each conditi
 
 Choose **Download verification files** in the work-order view to save a ZIP with one packet per filed receipt, including the original and any filed follow-ups. Extract the ZIP, select its packet files together in the offline verifier and open a separately trusted copy of the enrolled public key. The verifier checks each packet independently and shows the full request ID and receipt digest alongside each finding. Match the digest to the printed work order to identify the exact filed answer. The ZIP leaves out the local work-order reference.
 
+When different signed receipts share a request ID, the offline verifier flags those attachments and shows both digests. Repeated copies of the same signed receipt appear as ordinary verified files.
+
 After filing, **Download verification packet** saves the original signed receipt, the original request and the enrolled issuer fingerprint as one JSON attachment for the work order. Open it in the standalone verifier with a separately trusted issuer public key. The individual files also remain downloadable.
 
 The shop register survives a restart. It stores job IDs, public keys, scoped receipts and shop filing times in `%LOCALAPPDATA%\RepairReceipt\shop.sqlite3` by default. The times describe activity at the shop. To choose a different database file, pass `--shop-register` to `live.py`.
