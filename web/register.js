@@ -382,18 +382,26 @@ function reportReading(evidence, label) {
 
 function compareReadings(baseline, recheck) {
   if (recheck.finding === "insufficient_evidence") return "Recheck coverage is insufficient for a comparison.";
-  if (baseline.source !== recheck.source) return "Different capture methods. Review each finding in its recording context.";
+  if (!baseline.source || !recheck.source) return "A recording source is unspecified. Review the findings separately.";
+  if (baseline.source !== recheck.source) return "The receipts report different input types. Review the findings separately.";
   const before = baseline.finding === "observed";
   const after = recheck.finding === "observed";
-  if (before && after) return "The test rule was met in both recordings.";
-  if (before) return "The test rule was met only in the earlier recording.";
-  if (after) return "The test rule was met only in the recheck.";
-  return "The test rule was unmet in both recordings.";
+  if (before && after) return "Both receipts report that the test rule was met.";
+  if (before) return "Only the prior receipt reports that the test rule was met.";
+  if (after) return "Only the recheck receipt reports that the test rule was met.";
+  return "Both receipts report that the test rule was not met.";
 }
 
 function showWorkOrder(report) {
   byId("report-reference").textContent = report.workOrder
     ? `Work order ${report.workOrder}` : `Original request ${report.originalRequest.slice(-8)}`;
+  const latest = report.contexts.map(context => context.evidence?.request);
+  const receiptSummary = byId("report-receipt-summary");
+  receiptSummary.hidden = latest.length !== 2 || !latest.every(Boolean);
+  receiptSummary.textContent = receiptSummary.hidden ? "" : latest[0] === latest[1]
+    ? "The latest idle and moving findings share one signed receipt."
+    : "The latest idle and moving findings come from separate signed receipts.";
+  byId("report-recheck-note").hidden = !report.contexts.some(context => context.baseline);
   const entries = byId("report-findings");
   entries.replaceChildren();
   const evidenceLink = byId("download-work-evidence");
@@ -415,7 +423,7 @@ function showWorkOrder(report) {
       rule.hidden = false;
     }
     const readings = row.querySelector(".report-readings");
-    if (baseline) readings.append(reportReading(baseline, "Before recheck"));
+    if (baseline) readings.append(reportReading(baseline, "Prior receipt"));
     readings.append(reportReading(evidence, baseline ? "Recheck" : ""));
     if (pendingRequest && evidence) {
       const pending = row.querySelector(".report-pending");
