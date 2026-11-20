@@ -11,6 +11,7 @@ from tempfile import TemporaryDirectory
 from issuer_store import Issuer
 from run_qnx import ROOT, build_template, review_native
 from shop_request import CURRENT_RECIPE, DEMO_SOURCE, PUBLISHED_SOURCE, request_document
+from verify_policy import compile_template, verify_export_denial, without_export_grant
 
 
 KIT_ROAD_PAIR = (
@@ -19,7 +20,7 @@ KIT_ROAD_PAIR = (
 )
 
 
-def verify(qemu):
+def verify(qemu, *, check_export_grant=False):
     seed = secrets.token_bytes(32)
     issuer = Issuer(seed)
     issuer_key = issuer.public_hex.encode("ascii")
@@ -35,7 +36,15 @@ def verify(qemu):
     )
     with TemporaryDirectory(prefix="repair-receipt-proof-") as temporary:
         root = Path(temporary)
-        template = build_template(root / "template")
+        if check_export_grant:
+            policy = (ROOT / "policy.conf").read_text(encoding="utf-8")
+            restricted = without_export_grant(policy)
+            executable = ROOT / "build/repair-receipt"
+            executable_digest = sha256(executable.read_bytes()).hexdigest()
+            template = compile_template(root / "template", policy)
+            denied_image = compile_template(root / "restricted", restricted)
+        else:
+            template = build_template(root / "template")
         for name, fixture, scope, finding, share in controls:
             ticket = tickets[scope]
             expected = {"recipe": CURRENT_RECIPE, "source": DEMO_SOURCE, "request": ticket["id"],
@@ -47,7 +56,8 @@ def verify(qemu):
                 return share
 
             coverage = {}
-            body = review_native(root / name, qemu, ROOT / "fixtures" / f"{fixture}.csv",
+            recording = (ROOT / "fixtures" / f"{fixture}.csv").read_bytes()
+            body = review_native(root / name, qemu, recording,
                                  decide, seed, ticket, image=template, source=DEMO_SOURCE, on_coverage=coverage.update)
             if (body is not None) != share:
                 raise RuntimeError(f"Incorrect receipt decision for {name}.")
@@ -61,6 +71,12 @@ def verify(qemu):
                         b"RR_COVERAGE [driver-only guidance]"]:
                     raise RuntimeError("Driver guidance entered the diagnostic log without redaction.")
             results[name] = body
+            if check_export_grant and name == "trip_a_at_idle":
+                denied = root / "policy-denied"
+                verify_export_denial(denied, lambda: review_native(
+                    denied, qemu, recording, decide, seed, ticket, image=denied_image, source=DEMO_SOURCE))
+        if check_export_grant and sha256(executable.read_bytes()).hexdigest() != executable_digest:
+            raise RuntimeError("The guest executable changed during the experiment.")
     if results["trip_a_at_idle"] != results["trip_c_at_idle"]:
         raise RuntimeError("Withheld driving findings changed the signed idle receipt.")
     if results["trip_a_while_moving"] == results["trip_c_while_moving"]:

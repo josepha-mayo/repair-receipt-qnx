@@ -14,7 +14,7 @@ from shop_request import CURRENT_RECIPE, DEMO_SOURCE, request_document
 
 
 EXPORT_GRANT = "allow receipt_export_t receipt_owner_t:channel connect;"
-EXPORT_DENIAL = b"RR_FAIL connect to receipt channel "
+EXPORT_DENIAL = b"RR_FAIL connect to receipt channel errno=1"
 
 
 def compile_template(workspace, policy):
@@ -25,13 +25,33 @@ def compile_template(workspace, policy):
     return build_template(workspace, policy_binary=binary)
 
 
-def verify(qemu):
-    standard = (ROOT / "policy.conf").read_text(encoding="utf-8")
+def without_export_grant(standard):
     lines = standard.splitlines(keepends=True)
     restricted_lines = [line for line in lines if line.rstrip("\n") != EXPORT_GRANT]
     if len(lines) - len(restricted_lines) != 1:
         raise ValueError("The standard policy must contain exactly one exporter channel grant.")
-    restricted = "".join(restricted_lines)
+    return "".join(restricted_lines)
+
+
+def verify_export_denial(workspace, approve):
+    try:
+        approve()
+    except RuntimeError as error:
+        if "QNX failed to complete review" not in str(error):
+            raise
+    else:
+        raise RuntimeError("Removing the channel grant did not stop receipt export.")
+
+    trace = [line.lstrip(b"\x11\x13") for line in (workspace / "serial.log").read_bytes().splitlines()]
+    if trace.count(EXPORT_DENIAL) != 1 or any(line.startswith(b"RR_RECEIPT ") for line in trace):
+        raise RuntimeError("The restricted guest did not show the expected channel denial without a receipt.")
+    if b"RR_PREVIEW [private preview]" not in trace[:trace.index(EXPORT_DENIAL)]:
+        raise RuntimeError("The channel denial occurred before the native review preview.")
+
+
+def verify(qemu):
+    standard = (ROOT / "policy.conf").read_text(encoding="utf-8")
+    restricted = without_export_grant(standard)
 
     executable = ROOT / "build/repair-receipt"
     executable_digest = sha256(executable.read_bytes()).hexdigest()
@@ -59,18 +79,7 @@ def verify(qemu):
             return review_native(scratch / name, qemu, recording, consent, seed, ticket, image=image,
                                  source=DEMO_SOURCE)
 
-        try:
-            trial("policy-denied", denied_image, True)
-        except RuntimeError as error:
-            if "QNX failed to complete review" not in str(error):
-                raise
-        else:
-            raise RuntimeError("Removing the channel grant did not stop receipt export.")
-
-        trace = [line.lstrip(b"\x11\x13") for line in (scratch / "policy-denied/serial.log").read_bytes().splitlines()]
-        denials = [line for line in trace if line.startswith(EXPORT_DENIAL)]
-        if len(denials) != 1 or any(line.startswith(b"RR_RECEIPT ") for line in trace):
-            raise RuntimeError("The restricted guest did not show the expected channel denial without a receipt.")
+        verify_export_denial(scratch / "policy-denied", lambda: trial("policy-denied", denied_image, True))
 
         if trial("consent-declined", control, False) is not None:
             raise RuntimeError("The standard policy emitted a receipt after the driver declined.")
@@ -92,7 +101,7 @@ def verify(qemu):
         "signed_input_type": DEMO_SOURCE,
         "grant_removed": EXPORT_GRANT,
         "approved_preview_before_denial": True,
-        "export_denial": denials[0].decode("ascii"),
+        "export_denial": EXPORT_DENIAL.decode("ascii"),
         "receipt_emitted_without_grant": False,
         "receipt_emitted_after_decline": False,
         "receipt_verified_with_grant_and_approval": True,

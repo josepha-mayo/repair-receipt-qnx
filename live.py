@@ -417,7 +417,8 @@ def main():
     parser.add_argument("--qemu", type=Path, help="path to qemu-system-x86_64")
     setup = parser.add_mutually_exclusive_group()
     setup.add_argument("--check", action="store_true", help="check available SDK tools, QEMU and the build")
-    setup.add_argument("--self-test", action="store_true", help="boot QNX and verify the scoped signing and consent controls")
+    setup.add_argument("--self-test", action="store_true",
+                       help="boot QNX and verify scoped signing, consent and the native export grant")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--open", action="store_true", help="open the driver page in your browser")
     parser.add_argument("--shop-register", type=Path, help="path for the local SQLite shop register")
@@ -436,9 +437,9 @@ def main():
             from verify_requests import verify
 
             print(f"Running Repair Receipt's QNX self-test. {version}", flush=True)
-            verify(qemu)
+            verify(qemu, check_export_grant=True)
             print("Passed. Four signatures verified, the idle receipts matched, the moving receipts differed, "
-                  "and declining produced no receipt.")
+                  "and declining produced no receipt. Removing the QNX export grant blocked an approved receipt.")
             return
         seed = secrets.token_bytes(32) if args.ephemeral_issuer else load_or_create_seed(
             (args.issuer_store or default_store()).resolve()

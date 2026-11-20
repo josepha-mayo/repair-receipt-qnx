@@ -27,7 +27,7 @@ start-live.cmd
 
 The scripts use the active QNX SDK environment or load it from `%USERPROFILE%\qnx800` if present. The launcher looks for `qemu-system-x86_64` on PATH and then under `C:\QNX\qemu`. Use `start-live.cmd --qemu "C:\path to\qemu-system-x86_64.exe" --open` for another location. `--check` checks the setup without starting the app or creating an issuer profile.
 
-Run `start-live.cmd --self-test` to verify the QNX path with the included demo recordings. It boots a prepared QNX image, verifies four signed receipts and checks that declining produces no receipt. The test uses a temporary issuer and scratch directory.
+Run `start-live.cmd --self-test` to verify the QNX path with the included demo recordings. It checks four signed receipts, confirms that declining produces no receipt, and repeats an approved review with the exporter channel grant removed. Both policy variants use the same guest executable. The command uses a temporary issuer and scratch directory and requires no browser interaction.
 
 [Host checks](.github/workflows/host-checks.yml) verify the shop register, the four archived QNX signatures, browser-script syntax and the generated offline verifier on Windows and Ubuntu. To reproduce the receipt and bundle checks locally, run `python verify_shop_register.py` and `python pack_shop.py --check`. The QNX self-test above exercises the live guest.
 
