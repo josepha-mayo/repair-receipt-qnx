@@ -100,6 +100,8 @@ class Review:
 
     def snapshot(self, session):
         with self.lock:
+            if self.state["stage"] == "review" and time.monotonic() >= self.deadline:
+                self._finish_decision("expired")
             if self.owns_session(session):
                 return dict(self.state)
             return {"stage": "occupied" if self.state["stage"] in ACTIVE_STAGES else "ready"}
@@ -123,10 +125,17 @@ class Review:
             if not self.owns_session(session) or self.state["stage"] != "review" or self.state["job"] != job:
                 return False
             timely = time.monotonic() < self.deadline
-            self.decision = choice if timely else "expired"
-            self.state["stage"] = "finishing"
-            self.response.set()
+            self._finish_decision(choice if timely else "expired")
             return timely
+
+    def _finish_decision(self, decision):
+        """Commit a decision with the review lock held."""
+        self.decision = decision
+        self.state["stage"] = "finishing"
+        if decision == "expired":
+            for field in ("claim", "coverage", "issuer"):
+                self.state.pop(field, None)
+        self.response.set()
 
     def wait_for_decision(self, preview, issuer, guest_closed, coverage=None):
         if not secrets.compare_digest(self.issuer.public_hex.encode("ascii"), issuer):
@@ -136,13 +145,11 @@ class Review:
             self.state.update(stage="review", claim=json.loads(preview), issuer=issuer.decode("ascii"))
             if coverage:
                 self.state["coverage"] = coverage
-        self.response.wait(timeout=CONSENT_SECONDS)
+        self.response.wait(timeout=max(0, self.deadline - time.monotonic()))
         with self.lock:
             if guest_closed.is_set():
                 raise RuntimeError("QNX disconnected while waiting for the driver's decision.")
-            if self.decision is None:
-                self.decision = "expired"
-            self.state["stage"] = "finishing"
+            self._finish_decision(self.decision or "expired")
             return self.decision == "share"
 
     def run(self, recording, request, bench, source):

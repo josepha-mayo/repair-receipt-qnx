@@ -20,7 +20,7 @@
     </header>
     <div class="workspace" id="driver-workspace">
       <section class="card" id="recording-panel" aria-labelledby="recording-heading">
-        <h2 id="recording-heading">Recording</h2>
+        <h2 id="recording-heading" tabindex="-1">Recording</h2>
         <p id="guest-preparation" class="help" hidden>Preparing QNX for this app session.</p>
         <label for="shop-request">Shop request file (optional)</label>
         <input id="shop-request" type="file" accept=".json,application/json" aria-describedby="request-status">
@@ -57,6 +57,7 @@
           <h2 id="receipt-heading" tabindex="-1">Coolant receipt</h2>
         </div>
         <p id="status" class="status" role="status">Choose a recording to start.</p>
+        <a id="choose-recording" href="#recording-heading" hidden>Choose a recording</a>
         <p id="receipt-scope" class="help input-note" hidden></p>
         <p id="recipe-rule" class="help input-note"></p>
         <p id="capture-source" class="help input-note" hidden></p>

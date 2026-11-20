@@ -121,6 +121,8 @@ start-live.cmd --self-test
 
 The self-test verifies four signatures, identical signed idle receipts and different moving receipts under a common request for each condition. It checks that QNX explains gaps to the driver and the diagnostic log redacts that guidance. Declining must produce no receipt. One additional boot repeats the approved idle review under the policy from section 2 with the export grant removed. QNX must deny the connection after the preview. For the individual receipt SHA-256 digests, run `python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe` from the SDK prompt.
 
+Run `python verify_consent.py` on the host to check the five-minute boundary. It exercises approval immediately before, at and after expiry. It also checks that the pending preview and coverage guidance drop out of the driver's response at expiry.
+
 Run `python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --scope-matrix` to check both request scopes and all three result types. Each pair changes the temperature and RPM outside the requested condition. QNX produces the same signed bytes within each pair. A request for both conditions shows the moving result change. The suite also checks that QNX withholds a negative answer after a coverage gap and rejects a malformed out-of-scope row before preview. [Native scope matrix](replay/qnx-scope-matrix-proof.json)
 
 Run `python verify_shop_register.py` to test the shop side with independent test keys. It checks the pinned issuer, races two valid answers to the same request, and reopens the database to check the exact stored receipt. The same command verifies the four archived road receipts and their matching idle digest.

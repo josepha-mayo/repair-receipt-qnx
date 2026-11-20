@@ -60,10 +60,8 @@ function showCoverage(claim, coverage) {
     const field = byId(context + "-guidance");
     const guidance = claim?.[context] === "insufficient_evidence" && coverageGuidance[coverage?.[context]];
     field.hidden = !guidance;
-    if (guidance) {
-      field.textContent = `${label} · ${guidance}`;
-      visible = true;
-    }
+    field.textContent = guidance ? `${label} · ${guidance}` : "";
+    if (guidance) visible = true;
   }
   details.hidden = !visible;
   if (!visible) details.open = false;
@@ -71,7 +69,7 @@ function showCoverage(claim, coverage) {
 
 function render() {
   const {stage, message} = state;
-  const claim = newSelection ? null : state.claim;
+  const claim = newSelection || stage === "error" || stage === "expired" ? null : state.claim;
   byId("recipe-rule").textContent = ShopRequest.rule(claim || ticket || undefined);
   const reviewing = busyStages.has(stage);
   const busy = reviewing || stage === "occupied" || changing || reconnecting;
@@ -93,11 +91,12 @@ function render() {
   byId("sample-run").disabled = blocked || benchWithoutRequest;
   byId("bench-help").hidden = !benchWithoutRequest;
   byId("recording-reselection").hidden = !recordingCleared;
+  byId("choose-recording").hidden = stage !== "expired";
   byId("actions").hidden = stage !== "review" || reconnecting;
   byId("share").disabled = changing;
   byId("decline").disabled = changing;
-  byId("findings").hidden = !claim || stage === "error" || stage === "expired";
-  showCoverage(byId("findings").hidden ? null : claim, state.coverage);
+  byId("findings").hidden = !claim;
+  showCoverage(claim, state.coverage);
   byId("exports").hidden = stage !== "shared" || newSelection || reconnecting || changing;
   byId("download-packet").hidden = !state.packet;
   byId("packet-note").hidden = !state.packet;
@@ -107,18 +106,15 @@ function render() {
     ? `${ShopRequest.scopes[ticket.scope]} · Request ${ticket.id.slice(-8)}`
     : "Without a shop request, the review covers both conditions.");
   requestStatus.classList.toggle("bad", !!requestError);
-  byId("receipt-scope").hidden = !claim?.request || stage === "error" || stage === "expired";
+  const receiptScope = byId("receipt-scope");
+  receiptScope.hidden = !claim?.request;
+  receiptScope.textContent = claim?.request ? `${ShopRequest.scopes[claim.scope]} · Request ${claim.request.slice(-8)}` : "";
   const captureSource = byId("capture-source");
-  captureSource.hidden = !claim?.source || stage === "error" || stage === "expired";
-  if (!captureSource.hidden) captureSource.textContent = ShopRequest.sourceLabel(claim.source);
-  if (claim) {
-    for (const context of ["idle", "moving"]) {
-      byId(context + "-row").hidden = !Object.hasOwn(claim, context);
-      byId(context).textContent = labels[claim[context]] || "";
-    }
-    if (claim.request) {
-      byId("receipt-scope").textContent = `${ShopRequest.scopes[claim.scope]} · Request ${claim.request.slice(-8)}`;
-    }
+  captureSource.hidden = !claim?.source;
+  captureSource.textContent = captureSource.hidden ? "" : ShopRequest.sourceLabel(claim.source);
+  for (const context of ["idle", "moving"]) {
+    byId(context + "-row").hidden = !claim || !Object.hasOwn(claim, context);
+    byId(context).textContent = labels[claim?.[context]] || "";
   }
   const text = {
     ready: "Choose a recording to start.",
