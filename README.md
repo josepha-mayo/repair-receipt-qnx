@@ -164,6 +164,8 @@ The importer keeps elapsed milliseconds, RPM, speed, and coolant temperature, re
 
 Two full KIT recordings showed the same idle finding and different moving findings in a test at 95 °C. Under one idle-only request and issuer, QNX returned exactly the same 342-byte signed receipt for both recordings. A separate moving-only request confirmed the difference. All four receipts carry the signed published-road input type. [Paired real-recording results](replay/qnx-road-scope-proof.json)
 
+The original logs contain 47,350 and 16,961 timestamped rows across ten vehicle signals per file. They are 3,037,603 and 1,070,443 bytes uncompressed. Each response in the idle-only example is the same **667-byte verification packet**, including the request, signed receipt and issuer fingerprint. The packet carries no timestamps, source filename or raw sensor values. [Disclosure measurement](replay/qnx-road-disclosure.json) · [Reproduce the measurement](CODELAB.md#measure-what-the-shop-receives)
+
 A 64-receipt QNX sweep across 90–105 °C reproduced that pattern at 95 °C and at 98–100 °C. The idle findings were observed at 95 °C and not observed at 98–100 °C. At 96–97 °C, the idle findings differed and the signed idle receipts differed too. These results cover the two KIT recordings under the test recipe. [Complete results](replay/qnx-road-threshold-sweep.json) · [Reproduce the sweep](CODELAB.md#vary-the-test-threshold)
 
 ## Current scope

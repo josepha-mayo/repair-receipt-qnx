@@ -79,6 +79,16 @@ Open the downloaded HTML in a current Chromium browser. **Check idle receipts** 
 
 The archived run uses the normalized input hashes listed in the [paired-drive proof](replay/qnx-road-scope-proof.json). Importing the raw files through the driver page reproduces the findings and the equality comparison with an uploaded-CSV input label.
 
+### Measure what the shop receives
+
+With the Python dependencies installed and Node.js 24 available, run the measurement tool on both original CSVs. It regenerates the normalized inputs using the browser's parser and verifies the archived idle signature before counting the bytes of the verification packet. This check runs on the host.
+
+```bat
+python measure_road_disclosure.py "path\to\2017-07-26_Seat_Leon_RT_S_Stau.csv" "path\to\2017-07-27_Seat_Leon_KA_KA_2_Normal.csv"
+```
+
+The complete attachment is **667 bytes** for either recording in this idle-only test. To verify the count from the browser, save both packets using **Download proof files** after checking the idle receipts. The issuing key is shared separately at enrollment. [Measured file sizes and claim fields](replay/qnx-road-disclosure.json)
+
 ### Vary the test threshold
 
 Use Node.js 24 and the same two raw CSVs. The command-line normalizer uses the driver page's parser. From the QNX SDK prompt, run these commands from the project root:

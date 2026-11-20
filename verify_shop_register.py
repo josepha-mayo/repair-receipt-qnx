@@ -44,7 +44,19 @@ def verify_archived_road_pair():
     idle = evidence["receipts"]["idle"][0].encode("ascii")
     assert len(idle) == proof["idle_receipt_bytes"]
     assert sha256(idle).hexdigest() == proof["idle_receipt_sha256"]
-    print("Verified all four archived road signatures, request bindings and the reported idle digest.")
+    disclosure = json.loads((replay / "qnx-road-disclosure.json").read_bytes())
+    packet = verification_packet(evidence["requests"]["idle"], idle.decode("ascii"), evidence["issuer"]["fingerprint"])
+    packet_bytes = canonical(packet).encode("ascii")
+    measured = disclosure["shared_idle_reply"]
+    assert measured["signed_receipt_bytes"] == len(idle)
+    assert measured["signed_claim_fields"] == sorted(json.loads(idle)["claim"])
+    assert measured["verification_packet_bytes"] == len(packet_bytes)
+    assert measured["verification_packet_sha256"] == sha256(packet_bytes).hexdigest()
+    for record, native in zip(disclosure["recordings"], proof["recordings"], strict=True):
+        assert record["name"] == native["recording"]
+        assert record["normalized_qnx_input"]["bytes"] == native["normalized_bytes"]
+        assert record["normalized_qnx_input"]["sha256"] == native["normalized_sha256"]
+    print("Verified the archived road signatures, request bindings and measured verification packet.")
 
 
 def sign(request, result, key):

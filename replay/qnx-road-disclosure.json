@@ -1,0 +1,50 @@
+{
+  "dataset": "Marc Weber, Automotive OBD-II Dataset (CC BY 4.0)",
+  "source": "https://publikationen.bibliothek.kit.edu/1000085073",
+  "recordings": [
+    {
+      "name": "2017-07-26_Seat_Leon_RT_S_Stau.csv",
+      "original_csv": {
+        "bytes": 3037603,
+        "sha256": "13116c2435977ea6beb1a8940650c9058a75198c81d97e2101f208375e11114c",
+        "timestamped_rows": 47350,
+        "vehicle_signals": 10
+      },
+      "normalized_qnx_input": {
+        "bytes": 872379,
+        "sha256": "7d6cb65f17c9ec8e787bbdcfb34946f2d4027ecd4dfbf4d782d3d33643ee5715",
+        "duration_ms": 4031987,
+        "rows": 47347
+      }
+    },
+    {
+      "name": "2017-07-27_Seat_Leon_KA_KA_2_Normal.csv",
+      "original_csv": {
+        "bytes": 1070443,
+        "sha256": "1bc325937e4421ab88f057a56272589aae1fb4859525b2f872a8e5386953f349",
+        "timestamped_rows": 16961,
+        "vehicle_signals": 10
+      },
+      "normalized_qnx_input": {
+        "bytes": 290043,
+        "sha256": "0cc230ac5746b6f257980404806ff6a2776599e6019a71acd73c0b677c3dbdbd",
+        "duration_ms": 1448033,
+        "rows": 16958
+      }
+    }
+  ],
+  "shared_idle_reply": {
+    "test_threshold_c": 95,
+    "signed_receipt_bytes": 342,
+    "signed_claim_fields": [
+      "idle",
+      "recipe",
+      "request",
+      "scope",
+      "source",
+      "thresholdC"
+    ],
+    "verification_packet_bytes": 667,
+    "verification_packet_sha256": "98acdbf133744068991cee09fa170b32a3a33b03afe4ac26c6b42b90989fb361"
+  }
+}
