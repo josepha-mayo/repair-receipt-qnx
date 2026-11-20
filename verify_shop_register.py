@@ -14,15 +14,37 @@ from zipfile import ZipFile
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from shop_register import PAGE_SIZE, ReceiptConflict, ShopRegister
+from shop_register import PAGE_SIZE, ReceiptConflict, ShopRegister, check_receipt, read_receipt
 from shop_request import (
-    CURRENT_RECIPE, DEFAULT_THRESHOLD_C, RECIPE, canonical, guest_bytes, parse_request, verification_packet,
+    CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, canonical, guest_bytes,
+    parse_request, verification_packet,
 )
 
 
 def pin(key):
     return canonical({"format": "repair-receipt-issuer/v1",
                       "ed25519": key.public_key().public_bytes_raw().hex()})
+
+
+def verify_archived_road_pair():
+    replay = Path(__file__).resolve().parent / "replay"
+    evidence = json.loads((replay / "qnx-road-scope-receipts.json").read_text(encoding="utf-8"))
+    proof = json.loads((replay / "qnx-road-scope-proof.json").read_text(encoding="utf-8"))
+    key = bytes.fromhex(evidence["issuer"]["key"])
+    assert sha256(key).hexdigest() == evidence["issuer"]["fingerprint"]
+    for scope, findings in (("idle", ["observed", "observed"]), ("moving", ["observed", "not_observed"])):
+        request = parse_request(canonical(evidence["requests"][scope]))
+        assert request["scope"] == scope and request["thresholdC"] == proof["test_threshold_c"]
+        receipts = evidence["receipts"][scope]
+        claims = [check_receipt(text, read_receipt(text), request, key) for text in receipts]
+        assert [claim[scope] for claim in claims] == findings
+        assert [recording[scope] for recording in proof["recordings"]] == findings
+        assert all(claim["source"] == PUBLISHED_SOURCE for claim in claims)
+        assert (receipts[0] == receipts[1]) == (scope == "idle")
+    idle = evidence["receipts"]["idle"][0].encode("ascii")
+    assert len(idle) == proof["idle_receipt_bytes"]
+    assert sha256(idle).hexdigest() == proof["idle_receipt_sha256"]
+    print("Verified all four archived road signatures, request bindings and the reported idle digest.")
 
 
 def sign(request, result, key):
@@ -329,3 +351,5 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
         assert bundle.namelist() == [f"repair-verification-{ticket['id']}.json"
                                     for ticket in (initial, after, follow_after)]
     print("Verified matching, work-order evidence, rechecks and follow-ups, concurrency and backups.")
+
+verify_archived_road_pair()

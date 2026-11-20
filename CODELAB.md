@@ -87,7 +87,7 @@ The self-test verifies four signatures, identical signed idle receipts and diffe
 
 Run `python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --scope-matrix` to check both request scopes and all three result types. Each pair changes the temperature and RPM outside the requested condition. QNX produces the same signed bytes within each pair. A request for both conditions shows the moving result change. The suite also checks that QNX withholds a negative answer after a coverage gap and rejects a malformed out-of-scope row before preview. [Native scope matrix](replay/qnx-scope-matrix-proof.json)
 
-Run `python verify_shop_register.py` to test the shop side with independent test keys. It checks the pinned issuer, races two valid answers to the same request, and reopens the database to check the exact stored receipt.
+Run `python verify_shop_register.py` to test the shop side with independent test keys. It checks the pinned issuer, races two valid answers to the same request, and reopens the database to check the exact stored receipt. The same command verifies the four archived road receipts and their matching idle digest.
 
 ## 4. Capture through a QNX serial device
 

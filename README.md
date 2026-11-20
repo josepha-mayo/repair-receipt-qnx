@@ -29,6 +29,8 @@ The scripts use the active QNX SDK environment or load it from `%USERPROFILE%\qn
 
 Run `start-live.cmd --self-test` to verify the QNX path with the included demo recordings. It boots a prepared QNX image, verifies four signed receipts and checks that declining produces no receipt. The test uses a temporary issuer and scratch directory.
 
+[Host checks](.github/workflows/host-checks.yml) verify the shop register, the four archived QNX signatures, browser-script syntax and the generated offline verifier on Windows and Ubuntu. To reproduce the receipt and bundle checks locally, run `python verify_shop_register.py` and `python pack_shop.py --check`. The QNX self-test above exercises the live guest.
+
 If Windows reports a path-length error while creating the Python environment, use a short project path such as `C:\src\repair-receipt` and retry.
 
 Open the printed **Driver** URL to save its issuer public key. In the printed **Shop** URL, load the key after confirming its fingerprint and choose **At idle only**. Create and download the request. In the driver page load that file, run a sample or import a CSV, review the finding, then approve or decline. The browser exchanges consent with a private QNX VM over loopback. The VM has no network interface. Approval returns a signed receipt from QNX. The host removes the temporary staging files and job disk after review. Drivers can also initiate a broad review of both operating conditions from the driver page.
