@@ -45,12 +45,20 @@ def verify(qemu):
                     raise ValueError("QNX preview or issuer did not match the control.")
                 return share
 
+            coverage = {}
             body = review_native(root / name, qemu, ROOT / "fixtures" / f"{fixture}.csv",
-                                 decide, seed, ticket, image=template, source=DEMO_SOURCE)
+                                 decide, seed, ticket, image=template, source=DEMO_SOURCE, on_coverage=coverage.update)
             if (body is not None) != share:
                 raise RuntimeError(f"Incorrect receipt decision for {name}.")
             if body is not None:
                 issuer.verify_receipt(body)
+            if coverage != ({} if share else {"idle": 1}):
+                raise RuntimeError(f"Unexpected private recording guidance for {name}.")
+            if coverage:
+                events = (root / name / "serial.log").read_bytes().splitlines()
+                if [line for line in events if line.startswith(b"RR_COVERAGE ")] != [
+                        b"RR_COVERAGE [driver-only guidance]"]:
+                    raise RuntimeError("Driver guidance entered the diagnostic log without redaction.")
             results[name] = body
     if results["trip_a_at_idle"] != results["trip_c_at_idle"]:
         raise RuntimeError("Withheld driving findings changed the signed idle receipt.")

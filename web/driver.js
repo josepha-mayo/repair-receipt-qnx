@@ -12,6 +12,11 @@ const labels = {
   not_observed: "Threshold not observed",
   insufficient_evidence: "Insufficient evidence",
 };
+const coverageGuidance = {
+  1: "There are gaps in the recording. Choose a complete recording for this condition.",
+  2: "There is too little continuous coverage. Choose a recording with more time in this condition.",
+  3: "There are gaps and too little continuous coverage. Choose a complete recording with more time in this condition.",
+};
 let state = {stage: "ready"};
 let changing = false;
 let reconnecting = false;
@@ -46,6 +51,24 @@ function keepPolling() {
   return busyStages.has(state.stage) || state.stage === "occupied" || state.template === "building";
 }
 
+function showCoverage(claim, coverage) {
+  const details = byId("coverage-help");
+  const hasClockWarning = !!claim && !!clockBreaks;
+  byId("recording-coverage").hidden = !hasClockWarning;
+  let visible = hasClockWarning;
+  for (const [context, label] of [["idle", "At idle"], ["moving", "While moving"]]) {
+    const field = byId(context + "-guidance");
+    const guidance = claim?.[context] === "insufficient_evidence" && coverageGuidance[coverage?.[context]];
+    field.hidden = !guidance;
+    if (guidance) {
+      field.textContent = `${label} · ${guidance}`;
+      visible = true;
+    }
+  }
+  details.hidden = !visible;
+  if (!visible) details.open = false;
+}
+
 function render() {
   const {stage, message} = state;
   const claim = newSelection ? null : state.claim;
@@ -69,12 +92,12 @@ function render() {
   byId("import").disabled = blocked || !file.files.length;
   byId("sample-run").disabled = blocked || benchWithoutRequest;
   byId("bench-help").hidden = !benchWithoutRequest;
-  byId("recording-coverage").hidden = !clockBreaks;
   byId("recording-reselection").hidden = !recordingCleared;
   byId("actions").hidden = stage !== "review" || reconnecting;
   byId("share").disabled = changing;
   byId("decline").disabled = changing;
   byId("findings").hidden = !claim || stage === "error" || stage === "expired";
+  showCoverage(byId("findings").hidden ? null : claim, state.coverage);
   byId("exports").hidden = stage !== "shared" || newSelection || reconnecting || changing;
   const requestStatus = byId("request-status");
   requestStatus.textContent = requestError || (loadingRequest ? "Reading the request." : ticket

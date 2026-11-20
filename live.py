@@ -125,12 +125,14 @@ class Review:
             self.response.set()
             return timely
 
-    def wait_for_decision(self, preview, issuer, guest_closed):
+    def wait_for_decision(self, preview, issuer, guest_closed, coverage=None):
         if not secrets.compare_digest(self.issuer.public_hex.encode("ascii"), issuer):
             raise RuntimeError("The guest presented a key different from the enrolled issuer.")
         with self.lock:
             self.deadline = time.monotonic() + CONSENT_SECONDS
             self.state.update(stage="review", claim=json.loads(preview), issuer=issuer.decode("ascii"))
+            if coverage:
+                self.state["coverage"] = coverage
         self.response.wait(timeout=CONSENT_SECONDS)
         with self.lock:
             if guest_closed.is_set():
@@ -143,6 +145,7 @@ class Review:
     def run(self, recording, request, bench, source):
         guest_closed = Event()
         response = self.response
+        coverage = {}
 
         def disconnect():
             guest_closed.set()
@@ -152,9 +155,9 @@ class Review:
             image = self.template.result()
             with TemporaryDirectory(prefix="repair-receipt-") as directory:
                 receipt = review_native(Path(directory) / "guest", self.qemu, recording,
-                                        lambda preview, issuer: self.wait_for_decision(preview, issuer, guest_closed),
+                                        lambda preview, issuer: self.wait_for_decision(preview, issuer, guest_closed, coverage),
                                         self.issuer.seed, request, bench, image=image, on_disconnect=disconnect,
-                                        source=source)
+                                        source=source, on_coverage=coverage.update)
                 result = {"stage": "expired" if self.decision == "expired" else "declined"}
                 if receipt is not None:
                     self.issuer.verify_receipt(receipt)

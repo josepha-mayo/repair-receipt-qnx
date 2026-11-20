@@ -57,15 +57,21 @@ static bool parse_sample(char *line, long values[4], bool *missing)
     return parse_columns(line, values, *missing ? 1 : 4);
 }
 
-static const char *finding(const struct findings *summary, bool complete, bool sustained)
+static unsigned coverage_limits(const struct findings *summary, bool complete, bool sustained)
+{
+    if (summary->observed) {
+        return 0;
+    }
+    const bool adequate = sustained ? summary->adequate : summary->samples >= MIN_SAMPLES;
+    return (complete ? 0 : COVERAGE_GAP) | (adequate ? 0 : COVERAGE_SHORT_RUN);
+}
+
+static const char *finding(const struct findings *summary, unsigned limits)
 {
     if (summary->observed) {
         return "observed";
     }
-    if (complete && (sustained ? summary->adequate : summary->samples >= MIN_SAMPLES)) {
-        return "not_observed";
-    }
-    return "insufficient_evidence";
+    return limits ? "insufficient_evidence" : "not_observed";
 }
 
 static void observe(struct findings *summary, long timestamp, long temperature, int threshold,
@@ -135,12 +141,12 @@ static int read_line(struct recording_reader *reader, char *line, size_t capacit
 }
 
 static int format_receipt(char receipt[RECEIPT_CAPACITY], const struct shop_request *request,
-                          const struct findings summaries[CONTEXTS], bool complete,
+                          const struct findings summaries[CONTEXTS], struct receipt_coverage coverage,
                           enum recording_source source, bool sustained)
 {
     const enum receipt_scope scope = request ? request->scope : SCOPE_BOTH;
-    const char *idle = scope & SCOPE_IDLE ? finding(&summaries[IDLE], complete, sustained) : NULL;
-    const char *moving = scope & SCOPE_MOVING ? finding(&summaries[MOVING], complete, sustained) : NULL;
+    const char *idle = scope & SCOPE_IDLE ? finding(&summaries[IDLE], coverage.idle) : NULL;
+    const char *moving = scope & SCOPE_MOVING ? finding(&summaries[MOVING], coverage.moving) : NULL;
     const char *recipe = sustained ? "coolant-duration-demo/v2" : "coolant-context-demo/v1";
     static const char *const sources[] = {
         [SOURCE_UNSPECIFIED] = "",
@@ -180,7 +186,7 @@ static int format_receipt(char receipt[RECEIPT_CAPACITY], const struct shop_requ
 
 static int evaluate(FILE *input, const struct shop_request *request, enum receipt_recipe recipe,
                     enum recording_source source, unsigned missing,
-                    char receipt[RECEIPT_CAPACITY])
+                    char receipt[RECEIPT_CAPACITY], struct receipt_coverage *coverage)
 {
     struct recording_reader reader = {.input = input};
     char line[256];
@@ -225,22 +231,30 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
         return -1;
     }
     complete = complete && previous >= 0 && duration - previous <= MAX_GAP_MS;
-    return format_receipt(receipt, request, summaries, complete, source, sustained);
+    const struct receipt_coverage limits = {
+        .idle = requested[IDLE] ? coverage_limits(&summaries[IDLE], complete, sustained) : 0,
+        .moving = requested[MOVING] ? coverage_limits(&summaries[MOVING], complete, sustained) : 0,
+    };
+    if (coverage) {
+        *coverage = limits;
+    }
+    return format_receipt(receipt, request, summaries, limits, source, sustained);
 }
 
 int evaluate_recording(FILE *input, const struct shop_request *request, enum recording_source source,
-                       char receipt[RECEIPT_CAPACITY])
+                       char receipt[RECEIPT_CAPACITY], struct receipt_coverage *coverage)
 {
-    return evaluate(input, request, request ? request->recipe : RECIPE_SAMPLE_COUNT, source, 0, receipt);
+    return evaluate(input, request, request ? request->recipe : RECIPE_SAMPLE_COUNT, source, 0, receipt, coverage);
 }
 
-int evaluate_driver_recording(FILE *input, enum recording_source source, char receipt[RECEIPT_CAPACITY])
+int evaluate_driver_recording(FILE *input, enum recording_source source, char receipt[RECEIPT_CAPACITY],
+                              struct receipt_coverage *coverage)
 {
-    return evaluate(input, NULL, RECIPE_SUSTAINED, source, 0, receipt);
+    return evaluate(input, NULL, RECIPE_SUSTAINED, source, 0, receipt, coverage);
 }
 
 int evaluate_bench_capture(FILE *input, const struct shop_request *request, unsigned missing,
-                           char receipt[RECEIPT_CAPACITY])
+                           char receipt[RECEIPT_CAPACITY], struct receipt_coverage *coverage)
 {
-    return evaluate(input, request, request->recipe, SOURCE_BENCH, missing, receipt);
+    return evaluate(input, request, request->recipe, SOURCE_BENCH, missing, receipt, coverage);
 }

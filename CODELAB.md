@@ -81,7 +81,7 @@ Run the included demo controls without a browser from Windows:
 start-live.cmd --self-test
 ```
 
-The self-test verifies four signatures, identical signed idle receipts and different moving receipts under a common request for each condition. Declining must produce no receipt. For the individual SHA-256 digests, run `python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe` from the SDK prompt.
+The self-test verifies four signatures, identical signed idle receipts and different moving receipts under a common request for each condition. It also checks that QNX explains gaps to the driver and the diagnostic log redacts that guidance. Declining must produce no receipt. For the individual SHA-256 digests, run `python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe` from the SDK prompt.
 
 Run `python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --scope-matrix` to check both request scopes and all three result types. Each pair changes the temperature and RPM outside the requested condition. QNX produces the same signed bytes within each pair. A request for both conditions shows the moving result change. The suite also checks that QNX withholds a negative answer after a coverage gap and rejects a malformed out-of-scope row before preview. [Native scope matrix](replay/qnx-scope-matrix-proof.json)
 

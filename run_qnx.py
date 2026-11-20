@@ -2,6 +2,7 @@
 
 import argparse
 from contextlib import nullcontext
+import json
 from pathlib import Path
 from queue import Empty, Queue
 import re
@@ -24,6 +25,7 @@ RECORDING_DOMAIN = b"Repair Receipt CSV stage v1"
 PRIVATE_REVIEW_EVENTS = {
     b"RR_ISSUER_SETUP": b"RR_ISSUER_SETUP [private boot token]\n",
     b"RR_ISSUER ": b"RR_ISSUER [issuer key]\n",
+    b"RR_COVERAGE ": b"RR_COVERAGE [driver-only guidance]\n",
     b"RR_PREVIEW ": b"RR_PREVIEW [private preview]\n",
     b"RR_RECEIPT ": b"RR_RECEIPT import [signed receipt]\n",
 }
@@ -215,7 +217,8 @@ def run(workspace, qemu):
 
 
 def collect_review(guest, transport, serial, decide, seed=None, boot_token=None, request=None,
-                   bench=False, job_disk=False, recording_key=None, on_disconnect=None, *, source=None):
+                   bench=False, job_disk=False, recording_key=None, on_disconnect=None, *, source=None,
+                   on_coverage=None):
     expected_source = BENCH_SOURCE if bench else source
     lines = Queue()
     signed = seed is not None
@@ -241,6 +244,7 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
     reader = Thread(target=read_serial, daemon=True)
     reader.start()
     preview = receipt = issuer = None
+    coverage = None
     share = denied = boundary = key_denied = done = False
     raw_withheld = False
     provisioned = False
@@ -276,6 +280,12 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
                 recorded = True
             elif line == b"RR_RECORDING_AUTHENTICATED":
                 authenticated_recording = True
+            elif line.startswith(b"RR_COVERAGE "):
+                limits = re.fullmatch(rb"RR_COVERAGE ([0-3]) ([0-3])", line)
+                if issuer is None or preview is not None or coverage is not None or not limits:
+                    raise RuntimeError("Invalid driver guidance from QNX.")
+                coverage = {context: int(value) for context, value in zip(("idle", "moving"), limits.groups())
+                            if value != b"0"}
             elif line.startswith(b"RR_PREVIEW ") and preview is None:
                 preview = line.removeprefix(b"RR_PREVIEW ")
                 if signed and issuer is None:
@@ -288,6 +298,14 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
                     raise RuntimeError("QNX preview does not match the requested scope or recording source.")
                 if signed and request is None and not matches_driver_claim(preview, expected_source):
                     raise RuntimeError("QNX preview does not match the driver-started review format.")
+                if coverage is not None:
+                    claim = json.loads(preview)
+                    incomplete = {context for context in ("idle", "moving")
+                                  if claim.get(context) == "insufficient_evidence"}
+                    if coverage.keys() != incomplete:
+                        raise RuntimeError("The driver guidance does not match the QNX findings.")
+                    if on_coverage is not None:
+                        on_coverage(coverage)
                 share = decide(preview, issuer)
                 transport.sendall(b"share\n" if share else b"decline\n")
                 deadline = time.monotonic() + 15
@@ -371,7 +389,7 @@ def seal_recording(recording, source=None):
 
 
 def review_native(workspace, qemu, recording, decide, seed=None, request=None, bench=None, image=None,
-                  on_disconnect=None, *, source=None):
+                  on_disconnect=None, *, source=None, on_coverage=None):
     if request is not None and seed is None:
         raise ValueError("A shop request needs a signing key.")
     if seed is not None and len(seed) != 32:
@@ -414,7 +432,7 @@ def review_native(workspace, qemu, recording, decide, seed=None, request=None, b
                     result = collect_review(guest, connection, serial, decide,
                                             seed=seed, boot_token=token, request=request, bench=bench is not None,
                                             job_disk=image is not None, recording_key=recording_key,
-                                            on_disconnect=on_disconnect, source=source)
+                                            on_disconnect=on_disconnect, source=source, on_coverage=on_coverage)
                     if adapter is not None:
                         adapter.check_commands()
                     return result

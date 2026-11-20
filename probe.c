@@ -130,7 +130,7 @@ static void read_shop_request(struct shop_request *request)
     }
 }
 
-static int consent(const char *receipt, const char *issuer);
+static int consent(const char *receipt, const char *issuer, const struct receipt_coverage *coverage);
 static EVP_PKEY *provision_issuer(unsigned char *recording_key);
 
 static FILE *capture_bench(struct capture_quality *quality)
@@ -208,9 +208,10 @@ static void review_signed(int rcvid, const struct request *message, const struct
     struct timespec started, finished;
     const int timed = clock_gettime(CLOCK_MONOTONIC, &started) == 0;
     const enum recording_source source = bench ? SOURCE_BENCH : read_recording_source(recording);
-    const int parsed = bench ? evaluate_bench_capture(recording, scope, quality.missed, claim)
-                             : scope ? evaluate_recording(recording, scope, source, claim)
-                                     : evaluate_driver_recording(recording, source, claim);
+    struct receipt_coverage coverage;
+    const int parsed = bench ? evaluate_bench_capture(recording, scope, quality.missed, claim, &coverage)
+                             : scope ? evaluate_recording(recording, scope, source, claim, &coverage)
+                                     : evaluate_driver_recording(recording, source, claim, &coverage);
     if (timed && clock_gettime(CLOCK_MONOTONIC, &finished) == 0) {
         const long long elapsed = (finished.tv_sec - started.tv_sec) * 1000000LL +
                                   (finished.tv_nsec - started.tv_nsec) / 1000;
@@ -222,7 +223,7 @@ static void review_signed(int rcvid, const struct request *message, const struct
         return;
     }
     check(issuer_public_key(key, issuer), "load live issuer key");
-    const int allowed = consent(claim, issuer);
+    const int allowed = consent(claim, issuer, &coverage);
     if (allowed) {
         const int version = bench ? 3 : source == SOURCE_UNSPECIFIED ? (scope ? 2 : 4) : (scope ? 5 : 6);
         check(issuer_envelope(key, claim, version, approved), "sign the exact approved claim");
@@ -279,7 +280,7 @@ static void vault(const char *ready_path, enum vault_mode mode)
             valid = fgets(body, RECEIPT_CAPACITY, recording) != NULL &&
                     fgets(body, RECEIPT_CAPACITY, recording) != NULL;
         } else if (req.command == EVALUATE) {
-            valid = evaluate_recording(recording, NULL, SOURCE_UNSPECIFIED, body) == 0;
+            valid = evaluate_recording(recording, NULL, SOURCE_UNSPECIFIED, body, NULL) == 0;
         }
         fclose(recording);
         if (!valid) {
@@ -432,12 +433,15 @@ static EVP_PKEY *provision_issuer(unsigned char *recording_key)
     return key;
 }
 
-static int consent(const char *receipt, const char *issuer)
+static int consent(const char *receipt, const char *issuer, const struct receipt_coverage *coverage)
 {
     struct termios original;
     serial_read_mode(&original);
     if (issuer) {
         printf("RR_ISSUER %s\n", issuer);
+    }
+    if (coverage && (coverage->idle || coverage->moving)) {
+        printf("RR_COVERAGE %u %u\n", coverage->idle, coverage->moving);
     }
     printf("RR_PREVIEW %s\n", receipt);
     fflush(stdout);
@@ -530,7 +534,7 @@ int main(int argc, char **argv)
             puts("RR_INVALID recording_rejected");
             return EXIT_FAILURE;
         }
-        share = consent(body, NULL);
+        share = consent(body, NULL, NULL);
     } else {
         check(request(raw, READ_RAW, 0, body) == 0 && strchr(body, ',') != NULL,
               "authorized supervisor can read an actual raw row");

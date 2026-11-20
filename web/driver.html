@@ -63,7 +63,12 @@
           <div id="idle-row"><dt>At idle</dt><dd id="idle"></dd></div>
           <div id="moving-row"><dt>While moving</dt><dd id="moving"></dd></div>
         </dl>
-        <p id="recording-coverage" class="help input-note" hidden>Conflicting or reversed timestamps interrupted coverage. QNX treats the affected samples as missing.</p>
+        <details id="coverage-help" class="issuer-enrollment" hidden>
+          <summary>Recording guidance</summary>
+          <p id="idle-guidance" class="help" hidden></p>
+          <p id="moving-guidance" class="help" hidden></p>
+          <p id="recording-coverage" class="help" hidden>Conflicting or reversed timestamps interrupted coverage. QNX treats the affected samples as missing.</p>
+        </details>
         <div id="actions" hidden>
           <p class="help">QNX signs the findings, test rule and any request ID or capture source shown. Trip samples and timestamps stay on this computer.</p>
           <div class="actions">
