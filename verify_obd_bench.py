@@ -24,6 +24,8 @@ def verify(qemu):
         ("gapped", ("insufficient_evidence", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 5 2"),
         ("motion-change", ("insufficient_evidence", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 6 1"),
         ("late-reply", ("insufficient_evidence", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 2 1"),
+        ("within-sample-budget", ("observed", "not_observed"), b"RR_CAPTURE_COMPLETE 7 0"),
+        ("over-sample-budget", ("insufficient_evidence", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 2 1"),
         ("link-loss", ("observed", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 4 1"),
         ("setup-failure", None, b"RR_INVALID adapter_unavailable"),
     )
@@ -38,7 +40,7 @@ def verify(qemu):
                     raise RuntimeError("Unexpected preview or issuer.")
                 if (claim["idle"], claim["moving"]) != expected:
                     raise RuntimeError("Wrong result for bench profile " + profile)
-                if profile == "late-reply":
+                if profile in {"late-reply", "over-sample-budget"}:
                     # Keep the guest open long enough for the timed-out prompt to arrive.
                     time.sleep(0.7)
                 return True

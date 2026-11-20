@@ -5,13 +5,21 @@ import socket
 from threading import Thread
 import time
 
-PROFILES = {"normal", "gapped", "setup-failure", "late-reply", "link-loss", "motion-change"}
+PROFILES = {
+    "normal", "gapped", "setup-failure", "late-reply", "link-loss", "motion-change",
+    "within-sample-budget", "over-sample-budget",
+}
 SETUP = ("ATE0", "ATL0", "ATS0", "ATH0", "ATCAF1", "ATM0", "ATTP6", "ATSH7E0", "ATCRA7E8")
 SAMPLE_COMMANDS = ("010D", "0105", "010C", "010D")
 ALLOWED = {*SETUP, *SAMPLE_COMMANDS}
 FAULT_COMMANDS = {
     "late-reply": SETUP + SAMPLE_COMMANDS * 2 + SAMPLE_COMMANDS[:2],
     "link-loss": SETUP + SAMPLE_COMMANDS * 5,
+    "over-sample-budget": SETUP + SAMPLE_COMMANDS * 3,
+}
+TIMED_PROMPT_DELAYS = {
+    "within-sample-budget": (0.060, 0.060, 0.060, 0.050),
+    "over-sample-budget": (0.060, 0.060, 0.060, 0.240),
 }
 SAMPLES = (
     (100, 790, 0), (106, 805, 0), (108, 800, 0), (107, 815, 0),
@@ -29,6 +37,7 @@ class AdapterBench:
         self.commands = []
         self.error = None
         self.late_prompt_sent = False
+        self.timed_exchanges = []
 
     def __enter__(self):
         self.listener = socket.socket()
@@ -66,6 +75,19 @@ class AdapterBench:
             raise RuntimeError("The guest continued asking for readings after a failed serial exchange.")
         if self.profile == "late-reply" and not self.late_prompt_sent:
             raise RuntimeError("The delayed prompt did not reach the guest connection.")
+        if self.profile in TIMED_PROMPT_DELAYS:
+            self.check_timed_sample()
+
+    def check_timed_sample(self):
+        # Host-side sanity check on the injected delay. The guest tracks its own deadline.
+        budget = 0.350
+        if len(self.timed_exchanges) != len(SAMPLE_COMMANDS):
+            raise RuntimeError("The simulated adapter did not finish sending the timed sample.")
+        if any(prompt - request >= budget for request, prompt in self.timed_exchanges):
+            raise RuntimeError("A single adapter reply exceeded the whole sample budget.")
+        elapsed = self.timed_exchanges[-1][1] - self.timed_exchanges[0][0]
+        if (elapsed >= budget) != (self.profile == "over-sample-budget"):
+            raise RuntimeError("The timed sample did not exercise the intended side of the budget.")
 
     def exchange(self, connection):
         command = bytearray()
@@ -98,7 +120,16 @@ class AdapterBench:
                     sample += 1
                 closing_speed = step == len(SAMPLE_COMMANDS) - 1
                 reply, usable = self.pid_reply(command_text, sample, closing_speed)
+                delays = TIMED_PROMPT_DELAYS.get(self.profile)
+                delay = delays[step] if sample == 2 and delays else 0
                 step = (step + 1) % len(SAMPLE_COMMANDS) if usable else 0
+                if delay:
+                    request_time = time.monotonic()
+                    connection.sendall(reply)
+                    time.sleep(delay)
+                    connection.sendall(b">")
+                    self.timed_exchanges.append((request_time, time.monotonic()))
+                    continue
                 if self.profile == "link-loss" and sample == 4 and closing_speed:
                     connection.sendall(b"410D")
                     return
