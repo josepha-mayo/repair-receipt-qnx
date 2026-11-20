@@ -10,10 +10,10 @@ Use a Windows command prompt with QNX SDP 8.0, QEMU for x86-64 and 64-bit Python
 python -m pip install -r requirements-live.txt
 build-qnx.cmd
 start-live.cmd --check
-start-live.cmd
+start-live.cmd --practice
 ```
 
-See [setup in the README](README.md#live-driver-and-shop-workflow) for loading the SDK and selecting a custom QEMU path.
+Practice mode gives the walkthrough an empty shop register and a temporary driver key. Download any files you want to keep before closing the app. See [setup in the README](README.md#live-driver-and-shop-workflow) for loading the SDK and selecting a custom QEMU path.
 
 Open the printed shop and driver URLs. In the driver, save the public key under **Enroll your issuer key at the shop**. In the shop, load the public key, choose **At idle only**, create the request and download it. The request carries a random ID, a fixed recipe version and one operating condition. The shop register retains the request and its enrolled public key.
 
@@ -31,7 +31,7 @@ Download a **verification packet** from a filed request. Open the standalone ver
 
 In the work-order view, choose **Download verification files**. Extract the ZIP, select both packet files together and choose **Verify packets** in the offline verifier. The earlier packet still shows insufficient evidence and the follow-up carries the later finding. Match their full request IDs and receipt digests to the printed work order.
 
-Download a **Register backup** from the shop intake page and start the app with `--shop-register` pointing at a copy of that file. Reopen the work order and follow its source receipt links. The register can verify prior receipts using the public keys saved with those requests, even if the local driver's signing key has changed.
+Download a **Register backup** from the shop intake page. Start a separate session with `start-live.cmd --ephemeral-issuer --shop-register "C:\path\practice-backup-copy.sqlite3"` pointing at a copy of that file. Reopen the work order and follow its source receipt links. The register verifies prior receipts using the public keys saved with those requests, even with a different local driver key.
 
 ## 2. Follow the QNX boundary
 

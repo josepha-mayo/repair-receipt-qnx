@@ -234,7 +234,10 @@ class Handler(BaseHTTPRequestHandler):
             asset = ("register.html", "text/html")
         if asset:
             name, mime = asset
-            self.send(200, (ROOT / "web" / name).read_bytes(), mime + "; charset=utf-8")
+            body = (ROOT / "web" / name).read_bytes()
+            if self.server.practice and name in ("driver.html", "register.html"):
+                body = body.replace(b'id="practice-note" hidden', b'id="practice-note"', 1)
+            self.send(200, body, mime + "; charset=utf-8")
         elif self.path == self.server.driver + "state":
             body = self.server.review.snapshot(self.driver_session())
             template = self.server.review.template
@@ -411,6 +414,33 @@ class Handler(BaseHTTPRequestHandler):
         self.json(202 if ok else 409, {} if ok else {"message": "Refresh the page and check the current review."})
 
 
+def serve(args, qemu, issuer, register):
+    with ThreadingHTTPServer(("127.0.0.1", args.port), Handler) as server, \
+            TemporaryDirectory(prefix="repair-receipt-template-") as workspace, \
+            ThreadPoolExecutor(max_workers=1) as builds:
+        server.host = f"127.0.0.1:{server.server_port}"
+        server.driver = f"/review/{secrets.token_urlsafe(24)}/"
+        server.shop_path = f"/intake/{secrets.token_urlsafe(24)}/"
+        server.practice = args.practice
+        server.register = register
+        template = builds.submit(prepare_live_template, Path(workspace) / "reference")
+        server.review = Review(qemu, issuer, template)
+        driver_url = f"http://{server.host}{server.driver}"
+        if args.practice:
+            print("Practice session. This session uses a temporary driver key and shop register.", flush=True)
+        print(f"Driver: {driver_url}", flush=True)
+        print(f"Shop:   http://{server.host}{server.shop_path}", flush=True)
+        print(f"Offline verifier: http://{server.host}/shop", flush=True)
+        if args.open:
+            webbrowser.open(driver_url)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.review.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("qemu_path", nargs="?", type=Path, help=argparse.SUPPRESS)
@@ -419,6 +449,7 @@ def main():
     setup.add_argument("--check", action="store_true", help="check available SDK tools, QEMU and the build")
     setup.add_argument("--self-test", action="store_true",
                        help="boot QNX and verify scoped signing, consent and the native export grant")
+    setup.add_argument("--practice", action="store_true", help="run with a temporary driver key and shop register")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--open", action="store_true", help="open the driver page in your browser")
     parser.add_argument("--shop-register", type=Path, help="path for the local SQLite shop register")
@@ -428,6 +459,8 @@ def main():
     args = parser.parse_args()
     if args.qemu and args.qemu_path:
         parser.error("Supply one QEMU executable path.")
+    if args.practice and (args.issuer_store or args.ephemeral_issuer or args.shop_register):
+        parser.error("--practice already uses a temporary issuer and shop register.")
     try:
         qemu, version = startup_check(args.qemu or args.qemu_path)
         if args.check:
@@ -441,38 +474,25 @@ def main():
             print("Passed. Four signatures verified, the idle receipts matched, the moving receipts differed, "
                   "and declining produced no receipt. Removing the QNX export grant blocked an approved receipt.")
             return
-        seed = secrets.token_bytes(32) if args.ephemeral_issuer else load_or_create_seed(
-            (args.issuer_store or default_store()).resolve()
-        )
-        issuer = Issuer(seed, durable=not args.ephemeral_issuer)
-        app_data = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share"))
-        register_path = args.shop_register or (
-            args.issuer_store.with_name("shop.sqlite3") if args.issuer_store else app_data / "RepairReceipt" / "shop.sqlite3"
-        )
-        register = ShopRegister(register_path.resolve())
+        with ExitStack() as resources:
+            ephemeral = args.practice or args.ephemeral_issuer
+            seed = secrets.token_bytes(32) if ephemeral else load_or_create_seed(
+                (args.issuer_store or default_store()).resolve()
+            )
+            issuer = Issuer(seed, durable=not ephemeral)
+            if args.practice:
+                directory = resources.enter_context(TemporaryDirectory(prefix="repair-receipt-practice-"))
+                register_path = Path(directory) / "shop.sqlite3"
+            else:
+                app_data = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share"))
+                register_path = args.shop_register or (
+                    args.issuer_store.with_name("shop.sqlite3")
+                    if args.issuer_store else app_data / "RepairReceipt" / "shop.sqlite3"
+                )
+            register = ShopRegister(register_path.resolve())
+            serve(args, qemu, issuer, register)
     except (OSError, ValueError, RuntimeError, KeyError, sqlite3.Error, subprocess.SubprocessError) as error:
         parser.exit(1, f"Repair Receipt could not start: {error}\n")
-    with ThreadingHTTPServer(("127.0.0.1", args.port), Handler) as server, \
-            TemporaryDirectory(prefix="repair-receipt-template-") as workspace, \
-            ThreadPoolExecutor(max_workers=1) as builds:
-        server.host = f"127.0.0.1:{server.server_port}"
-        server.driver = f"/review/{secrets.token_urlsafe(24)}/"
-        server.shop_path = f"/intake/{secrets.token_urlsafe(24)}/"
-        server.register = register
-        template = builds.submit(prepare_live_template, Path(workspace) / "reference")
-        server.review = Review(qemu, issuer, template)
-        driver_url = f"http://{server.host}{server.driver}"
-        print(f"Driver: {driver_url}", flush=True)
-        print(f"Shop:   http://{server.host}{server.shop_path}", flush=True)
-        print(f"Offline verifier: http://{server.host}/shop", flush=True)
-        if args.open:
-            webbrowser.open(driver_url)
-        try:
-            server.serve_forever()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            server.review.close()
 
 
 if __name__ == "__main__":

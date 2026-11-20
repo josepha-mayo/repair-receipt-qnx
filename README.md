@@ -27,6 +27,8 @@ start-live.cmd
 
 The scripts use the active QNX SDK environment or load it from `%USERPROFILE%\qnx800` if present. The launcher looks for `qemu-system-x86_64` on PATH and then under `C:\QNX\qemu`. Use `start-live.cmd --qemu "C:\path to\qemu-system-x86_64.exe" --open` for another location. `--check` checks the setup without starting the app or creating an issuer profile.
 
+Use `start-live.cmd --practice` for a hands-on trial. The driver gets a temporary signing key and the shop starts with an empty register for this session. The app discards the practice register on normal exit. Files you deliberately download remain on your PC.
+
 Run `start-live.cmd --self-test` to verify the QNX path with the included demo recordings. It checks four signed receipts, confirms that declining produces no receipt, and repeats an approved review with the exporter channel grant removed. Both policy variants use the same guest executable. The command uses a temporary issuer and scratch directory and requires no browser interaction.
 
 [Host checks](.github/workflows/host-checks.yml) verify the shop register, the four archived QNX signatures, browser-script syntax and the generated offline verifier on Windows and Ubuntu. To reproduce the receipt and bundle checks locally, run `python verify_shop_register.py` and `python pack_shop.py --check`. The QNX self-test above exercises the live guest.
@@ -101,7 +103,7 @@ For a quick check, open the [signed scoped sample](replay/sample-request-receipt
 
 In the driver page, open **Enroll your issuer key at the shop** and save the public key. Confirm its SHA-256 fingerprint with the shop through a known channel. The offline shop view displays the same fingerprint when it opens the key. The shop can reuse that public key after a restart of the driver app.
 
-The Windows app creates its issuer store in `%LOCALAPPDATA%\RepairReceipt\issuer.dpapi`. Windows DPAPI protects the persisted seed for the current Windows user. Startup refuses a damaged store so it cannot silently replace a trusted identity. For a separate installation use `python live.py --qemu path-to-qemu --issuer-store path-to-store`. For demonstrations that need a fresh identity each time, add `--ephemeral-issuer` instead. [Windows DPAPI](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata)
+The Windows app creates its issuer store in `%LOCALAPPDATA%\RepairReceipt\issuer.dpapi`. Windows DPAPI protects the persisted seed for the current Windows user. Startup refuses a damaged store so it cannot silently replace a trusted identity. For a separate installation use `python live.py --qemu path-to-qemu --issuer-store path-to-store`. Use `--ephemeral-issuer` when you need a temporary driver key with a saved shop register. [Windows DPAPI](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata)
 
 The local host checks a one-time boot token before passing the seed to the QNX vault over the loopback serial connection. The VM image contains the ephemeral token. The signing key is loaded into the vault's process memory. The host checks that QNX uses the enrolled public key and verifies QNX's signature before exposing the downloaded receipt.
 
