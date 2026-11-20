@@ -350,6 +350,36 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     with ZipFile(BytesIO(history)) as bundle:
         assert bundle.namelist() == [f"repair-verification-{ticket['id']}.json"
                                     for ticket in (initial, after, follow_after)]
-    print("Verified matching, work-order evidence, rechecks and follow-ups, concurrency and backups.")
+
+    full = reopened.repeat(follow_after["id"], recheck=True)["request"]
+    assert full == {**initial, "id": full["id"]}
+    prior_ids = [after["id"], follow_after["id"]]
+    pending = reopened.work_order_findings(full["id"])["contexts"]
+    assert [entry["baseline"]["request"] for entry in pending] == prior_ids
+    assert all(entry["pendingRequest"] == full["id"] for entry in pending)
+    reopened.attach(full["id"], sign(full, {"idle": "observed", "moving": "not_observed"}, owner))
+    comparison = ShopRegister(path).work_order_findings(initial["id"])["contexts"]
+    assert [entry["baseline"]["request"] for entry in comparison] == prior_ids
+    assert all(entry["evidence"]["request"] == full["id"] for entry in comparison)
+    _, history = reopened.work_order_archive(full["id"])
+    with ZipFile(BytesIO(history)) as bundle:
+        assert bundle.namelist() == [f"repair-verification-{ticket['id']}.json"
+                                    for ticket in (initial, after, follow_after, full)]
+
+    old = reopened.create("both", pin(owner), "Saved narrower recheck", threshold)["request"]
+    reopened.attach(old["id"], sign(old, {"idle": "observed", "moving": "insufficient_evidence"}, owner))
+    narrowed = reopened.follow_up(old["id"])["request"]
+    reopened.attach(narrowed["id"], sign(narrowed, {"moving": "observed"}, owner))
+    legacy = reopened.repeat(narrowed["id"], recheck=True)["request"]
+    # Older releases saved the preceding request's scope when creating rechecks.
+    with closing(reopened.connect()) as db, db:
+        db.execute("UPDATE intake_requests SET scope = ? WHERE id = ?", ("moving", legacy["id"]))
+    legacy = {**legacy, "scope": "moving"}
+    reopened.attach(legacy["id"], sign(legacy, {"moving": "not_observed"}, owner))
+    comparison = reopened.work_order_findings(old["id"])["contexts"]
+    assert [entry["evidence"]["request"] for entry in comparison] == [old["id"], legacy["id"]]
+    assert reopened.repeat(narrowed["id"], recheck=True)["request"] == legacy
+    assert reopened.repeat(legacy["id"], recheck=True)["request"]["scope"] == "both"
+    print("Verified matching, work-order evidence, full-scope rechecks, saved narrower rechecks, concurrency and backups.")
 
 verify_archived_road_pair()

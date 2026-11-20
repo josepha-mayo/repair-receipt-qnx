@@ -25,6 +25,8 @@ Choose **View work-order findings** to open a print view directly from the filed
 
 From this filed request choose **Create recheck request**, download it and use **Hot while moving** as the second fixture in the driver view. The original idle test observed a crossing and the recheck reports **Threshold not observed**. File the recheck and open **View work-order findings** to compare the two receipts under the same idle rule. Their request IDs and receipt digests appear separately on the printout.
 
+A recheck always asks for the original request's conditions. If a work order starts with both idle and moving and a moving-only follow-up completes coverage, the next recheck again asks for both. The report keeps the separate original receipts as the prior evidence for their respective conditions.
+
 Create a new idle-only request and run **Missing samples** in the driver view. The approved receipt reports insufficient evidence. File it and choose **Create follow-up request**. Open **View work-order findings** to see the outstanding recording. Run **Trip A** with the new request, approve its answer, and file it. Reopen the work order to see the resolved finding and open its source receipt. The original request retains its signed insufficient-evidence result.
 
 Download a **verification packet** from a filed request. Open the standalone verifier offline and load the packet with the issuer key you enrolled separately. The verifier checks the original request and signature, and the work-order printout includes the issuer fingerprint. Repeat with a different issuer key to see verification fail.

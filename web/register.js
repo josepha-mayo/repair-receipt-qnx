@@ -142,7 +142,9 @@ function renderSelection() {
         ? `The signed finding is on file. Follow-up ${job.followUp.slice(-8)} requests new coverage.`
         : repeatInstructions[missing];
     } else {
-      byId("follow-up-note").textContent = "Use a fresh recording with the same condition and test rule.";
+      byId("follow-up-note").textContent = job.followUp
+        ? "Open the saved recheck to see its conditions and test rule."
+        : "Use a fresh recording for the original request’s conditions and test rule.";
     }
     byId("open-original").hidden = !job.repeats;
     if (job.repeats) byId("open-original").textContent =

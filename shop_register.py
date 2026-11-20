@@ -232,7 +232,7 @@ class ShopRegister:
                 if bool(child["recheck"]) != recheck:
                     raise ValueError("The saved repeat has a different purpose.")
                 return self.job(child)
-            scope = prior["scope"] if recheck else missing
+            scope = self._checked_work_order(db, request_id)[0][1]["scope"] if recheck else missing
             follow_up = secrets.token_hex(16)
             db.execute("""INSERT INTO intake_requests(
                 id, scope, issuer, created_at, recipe, repeats, work_order, threshold_c, recheck)
@@ -270,20 +270,23 @@ class ShopRegister:
 
     def checked_work_order(self, request_id):
         with closing(self.connect()) as db:
-            rows = db.execute("""WITH RECURSIVE
-                ancestors(id, repeats) AS (
-                    SELECT id, repeats FROM intake_requests WHERE id = ?
-                    UNION
-                    SELECT parent.id, parent.repeats FROM intake_requests AS parent
-                        JOIN ancestors ON parent.id = ancestors.repeats
-                ),
-                linked(id) AS (
-                    SELECT id FROM ancestors WHERE repeats IS NULL
-                    UNION
-                    SELECT child.id FROM intake_requests AS child JOIN linked ON child.repeats = linked.id
-                )
-                SELECT request.* FROM intake_requests AS request JOIN linked USING(id)
-                ORDER BY request.number""", (request_id,)).fetchall()
+            return self._checked_work_order(db, request_id)
+
+    def _checked_work_order(self, db, request_id):
+        rows = db.execute("""WITH RECURSIVE
+            ancestors(id, repeats) AS (
+                SELECT id, repeats FROM intake_requests WHERE id = ?
+                UNION
+                SELECT parent.id, parent.repeats FROM intake_requests AS parent
+                    JOIN ancestors ON parent.id = ancestors.repeats
+            ),
+            linked(id) AS (
+                SELECT id FROM ancestors WHERE repeats IS NULL
+                UNION
+                SELECT child.id FROM intake_requests AS child JOIN linked ON child.repeats = linked.id
+            )
+            SELECT request.* FROM intake_requests AS request JOIN linked USING(id)
+            ORDER BY request.number""", (request_id,)).fetchall()
         if not rows:
             raise KeyError("This request was not found in the shop register.")
         root = rows[0]
@@ -293,10 +296,12 @@ class ShopRegister:
             request = self.request(row)
             if checked:
                 _, previous, preceding_claim = checked[-1]
-                scope = missing_scope(preceding_claim)
+                missing = missing_scope(preceding_claim)
+                scopes = (missing,)
                 if row["recheck"]:
-                    scope = previous["scope"] if preceding_claim is not None and scope is None else None
-                if (row["repeats"] != previous["id"] or request["scope"] != scope or
+                    # Older registers used the preceding request's scope for a recheck.
+                    scopes = (previous["scope"], root["scope"]) if preceding_claim is not None and missing is None else ()
+                if (row["repeats"] != previous["id"] or request["scope"] not in scopes or
                         any(row[field] != root[field] for field in same_fields)):
                     raise ValueError("A saved follow-up does not match its preceding receipt.")
             text = row["receipt"]
