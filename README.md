@@ -2,13 +2,13 @@
 
 Give a repair shop the answer to a specific question without handing over a recording of the whole drive.
 
+**Try the signed QNX example.** Open the downloaded HTML in a current Chromium browser. Choose **Check idle receipts** to verify two independently issued, identical 342-byte receipts from two published drives. Choose **Check moving receipts** to see where their signed answers differ. **Download proof files** saves the packets and example key for independent verification. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html) · [Signed QNX evidence](replay/qnx-road-scope-receipts.json)
+
 The first recipe distinguishes whether an intermittent coolant symptom appeared at idle or while moving. That gives a technician a starting point for reproducing the symptom. Each context is reported independently as observed, not observed, or insufficient evidence. The signed claim carries the recipe version and requested findings, with an opaque request ID for shop-initiated checks.
 
 The shop can request just one condition. A request carries an opaque job ID with the recipe and scope, and the signed answer is bound to that request. In a verified idle-only job, changing a trip's **moving** result leaves the signed file byte identical as long as the idle result, request, and issuer match.
 
 The QNX evaluator computes findings only for the requested conditions. It still validates each row and checks recording coverage. An unknown interval can withhold a negative finding, and a fully observed crossing remains evidence. Six paired controls check byte equality across idle and moving requests, each with observed, not observed and insufficient-evidence outcomes. [Native scope controls](replay/qnx-scope-matrix-proof.json)
-
-**Check it offline.** Download and open [the standalone verifier](replay/verify-receipt.html) in a current Chromium browser. Choose **Check idle receipts** to verify two independently issued, identical 342-byte files. Choose **Check moving receipts** to verify the two different answers. The checks use the [archived signed receipts](replay/qnx-road-scope-receipts.json) from QNX and their example public key. After verifying either pair, expand **Download proof files** to save the two verification packets and key.
 
 Independent shops and vehicle manufacturers already face decisions about how to share service data. The U.S. GAO documents concerns from independent repair stakeholders about access to wirelessly collected vehicle data. European data protection guidance recommends processing connected-vehicle data locally where possible. This prototype applies that principle to one narrow repair intake question. [GAO report](https://www.gao.gov/products/gao-24-106633) · [EDPB guidelines](https://www.edpb.europa.eu/documents/guideline/guidelines-012020-on-processing-personal-data-in-the-context-of-connected_en)
 
