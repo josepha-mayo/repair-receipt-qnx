@@ -5,19 +5,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Repair Receipt | Shop intake</title>
   <link rel="stylesheet" href="/shared.css">
+  <link rel="stylesheet" href="/register.css">
   <script defer src="/request.js"></script>
   <script defer src="/register.js"></script>
 </head>
-<body>
+<body class="intake-page">
   <main>
     <nav><span class="brand">Repair Receipt</span><a href="/shop">Offline verifier</a></nav>
     <header>
       <h1>Shop intake</h1>
-      <p class="lede">Request one coolant finding and file the driver’s signed answer against it.</p>
     </header>
     <div class="workspace intake-workspace">
+      <section class="card receipt" aria-labelledby="history-heading">
+        <div class="intake-heading">
+          <h2 id="history-heading">Review a receipt</h2>
+          <a class="intake-new-link" href="#new-heading">New request</a>
+        </div>
+        <label for="returned-receipt">Find a request from a receipt or packet</label>
+        <input id="returned-receipt" type="file" accept=".json,application/json" aria-describedby="match-status">
+        <p id="match-status" class="help input-note" role="status"></p>
+        <div id="selected" class="intake-detail" hidden>
+          <h3 id="selected-title" tabindex="-1"></h3>
+          <p id="selected-state" class="help"></p>
+          <p id="selected-rule" class="help"></p>
+          <dl id="filed-findings" hidden>
+            <div id="idle-entry"><dt>At idle</dt><dd id="idle-value"></dd></div>
+            <div id="moving-entry"><dt>While moving</dt><dd id="moving-value"></dd></div>
+          </dl>
+          <p id="filed-source" class="help" hidden></p>
+          <div class="actions" id="filing-actions" hidden>
+            <button id="file-receipt" type="button" disabled>File verified receipt</button>
+          </div>
+          <p id="file-status" class="status" role="status"></p>
+          <section id="receipt-conflict" class="follow-up" aria-labelledby="conflict-heading" hidden>
+            <h3 id="conflict-heading" tabindex="-1">Two verified receipts</h3>
+            <p class="help">The filed answer stays on the work order. Use a new request for a fresh recording.</p>
+            <dl id="conflict-findings"></dl>
+          </section>
+          <div class="actions">
+            <button id="save-request" type="button" class="secondary">Download request</button>
+            <button id="view-work-order" type="button" class="secondary" hidden>View work-order findings</button>
+            <button id="save-packet" type="button" class="secondary" hidden>Download verification packet</button>
+          </div>
+          <section id="follow-up" class="follow-up" aria-labelledby="follow-up-heading" hidden>
+            <h3 id="follow-up-heading">Follow-up recording</h3>
+            <p id="follow-up-note" class="help"></p>
+            <div class="actions">
+              <button id="new-follow-up" type="button">Create follow-up request</button>
+              <button id="open-follow-up" type="button" class="secondary">Open follow-up request</button>
+            </div>
+          </section>
+          <button id="open-original" type="button" class="link-button" hidden></button>
+          <details id="selected-issuer" class="issuer-enrollment">
+            <summary>Request details</summary>
+            <p id="selected-request" class="fingerprint"></p>
+            <p id="selected-key" class="fingerprint"></p>
+          </details>
+          <details id="individual-files" class="issuer-enrollment" hidden>
+            <summary>Individual verification files</summary>
+            <div class="actions">
+              <button id="save-filed-request" type="button" class="secondary">Download original request</button>
+              <button id="save-original" type="button" class="secondary">Download filed receipt</button>
+              <button id="save-pin" type="button" class="secondary">Download issuer key</button>
+            </div>
+          </details>
+        </div>
+        <form id="search-orders" role="search" aria-label="Work orders">
+          <label for="order-reference">Find by work order</label>
+          <div class="search-fields">
+            <input id="order-reference" type="text" placeholder="Full reference" maxlength="64" autocomplete="off" required>
+            <button id="find-order" class="secondary" type="submit">Find</button>
+          </div>
+        </form>
+        <button id="clear-search" type="button" class="link-button" hidden>Show recent requests</button>
+        <p id="history-status" class="status" role="status">Loading requests.</p>
+        <ul id="jobs" class="intake-list"></ul>
+        <button id="older-jobs" type="button" class="secondary" hidden>Load earlier requests</button>
+      </section>
       <section class="card" aria-labelledby="new-heading">
-        <h2 id="new-heading">New diagnostic request</h2>
+        <h2 id="new-heading" tabindex="-1">New diagnostic request</h2>
         <label for="trusted-key">Enrolled issuer key</label>
         <input id="trusted-key" type="file" accept=".json,application/json" aria-describedby="issuer-note">
         <p id="issuer-note" class="help input-note" role="status">Use a key whose fingerprint you have confirmed with the issuer.</p>
@@ -37,66 +103,6 @@
           <button id="new-request" type="button" disabled>Create request</button>
         </div>
         <p id="new-status" class="status" role="status"></p>
-      </section>
-      <section class="card receipt" aria-labelledby="history-heading">
-        <h2 id="history-heading">Requests</h2>
-        <label for="returned-receipt">Find a request from a receipt or packet</label>
-        <input id="returned-receipt" type="file" accept=".json,application/json" aria-describedby="match-status">
-        <p id="match-status" class="help input-note" role="status"></p>
-        <form id="search-orders" role="search" aria-label="Work orders">
-          <label for="order-reference">Find by work order</label>
-          <div class="search-fields">
-            <input id="order-reference" type="text" placeholder="Full work order reference" maxlength="64" autocomplete="off" required>
-            <button id="find-order" class="secondary" type="submit">Find</button>
-          </div>
-        </form>
-        <button id="clear-search" type="button" class="link-button" hidden>Show recent requests</button>
-        <p id="history-status" class="status" role="status">Loading requests.</p>
-        <ul id="jobs" class="intake-list"></ul>
-        <button id="older-jobs" type="button" class="secondary" hidden>Load earlier requests</button>
-        <div id="selected" class="intake-detail" hidden>
-          <h3 id="selected-title" tabindex="-1"></h3>
-          <p id="selected-work-order" class="help input-note" hidden></p>
-          <p id="selected-state" class="help"></p>
-          <p id="selected-rule" class="help"></p>
-          <p id="selected-key" class="fingerprint"></p>
-          <dl id="filed-findings" hidden>
-            <div id="idle-entry"><dt>At idle</dt><dd id="idle-value"></dd></div>
-            <div id="moving-entry"><dt>While moving</dt><dd id="moving-value"></dd></div>
-          </dl>
-          <p id="filed-source" class="help" hidden></p>
-          <section id="receipt-conflict" class="follow-up" aria-labelledby="conflict-heading" hidden>
-            <h3 id="conflict-heading" tabindex="-1">Two verified receipts</h3>
-            <p class="help">The filed answer stays on the work order. Use a new request for a fresh recording.</p>
-            <dl id="conflict-findings"></dl>
-          </section>
-          <section id="follow-up" class="follow-up" aria-labelledby="follow-up-heading" hidden>
-            <h3 id="follow-up-heading">Follow-up recording</h3>
-            <p id="follow-up-note" class="help"></p>
-            <div class="actions">
-              <button id="new-follow-up" type="button">Create follow-up request</button>
-              <button id="open-follow-up" type="button" class="secondary">Open follow-up request</button>
-            </div>
-          </section>
-          <button id="open-original" type="button" class="link-button" hidden></button>
-          <div class="actions">
-            <button id="save-request" type="button" class="secondary">Download request</button>
-            <button id="save-packet" type="button" class="secondary" hidden>Download verification packet</button>
-            <button id="view-work-order" type="button" class="secondary" hidden>View work-order findings</button>
-          </div>
-          <details id="individual-files" class="issuer-enrollment" hidden>
-            <summary>Individual verification files</summary>
-            <div class="actions">
-              <button id="save-filed-request" type="button" class="secondary">Download original request</button>
-              <button id="save-original" type="button" class="secondary">Download filed receipt</button>
-              <button id="save-pin" type="button" class="secondary">Download issuer key</button>
-            </div>
-          </details>
-          <div class="actions" id="filing-actions" hidden>
-            <button id="file-receipt" type="button" disabled>File verified receipt</button>
-          </div>
-          <p id="file-status" class="status" role="status"></p>
-        </div>
       </section>
     </div>
     <details class="issuer-enrollment">

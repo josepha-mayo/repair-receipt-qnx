@@ -43,6 +43,7 @@ ASSETS = {
     "/shop.js": ("shop.js", "text/javascript"),
     "/request.js": ("request.js", "text/javascript"),
     "/register.js": ("register.js", "text/javascript"),
+    "/register.css": ("register.css", "text/css"),
     "/shared.css": ("shared.css", "text/css"),
     "/shop": ("shop.html", "text/html"),
 }

@@ -1,0 +1,17 @@
+.intake-page header { padding: 26px 0 24px; }
+.intake-page h1 { font-size: clamp(2.5rem, 5.5vw, 4rem); }
+.intake-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.intake-new-link { display: none; font-size: .91rem; font-weight: 650; }
+.intake-detail:not([hidden]) + form { margin-top: 23px; padding-top: 2px; border-top: 1px solid var(--line); }
+.intake-workspace .status:empty, .intake-workspace .input-note:empty { margin: 0; }
+#selected-title { overflow-wrap: anywhere; }
+#selected-title, #new-heading { scroll-margin-block-start: 16px; }
+#selected-state, #selected-rule { margin-top: 5px; }
+#file-receipt { min-height: 44px; }
+
+@media (min-width: 681px) {
+  .intake-workspace { grid-template-columns: minmax(0, 1.16fr) minmax(0, .84fr); }
+}
+@media (max-width: 680px) {
+  .intake-new-link { display: inline; }
+}

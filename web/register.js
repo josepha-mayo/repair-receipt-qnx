@@ -114,13 +114,13 @@ function renderSelection() {
     const verified = matchedReceipt?.state === "ready";
     const conflict = matchedReceipt?.state === "conflict";
     const claim = job.claim || (verified ? matchedReceipt.claim : null);
-    byId("selected-title").textContent = `Request ${job.request.id.slice(-8)}`;
-    const workOrder = byId("selected-work-order");
-    workOrder.hidden = !job.workOrder;
-    workOrder.textContent = job.workOrder ? `Work order ${job.workOrder}` : "";
+    byId("selected-title").textContent = job.workOrder
+      ? `Work order ${job.workOrder}`
+      : `Request ${job.request.id.slice(-8)}`;
     byId("selected-state").textContent = job.acceptedAt
       ? `Filed ${time.format(new Date(job.acceptedAt))}`
       : `${ShopRequest.scopes[job.request.scope]} · ${verified ? "Ready to file" : "Awaiting a receipt"}`;
+    byId("selected-request").textContent = `Request ${job.request.id}`;
     byId("selected-key").textContent = `Enrolled issuer ${job.fingerprint.match(/.{8}/g).join(" ")}`;
     byId("selected-rule").textContent = ShopRequest.rule(job.request);
     byId("filed-findings").hidden = !claim || conflict;
@@ -237,6 +237,7 @@ function choose(id, receipt = null) {
   active = id;
   matchedReceipt = receipt;
   byId("individual-files").open = false;
+  byId("selected-issuer").open = false;
   if (!receipt) receiptFile.value = "";
   status("match-status", "");
   status("file-status", "");
@@ -245,7 +246,10 @@ function choose(id, receipt = null) {
 
 byId("jobs").addEventListener("click", event => {
   const button = event.target.closest("button[data-request]");
-  if (button && !busy) choose(button.dataset.request);
+  if (button && !busy) {
+    choose(button.dataset.request);
+    byId("selected-title").focus();
+  }
 });
 byId("older-jobs").addEventListener("click", () => action("history-status", () => loadJobs({older: true})));
 byId("search-orders").addEventListener("submit", event => {
@@ -278,8 +282,11 @@ async function showMatchedReceipt(evidence) {
     conflict: "A different signed receipt has already been filed for this request.",
   }[state];
   status("match-status", message, state === "conflict");
-  if (state === "ready") byId("selected-title").focus();
-  if (state === "conflict") byId("conflict-heading").focus();
+  const heading = byId(state === "conflict" ? "conflict-heading" : "selected-title");
+  heading.focus();
+  if (state === "ready" && byId("file-receipt").getBoundingClientRect().bottom > window.innerHeight) {
+    heading.scrollIntoView({block: "start"});
+  }
 }
 
 receiptFile.addEventListener("change", () => {
@@ -307,6 +314,7 @@ byId("new-request").addEventListener("click", () => {
     choose(created.request.id);
     status("new-status", "Request created. Download it and send it to the driver.");
     await showRecentRequests();
+    byId("selected-title").focus();
   });
 });
 
@@ -455,6 +463,7 @@ byId("file-receipt").addEventListener("click", () => action("file-status", async
     renderJobs();
     renderSelection();
     status("file-status", alreadyFiled ? "This exact receipt is already filed." : "Signature verified and receipt filed.");
+    byId("selected-title").focus();
   } catch (error) {
     if (error.status === 409) {
       matchedReceipt = null;
