@@ -32,7 +32,7 @@ def verify_archived_road_pair():
     proof = json.loads((replay / "qnx-road-scope-proof.json").read_text(encoding="utf-8"))
     key = bytes.fromhex(evidence["issuer"]["key"])
     assert sha256(key).hexdigest() == evidence["issuer"]["fingerprint"]
-    for scope, findings in (("idle", ["observed", "observed"]), ("moving", ["observed", "not_observed"])):
+    for scope, findings in (("idle", ["observed", "observed"]), ("moving", ["observed", "insufficient_evidence"])):
         request = parse_request(canonical(evidence["requests"][scope]))
         assert request["scope"] == scope and request["thresholdC"] == proof["test_threshold_c"]
         receipts = evidence["receipts"][scope]

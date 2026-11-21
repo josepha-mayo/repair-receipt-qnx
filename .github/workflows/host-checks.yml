@@ -47,6 +47,8 @@ jobs:
             node --check "$file"
           done
           node --check normalize-obd.cjs
+      - name: Verify missing coverage survives CSV import
+        run: node --test verify_obd_import.cjs
       - name: Check offline verifier bytes
         run: python pack_shop.py --check
       - name: Verify the shop register and archived QNX signatures

@@ -11,10 +11,10 @@
         "vehicle_signals": 10
       },
       "normalized_qnx_input": {
-        "bytes": 872379,
-        "sha256": "7d6cb65f17c9ec8e787bbdcfb34946f2d4027ecd4dfbf4d782d3d33643ee5715",
+        "bytes": 872397,
+        "sha256": "c8cedc5bbeea1a87a36f1e44899956f2b99e6943326d66d17f68af171a5af83d",
         "duration_ms": 4031987,
-        "rows": 47347
+        "rows": 47350
       }
     },
     {
@@ -26,10 +26,10 @@
         "vehicle_signals": 10
       },
       "normalized_qnx_input": {
-        "bytes": 290043,
-        "sha256": "0cc230ac5746b6f257980404806ff6a2776599e6019a71acd73c0b677c3dbdbd",
+        "bytes": 290061,
+        "sha256": "6bbd7898d0ba00512387b93677797738474a75f3c5553d89fdc9fa41623516b3",
         "duration_ms": 1448033,
-        "rows": 16958
+        "rows": 16961
       }
     }
   ],
@@ -45,6 +45,6 @@
       "thresholdC"
     ],
     "verification_packet_bytes": 667,
-    "verification_packet_sha256": "98acdbf133744068991cee09fa170b32a3a33b03afe4ac26c6b42b90989fb361"
+    "verification_packet_sha256": "09861175ce9d8dc4bf08044de661ab52c9b5c7ba69cdbd45bd6b66af3b87ae5f"
   }
 }

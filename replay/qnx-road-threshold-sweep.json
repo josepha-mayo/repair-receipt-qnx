@@ -6,11 +6,11 @@
   "recordings": [
     {
       "recording": "2017-07-26_Seat_Leon_RT_S_Stau.csv",
-      "normalized_sha256": "7d6cb65f17c9ec8e787bbdcfb34946f2d4027ecd4dfbf4d782d3d33643ee5715"
+      "normalized_sha256": "c8cedc5bbeea1a87a36f1e44899956f2b99e6943326d66d17f68af171a5af83d"
     },
     {
       "recording": "2017-07-27_Seat_Leon_KA_KA_2_Normal.csv",
-      "normalized_sha256": "0cc230ac5746b6f257980404806ff6a2776599e6019a71acd73c0b677c3dbdbd"
+      "normalized_sha256": "6bbd7898d0ba00512387b93677797738474a75f3c5553d89fdc9fa41623516b3"
     }
   ],
   "signed_receipts_verified": 64,
@@ -118,7 +118,7 @@
       "moving": {
         "findings": [
           "observed",
-          "not_observed"
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": false
       }
@@ -128,14 +128,14 @@
       "idle": {
         "findings": [
           "observed",
-          "not_observed"
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": false
       },
       "moving": {
         "findings": [
           "observed",
-          "not_observed"
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": false
       }
@@ -145,14 +145,14 @@
       "idle": {
         "findings": [
           "observed",
-          "not_observed"
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": false
       },
       "moving": {
         "findings": [
           "observed",
-          "not_observed"
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": false
       }
@@ -161,15 +161,15 @@
       "threshold_c": 98,
       "idle": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       },
       "moving": {
         "findings": [
           "observed",
-          "not_observed"
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": false
       }
@@ -178,15 +178,15 @@
       "threshold_c": 99,
       "idle": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       },
       "moving": {
         "findings": [
           "observed",
-          "not_observed"
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": false
       }
@@ -195,15 +195,15 @@
       "threshold_c": 100,
       "idle": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       },
       "moving": {
         "findings": [
           "observed",
-          "not_observed"
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": false
       }
@@ -212,15 +212,15 @@
       "threshold_c": 101,
       "idle": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       },
       "moving": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       }
@@ -229,15 +229,15 @@
       "threshold_c": 102,
       "idle": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       },
       "moving": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       }
@@ -246,15 +246,15 @@
       "threshold_c": 103,
       "idle": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       },
       "moving": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       }
@@ -263,15 +263,15 @@
       "threshold_c": 104,
       "idle": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       },
       "moving": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       }
@@ -280,15 +280,15 @@
       "threshold_c": 105,
       "idle": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       },
       "moving": {
         "findings": [
-          "not_observed",
-          "not_observed"
+          "insufficient_evidence",
+          "insufficient_evidence"
         ],
         "byte_identical_receipts": true
       }

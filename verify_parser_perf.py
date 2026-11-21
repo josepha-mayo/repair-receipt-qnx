@@ -134,6 +134,7 @@ def verify_preview_latency(qemu, repetitions, roads):
             raise RuntimeError(f"Repeated previews for {name} produced different signed receipts.")
         profiles.append({
             "recording": name, "normalized_bytes": len(recording),
+            "normalized_sha256": sha256(recording).hexdigest(),
             "normalized_rows": len(recording.splitlines()) - 1,
             "native_evaluation_us": distribution(list(evaluations)),
             "host_to_preview_seconds": distribution(list(previews)),

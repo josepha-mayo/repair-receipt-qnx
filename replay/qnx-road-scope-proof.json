@@ -6,22 +6,22 @@
   "recordings": [
     {
       "recording": "2017-07-26_Seat_Leon_RT_S_Stau.csv",
-      "normalized_bytes": 872379,
-      "normalized_sha256": "7d6cb65f17c9ec8e787bbdcfb34946f2d4027ecd4dfbf4d782d3d33643ee5715",
+      "normalized_bytes": 872397,
+      "normalized_sha256": "c8cedc5bbeea1a87a36f1e44899956f2b99e6943326d66d17f68af171a5af83d",
       "idle": "observed",
       "moving": "observed"
     },
     {
       "recording": "2017-07-27_Seat_Leon_KA_KA_2_Normal.csv",
-      "normalized_bytes": 290043,
-      "normalized_sha256": "0cc230ac5746b6f257980404806ff6a2776599e6019a71acd73c0b677c3dbdbd",
+      "normalized_bytes": 290061,
+      "normalized_sha256": "6bbd7898d0ba00512387b93677797738474a75f3c5553d89fdc9fa41623516b3",
       "idle": "observed",
-      "moving": "not_observed"
+      "moving": "insufficient_evidence"
     }
   ],
   "same_request_and_issuer": true,
   "byte_identical_idle_receipts": true,
   "different_moving_receipts": true,
   "idle_receipt_bytes": 342,
-  "idle_receipt_sha256": "46447eabcf92f16b31911be4b95cb3202d801d2920d1f5f4052695749e925df1"
+  "idle_receipt_sha256": "dce51eaf489e234793715f06d070293ca71cc0557b6d9f6529764d5a287f367c"
 }

@@ -91,7 +91,7 @@ const ObdCsv = (() => {
       const elapsed = current - first;
       if (elapsed > dayMs) throw new Error("Use a recording no longer than 24 hours.");
       if (sample === null) {
-        if (rows.length) rows.push({elapsed, sample: null});
+        rows.push({elapsed, sample: null});
         continue;
       }
       rows.push({elapsed, sample});

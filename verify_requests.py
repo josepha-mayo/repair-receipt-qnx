@@ -15,8 +15,8 @@ from verify_policy import compile_template, verify_export_denial, without_export
 
 
 KIT_ROAD_PAIR = (
-    ("2017-07-26_Seat_Leon_RT_S_Stau.csv", "7d6cb65f17c9ec8e787bbdcfb34946f2d4027ecd4dfbf4d782d3d33643ee5715"),
-    ("2017-07-27_Seat_Leon_KA_KA_2_Normal.csv", "0cc230ac5746b6f257980404806ff6a2776599e6019a71acd73c0b677c3dbdbd"),
+    ("2017-07-26_Seat_Leon_RT_S_Stau.csv", "c8cedc5bbeea1a87a36f1e44899956f2b99e6943326d66d17f68af171a5af83d"),
+    ("2017-07-27_Seat_Leon_KA_KA_2_Normal.csv", "6bbd7898d0ba00512387b93677797738474a75f3c5553d89fdc9fa41623516b3"),
 )
 
 
@@ -186,7 +186,7 @@ def verify_road_pair(qemu, recordings, signed_evidence=None):
         workspace = Path(temporary)
         image = build_template(workspace / "template")
         for index, (name, recording, digest) in enumerate(inputs):
-            moving = ("observed", "not_observed")[index]
+            moving = ("observed", "insufficient_evidence")[index]
             result = {"recording": name, "normalized_bytes": len(recording), "normalized_sha256": digest}
             for scope, finding in (("idle", "observed"), ("moving", moving)):
                 ticket = tickets[scope]
@@ -256,7 +256,7 @@ def verify_road_sweep(qemu, recordings):
 
     reference = thresholds[95 - 90]
     if (reference["idle"]["findings"] != ["observed", "observed"] or
-            reference["moving"]["findings"] != ["observed", "not_observed"]):
+            reference["moving"]["findings"] != ["observed", "insufficient_evidence"]):
         raise RuntimeError("The threshold sweep did not reproduce the archived 95 C control.")
     separating = [row["threshold_c"] for row in thresholds
                   if row["idle"]["byte_identical_receipts"] and not row["moving"]["byte_identical_receipts"]]
@@ -274,7 +274,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qemu", type=Path, required=True)
     controls = parser.add_mutually_exclusive_group()
-    controls.add_argument("--road-pair", type=Path, nargs=2, metavar=("MOVING_OBSERVED", "MOVING_NOT_OBSERVED"),
+    controls.add_argument("--road-pair", type=Path, nargs=2, metavar=("FIRST_DRIVE", "SECOND_DRIVE"),
                           help="two normalized KIT recordings listed in the codelab")
     controls.add_argument("--road-sweep", type=Path, nargs=2, metavar=("FIRST_DRIVE", "SECOND_DRIVE"),
                           help="test the documented KIT pair at every whole degree from 90 to 105 Celsius")

@@ -73,11 +73,13 @@ To observe the denial in the browser, use a separate project copy. Remove the li
 
 Use the **same idle-only request** to approve **Trip C**. It retains the idle threshold crossing and adds a crossing while moving. Compare the full signed files from A and C. They should be byte-identical. Now create a **While moving only** request for Trip C. The result should include the driving observation.
 
-Repeat the comparison with two published recordings from the [KIT Automotive OBD-II Dataset](https://publikationen.bibliothek.kit.edu/1000085073). Import `2017-07-26_Seat_Leon_RT_S_Stau.csv` and `2017-07-27_Seat_Leon_KA_KA_2_Normal.csv` directly in the driver page. Use the same idle-only request at a test threshold of 95 °C and the same issuer. Approve each review and compare the downloaded files. Both say **Threshold observed** and the signed files are byte-identical. Run both recordings again with a new moving-only request at the same test threshold to see the first say **Threshold observed** and the second say **Threshold not observed**. [Paired real-recording results](replay/qnx-road-scope-proof.json)
+Repeat the comparison with two published recordings from the [KIT Automotive OBD-II Dataset](https://publikationen.bibliothek.kit.edu/1000085073). Import `2017-07-26_Seat_Leon_RT_S_Stau.csv` and `2017-07-27_Seat_Leon_KA_KA_2_Normal.csv` directly in the driver page. Use the same idle-only request at a test threshold of 95 °C and the same issuer. Approve each review and compare the downloaded files. Both say **Threshold observed** and the signed files are byte-identical. Run both recordings again with a new moving-only request at the same test threshold. July 26 shows **Threshold observed**, and July 27 shows **Insufficient evidence**. Both files start before all three signals are available. QNX preserves a fully observed crossing even when coverage is incomplete. [Paired real-recording results](replay/qnx-road-scope-proof.json)
 
 Open the downloaded HTML in a current Chromium browser. **Check idle receipts** and **Check moving receipts** verify the signatures, request bindings and signed published-road input type. After either check, open **Download proof files** to save the two verification packets and example key. Load those files back into the verifier to check each signature and receipt hash independently. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html) · [Signed QNX evidence](replay/qnx-road-scope-receipts.json)
 
-The archived run uses the normalized input hashes listed in the [paired-drive proof](replay/qnx-road-scope-proof.json). Importing the raw files through the driver page reproduces the findings and the equality comparison with an uploaded-CSV input label.
+The archived run uses the normalized input hashes listed in the [paired-drive proof](replay/qnx-road-scope-proof.json). Importing the raw files through the driver page reproduces the findings and the equality comparison with an uploaded-CSV input label. To check that import preserves missing samples at either end of a recording, run `node --test verify_obd_import.cjs`.
+
+For a work-order trial, create a request for both conditions at 95 °C and file the July 27 result. The shop sees the observed idle finding and the insufficient moving result together. **Create follow-up request** asks only about moving and keeps the original signed receipt in the work order.
 
 ### Measure what the shop receives
 
@@ -104,10 +106,10 @@ The harness verifies four QNX-signed receipts per whole-degree threshold. Each s
 | Test threshold | At idle | While moving |
 | --- | --- | --- |
 | 90–94 °C | Both observed | Both observed |
-| 95 °C | Both observed | Observed / Not observed |
-| 96–97 °C | Observed / Not observed | Observed / Not observed |
-| 98–100 °C | Both not observed | Observed / Not observed |
-| 101–105 °C | Both not observed | Both not observed |
+| 95 °C | Both observed | Observed / Insufficient evidence |
+| 96–97 °C | Observed / Insufficient evidence | Observed / Insufficient evidence |
+| 98–100 °C | Both insufficient | Observed / Insufficient evidence |
+| 101–105 °C | Both insufficient | Both insufficient |
 
 Equal findings within a scope produced byte-identical receipts. At 96–97 °C the requested idle findings differed and the receipts reflected it. These thresholds describe this test on the two published recordings. [Full QNX sweep](replay/qnx-road-threshold-sweep.json)
 
