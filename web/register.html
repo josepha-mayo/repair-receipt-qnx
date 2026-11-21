@@ -135,7 +135,13 @@
       <button id="close-work-order" type="button" class="secondary">Close</button>
     </div>
     <p id="report-reference" class="help"></p>
+    <div id="report-pending" hidden>
+      <p id="report-pending-summary" class="help"></p>
+      <p id="report-pending-print" class="print-only help"></p>
+      <button id="report-open-pending" type="button" class="secondary">Open pending request</button>
+    </div>
     <p id="report-receipt-summary" class="help" hidden></p>
+    <p id="report-open-status" class="status" role="status"></p>
     <div id="report-findings" class="report-findings"></div>
     <p id="report-recheck-note" class="help" hidden>Times shown are when the shop filed each receipt. Confirm the capture dates and test conditions before assessing the repair.</p>
     <p class="help">Keep the signed receipts with this work order so each finding can be verified.</p>
@@ -151,7 +157,6 @@
       <p class="report-comparison report-outcome" hidden></p>
       <p class="report-rule help" hidden></p>
       <div class="report-readings"></div>
-      <p class="report-pending help" hidden></p>
     </section>
   </template>
   <template id="report-reading">

@@ -379,8 +379,12 @@ byId("new-follow-up").addEventListener("click", () => action("file-status", asyn
   byId(child.claim ? "selected-title" : "save-request").focus();
 }));
 
-async function openJob(id) {
+async function openJob(id, fromReport = false) {
   const {job} = await api(`files/${id}`);
+  if (fromReport) {
+    if (!workOrderDialog.open) return;
+    workOrderDialog.close();
+  }
   jobs.set(id, job);
   choose(id);
   byId("selected-title").focus();
@@ -428,6 +432,16 @@ function compareReadings(baseline, recheck) {
 }
 
 function showWorkOrder(report) {
+  const pending = report.pending;
+  byId("report-pending").hidden = !pending;
+  if (pending) {
+    const label = {original: "Request", "follow-up": "Follow-up", recheck: "Recheck"}[pending.purpose];
+    byId("report-pending-summary").textContent = `${label} awaiting a receipt · ${ShopRequest.scopes[pending.scope]} · ` +
+      `Request ${pending.request.slice(-8)}`;
+    byId("report-pending-print").textContent = `Pending request ID ${pending.request}`;
+    byId("report-open-pending").dataset.request = pending.request;
+  }
+  status("report-open-status", "");
   byId("report-reference").textContent = report.workOrder
     ? `Work order ${report.workOrder}` : `Original request ${report.originalRequest.slice(-8)}`;
   const latest = report.contexts.map(context => context.evidence?.request);
@@ -443,7 +457,7 @@ function showWorkOrder(report) {
   evidenceLink.hidden = !report.contexts.some(context => context.evidence || context.baseline);
   evidenceLink.href = `work-order/${report.originalRequest}/evidence`;
   byId("report-issuer").textContent = `Enrolled issuer SHA-256 ${report.fingerprint}`;
-  for (const {condition, evidence, pendingRequest, baseline} of report.contexts) {
+  for (const {condition, evidence, baseline} of report.contexts) {
     const row = byId("report-condition").content.cloneNode(true);
     row.querySelector("h3").textContent = conditions[condition];
     if (baseline && evidence) {
@@ -460,11 +474,6 @@ function showWorkOrder(report) {
     const readings = row.querySelector(".report-readings");
     if (baseline) readings.append(reportReading(baseline, "Prior receipt"));
     readings.append(reportReading(evidence, baseline ? "Recheck" : ""));
-    if (pendingRequest && evidence) {
-      const pending = row.querySelector(".report-pending");
-      pending.hidden = false;
-      pending.textContent = `Follow-up ${pendingRequest.slice(-8)} is awaiting a receipt.`;
-    }
     entries.append(row);
   }
   workOrderDialog.showModal();
@@ -481,11 +490,18 @@ function dismissWorkOrder(event) {
 byId("close-work-order").addEventListener("click", dismissWorkOrder);
 workOrderDialog.addEventListener("cancel", dismissWorkOrder);
 byId("print-work-order").addEventListener("click", () => window.print());
-byId("report-findings").addEventListener("click", event => {
+workOrderDialog.addEventListener("click", event => {
   const button = event.target.closest("button[data-request]");
   if (button) {
-    workOrderDialog.close();
-    action("file-status", () => openJob(button.dataset.request));
+    action("report-open-status", async () => {
+      status("report-open-status", "");
+      try {
+        await openJob(button.dataset.request, true);
+      } catch (error) {
+        if (error.status) throw error;
+        throw new Error("Could not open the request. Try again.");
+      }
+    });
   }
 });
 

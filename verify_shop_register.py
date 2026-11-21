@@ -265,6 +265,7 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     child_id = child["request"]["id"]
     order = reopened.work_order_findings(child_id)
     assert order["workOrder"] == local_reference and order["originalRequest"] == incomplete["id"]
+    assert order["pending"] == {"request": child_id, "scope": "moving", "purpose": "follow-up"}
     idle, moving = order["contexts"]
     assert idle["evidence"]["request"] == incomplete["id"] and idle["evidence"]["finding"] == "observed"
     assert moving["evidence"]["finding"] == "insufficient_evidence" and moving["pendingRequest"] == child_id
@@ -273,10 +274,14 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     with ZipFile(BytesIO(first_archive)) as bundle:
         assert bundle.namelist() == [f"repair-verification-{original_id}.json"]
     same_reference = reopened.create("idle", pin(owner), local_reference)
-    assert reopened.work_order_findings(same_reference["request"]["id"])["contexts"][0]["evidence"] is None
+    separate_id = same_reference["request"]["id"]
+    separate = reopened.work_order_findings(separate_id)
+    assert separate["contexts"][0]["evidence"] is None
+    assert separate["pending"] == {"request": separate_id, "scope": "idle", "purpose": "original"}
     assert not reopened.attach(child_id, sign(child["request"], {"moving": "observed"}, owner))["alreadyFiled"]
     order = reopened.work_order_findings(incomplete["id"])
     assert reopened.work_order_findings(child_id) == order
+    assert order["pending"] is None
     assert order["contexts"][0] == idle
     assert idle["evidence"]["receiptSha256"] == sha256(original.encode("ascii")).hexdigest()
     assert order["contexts"][1]["evidence"]["request"] == child_id
@@ -389,12 +394,17 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     after = recheck["request"]
     assert recheck["recheck"] and recheck["repeats"] == initial["id"]
     assert after == {**initial, "id": after["id"]} and after["id"] != initial["id"]
-    pending = reopened.work_order_findings(after["id"])["contexts"]
+    order = reopened.work_order_findings(after["id"])
+    assert order["pending"] == {"request": after["id"], "scope": "both", "purpose": "recheck"}
+    pending = order["contexts"]
     assert all(entry["baseline"]["request"] == initial["id"] and entry["evidence"] is None for entry in pending)
     assert all(entry["pendingRequest"] == after["id"] for entry in pending)
     reopened.attach(after["id"], sign(after, {"idle": "not_observed", "moving": "insufficient_evidence"}, owner))
     follow_after = reopened.follow_up(after["id"])["request"]
     assert follow_after["scope"] == "moving"
+    assert reopened.work_order_findings(initial["id"])["pending"] == {
+        "request": follow_after["id"], "scope": "moving", "purpose": "follow-up",
+    }
     reopened.attach(follow_after["id"], sign(follow_after, {"moving": "observed"}, owner))
     comparison = ShopRegister(path).work_order_findings(follow_after["id"])["contexts"]
     assert comparison[0]["baseline"]["finding"] == "observed"
