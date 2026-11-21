@@ -1,0 +1,11 @@
+{
+  "forced_driver_exit_at_qnx_preview": true,
+  "qemu_exited": true,
+  "guest_stop_observed_ms": 20,
+  "files_inspected": 140,
+  "staging_ciphertext_bytes": 90,
+  "job_disk_bytes": 8225280,
+  "plaintext_in_workspace": false,
+  "private_preview_in_workspace": false,
+  "receipt_issued": false
+}

@@ -1,7 +1,7 @@
 """Run the self-contained Repair Receipt experiment in a fresh QNX guest."""
 
 import argparse
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 import json
 from pathlib import Path
 from queue import Empty, Queue
@@ -207,31 +207,44 @@ def stop_guest(guest):
             guest.wait(timeout=5)
 
 
+@contextmanager
+def start_guest(command, workspace, log):
+    job_context = nullcontext()
+    flags = 0
+    if sys.platform == "win32":
+        from win_guest_job import add_guest, kill_on_close_job
+        job_context = kill_on_close_job()
+        flags = subprocess.CREATE_NO_WINDOW
+    with job_context as job, subprocess.Popen(command, cwd=workspace, stdin=subprocess.DEVNULL,
+                                              stdout=subprocess.DEVNULL, stderr=log, creationflags=flags) as guest:
+        try:
+            if job is not None:
+                try:
+                    add_guest(job, guest.pid)
+                except OSError as error:
+                    raise RuntimeError("Windows could not attach QEMU to the review's job object.") from error
+            yield guest
+        finally:
+            stop_guest(guest)
+
+
 def run(workspace, qemu):
     build_image(workspace, None)
     serial = workspace / "serial.log"
-    flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-    with (workspace / "qemu.log").open("wb") as log:
-        guest = subprocess.Popen(
-            qemu_command(qemu, "file:serial.log"),
-            cwd=workspace, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=log,
-            creationflags=flags,
-        )
-        try:
-            deadline = time.monotonic() + 120
-            while time.monotonic() < deadline:
-                if serial.is_file():
-                    lines = serial.read_bytes().splitlines()
-                    if b"RR_DONE" in lines and b"RR_EXIT=0" in lines:
-                        return serial
-                    if any(line.startswith((b"RR_FAIL ", b"RR_EXIT=")) for line in lines):
-                        raise RuntimeError(f"Native run failed. See {serial}")
-                if guest.poll() is not None:
-                    raise RuntimeError(f"QEMU exited early. See {workspace / 'qemu.log'}")
-                time.sleep(0.25)
-            raise TimeoutError(f"No result. See {serial}")
-        finally:
-            stop_guest(guest)
+    with (workspace / "qemu.log").open("wb") as log, \
+            start_guest(qemu_command(qemu, "file:serial.log"), workspace, log) as guest:
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
+            if serial.is_file():
+                lines = serial.read_bytes().splitlines()
+                if b"RR_DONE" in lines and b"RR_EXIT=0" in lines:
+                    return serial
+                if any(line.startswith((b"RR_FAIL ", b"RR_EXIT=")) for line in lines):
+                    raise RuntimeError(f"Native run failed. See {serial}")
+            if guest.poll() is not None:
+                raise RuntimeError(f"QEMU exited early. See {workspace / 'qemu.log'}")
+            time.sleep(0.25)
+        raise TimeoutError(f"No result. See {serial}")
 
 
 def decode_coverage_detail(fields, coverage):
@@ -467,7 +480,6 @@ def review_native(workspace, qemu, recording, decide, seed=None, request=None, b
         build_image(workspace, recording, token, request, bench is not None, sealed=sealed)
     else:
         prepare_job_disk(workspace, sealed, token, request, bench is not None)
-    flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
     adapter_context = AdapterBench(bench) if bench is not None else nullcontext()
     with adapter_context as adapter, socket.socket() as listener, (workspace / "qemu.log").open("wb") as log, \
             (workspace / "serial.log").open("wb") as serial:
@@ -481,23 +493,19 @@ def review_native(workspace, qemu, recording, decide, seed=None, request=None, b
         if adapter is not None:
             command.extend(["-chardev", f"socket,id=obd,host=127.0.0.1,port={adapter.port},nodelay=on",
                             "-device", "isa-serial,chardev=obd,index=2,iobase=0x3e8,irq=5"])
-        with subprocess.Popen(command, cwd=workspace, stdin=subprocess.DEVNULL,
-                              stdout=subprocess.DEVNULL, stderr=log, creationflags=flags) as guest:
-            try:
-                connection, _ = listener.accept()
-                listener.close()
-                with connection:
-                    result = collect_review(guest, connection, serial, decide,
-                                            seed=seed, boot_token=token, request=request, bench=bench is not None,
-                                            job_disk=image is not None, recording_key=recording_key,
-                                            on_disconnect=on_disconnect, source=source, on_coverage=on_coverage,
-                                            on_evaluation=on_evaluation, on_startup_window=on_startup_window,
-                                            on_coverage_detail=on_coverage_detail)
-                    if adapter is not None:
-                        adapter.check_commands()
-                    return result
-            finally:
-                stop_guest(guest)
+        with start_guest(command, workspace, log) as guest:
+            connection, _ = listener.accept()
+            listener.close()
+            with connection:
+                result = collect_review(guest, connection, serial, decide,
+                                        seed=seed, boot_token=token, request=request, bench=bench is not None,
+                                        job_disk=image is not None, recording_key=recording_key,
+                                        on_disconnect=on_disconnect, source=source, on_coverage=on_coverage,
+                                        on_evaluation=on_evaluation, on_startup_window=on_startup_window,
+                                        on_coverage_detail=on_coverage_detail)
+                if adapter is not None:
+                    adapter.check_commands()
+                return result
 
 
 def review(workspace, qemu, recording, receipt):
