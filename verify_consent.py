@@ -1,6 +1,7 @@
 """Check consent expiry and recovery from a failed QNX image build."""
 
 from concurrent.futures import Future
+import json
 from threading import Event
 from time import monotonic, sleep
 from types import SimpleNamespace
@@ -11,8 +12,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from issuer_store import Issuer
 import live
-from run_qnx import decode_coverage_detail
-from shop_request import canonical, request_document, verification_packet
+from run_qnx import ROOT, decode_coverage_detail
+from shop_request import canonical, consent_export_size, request_document, verification_packet
 
 
 class ConsentDeadline(unittest.TestCase):
@@ -61,6 +62,7 @@ class ConsentDeadline(unittest.TestCase):
     def test_countdown_is_relative_to_the_preview_and_private_to_its_driver(self):
         def check_remaining(review):
             self.assertEqual(review.snapshot("driver")["consentRemainingMs"], 250)
+            self.assertGreater(review.snapshot("driver")["consentExportBytes"], 0)
             self.assertEqual(review.snapshot("other-driver"), {"stage": "occupied"})
             return review.decide("driver", "test-job", "share")
 
@@ -68,6 +70,17 @@ class ConsentDeadline(unittest.TestCase):
         self.assertTrue(shared)
         self.assertTrue(accepted)
         self.assertNotIn("consentRemainingMs", state)
+        self.assertNotIn("consentExportBytes", state)
+
+    def test_consent_size_matches_published_packet_bytes(self):
+        archived = json.loads((ROOT / "replay/qnx-road-scope-receipts.json").read_text(encoding="utf-8"))
+        fingerprint = archived["issuer"]["fingerprint"]
+        for scope, receipts in archived["receipts"].items():
+            for receipt in receipts:
+                with self.subTest(scope=scope):
+                    request = archived["requests"][scope]
+                    expected = consent_export_size(json.loads(receipt)["claim"], request, fingerprint)
+                    self.assertEqual(expected, len(canonical(verification_packet(request, receipt, fingerprint))))
 
     def test_reuse_notice_is_scoped_to_the_same_driver_and_a_new_request(self):
         for options in ({"prior_owner": "another-driver"}, {"request_id": "original"}):

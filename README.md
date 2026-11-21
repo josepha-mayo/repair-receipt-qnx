@@ -47,7 +47,9 @@ Open the printed **Driver** URL to save its issuer public key. In the printed **
 
 The shop can send the **Request SHA-256** from **Request details** through a channel the driver already trusts. The offline request creator shows the same fingerprint beside the saved request. On the driver page, open **Check the shop request fingerprint** and paste it. Repair Receipt compares the canonical request and blocks the start if it differs. A match appears again at consent. The fingerprint is optional for local practice and requests you already trust.
 
-After approving a shop-requested review, choose **Download verification packet** and send that file to the shop. It carries the original request, signed receipt and issuer fingerprint. The shop uses its enrolled public key to verify it. Individual receipt and key downloads are also available.
+Before approval, the driver sees the byte count of the file available to share. Expand the file label to see its contents. For a shop-requested review, the verification packet includes the original request, signed receipt and issuer fingerprint. A driver-started review shows the signed receipt size. The app calculates the size from the QNX preview and the fixed-width signature field. QNX signs only after approval. [Verified download sizes](replay/qnx-consent-disclosure-proof.json)
+
+After approving a shop-requested review, choose **Download verification packet** and send that file to the shop. The shop uses its enrolled public key to verify it. Individual receipt and key downloads are also available.
 
 The driver session that starts a review can see the preview, decide and download the issued receipt. Refreshing that tab keeps the session when browser session storage is available. If another session starts a review first, the original tab can still download its approved packet. The app keeps the last 16 displaced receipts in memory, available only to the issuing sessions until they start their own next review or the app exits. Other sessions see only whether a QNX review is active.
 

@@ -15,7 +15,9 @@ from threading import Thread
 import time
 
 from obd_bench import AdapterBench
-from shop_request import BENCH_SOURCE, FILE_SOURCES, STARTUP_RECIPE, guest_bytes, matches_claim, matches_driver_claim
+from shop_request import (
+    BENCH_SOURCE, FILE_SOURCES, STARTUP_RECIPE, guest_bytes, matches_claim, matches_driver_claim, signed_receipt_format,
+)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -419,13 +421,8 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
             raise RuntimeError("QNX did not verify the absence of a plaintext recording file.")
         if share and not denied:
             if signed:
-                if bench:
-                    version = b"3"
-                elif source is not None:
-                    version = b"5" if request is not None else b"6"
-                else:
-                    version = b"2" if request is not None else b"4"
-                pattern = (rb'\{"format":"repair-receipt/v' + version + rb'","claim":' + re.escape(preview) +
+                envelope = signed_receipt_format(request, expected_source).encode("ascii")
+                pattern = (rb'\{"format":"' + envelope + rb'","claim":' + re.escape(preview) +
                            rb',"signature":"[a-f0-9]{128}"\}')
                 if receipt and re.fullmatch(pattern, receipt):
                     return receipt

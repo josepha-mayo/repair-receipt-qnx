@@ -1,0 +1,32 @@
+{
+  "runtime": "QNX 8.0 x86-64, Brave on Windows",
+  "results": {
+    "published_idle": {
+      "receipt_format": "repair-receipt/v5",
+      "preview_bytes": 667,
+      "downloaded_bytes": 667
+    },
+    "driver_started": {
+      "receipt_format": "repair-receipt/v6",
+      "preview_bytes": 297,
+      "downloaded_bytes": 297
+    },
+    "startup_rule": {
+      "receipt_format": "repair-receipt/v5",
+      "preview_bytes": 695,
+      "downloaded_bytes": 695
+    },
+    "simulated_uart": {
+      "receipt_format": "repair-receipt/v3",
+      "preview_bytes": 686,
+      "downloaded_bytes": 686
+    }
+  },
+  "approval_controls_visible_at_320x640": true,
+  "saved_size_survived_owner_reload": true,
+  "size_scoped_to_owner": true,
+  "disclosure_removed_after_decision": true,
+  "decline_stopped_export": true,
+  "native_signatures_verified": true,
+  "disclosure_metadata_absent_from_exports": true
+}

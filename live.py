@@ -26,7 +26,7 @@ from pack_shop import standalone
 from run_qnx import MAX_RECORDING, ROOT, build_template, review_native
 from shop_request import (
     CURRENT_RECIPE, DEFAULT_THRESHOLD_C, DEMO_SOURCE, PUBLISHED_SOURCE, STARTUP_RECIPE, UPLOADED_SOURCE,
-    canonical, parse_request, request_fingerprint, verification_packet,
+    canonical, consent_export_size, parse_request, request_fingerprint, verification_packet,
 )
 
 try:
@@ -191,7 +191,7 @@ class Review:
         self.response.set()
 
     def _clear_private_notes(self):
-        for field in ("reusedRecording", "previousRecordingRule", "startupExcludedMs", "coverageDetail"):
+        for field in ("reusedRecording", "previousRecordingRule", "startupExcludedMs", "coverageDetail", "consentExportBytes"):
             self.state.pop(field, None)
 
     def _note_upload(self, import_review, claim):
@@ -207,13 +207,14 @@ class Review:
             self.state["previousRecordingRule"] = prior_rule
 
     def wait_for_decision(self, preview, issuer, guest_closed, coverage=None, import_review=None, *,
-                          startup_excluded_ms=None, coverage_detail=None):
+                          startup_excluded_ms=None, coverage_detail=None, request=None):
         if not secrets.compare_digest(self.issuer.public_hex.encode("ascii"), issuer):
             raise RuntimeError("The guest presented a key different from the enrolled issuer.")
         with self.lock:
             self.deadline = time.monotonic() + CONSENT_SECONDS
             claim = json.loads(preview)
-            self.state.update(stage="review", claim=claim, issuer=issuer.decode("ascii"))
+            self.state.update(stage="review", claim=claim, issuer=issuer.decode("ascii"),
+                              consentExportBytes=consent_export_size(claim, request, self.issuer.fingerprint))
             if coverage:
                 self.state["coverage"] = coverage
             if coverage_detail:
@@ -255,7 +256,8 @@ class Review:
                 receipt = review_native(Path(directory) / "guest", self.qemu, recording,
                                         lambda preview, issuer: self.wait_for_decision(
                                             preview, issuer, guest_closed, coverage, import_review,
-                                            startup_excluded_ms=startup_excluded_ms, coverage_detail=coverage_detail),
+                                            startup_excluded_ms=startup_excluded_ms, coverage_detail=coverage_detail,
+                                            request=request),
                                         self.issuer.seed, request, bench, image=image, on_disconnect=disconnect,
                                         source=source, on_coverage=coverage.update, on_startup_window=record_startup_window,
                                         on_coverage_detail=coverage_detail.update)

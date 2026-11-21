@@ -146,6 +146,18 @@ function render() {
   byId("recording-reselection").hidden = !recordingCleared;
   byId("choose-recording").hidden = stage !== "expired";
   byId("actions").hidden = stage !== "review" || reconnecting;
+  const disclosure = byId("consent-disclosure");
+  const bytes = state.consentExportBytes;
+  disclosure.hidden = stage !== "review" || !claim || !Number.isSafeInteger(bytes) || bytes <= 0;
+  if (disclosure.hidden) {
+    disclosure.open = false;
+  } else {
+    const exportLabel = claim.request ? "Verification packet" : "Signed receipt";
+    byId("consent-export-size").textContent = `${exportLabel} · ${bytes} bytes`;
+    byId("consent-export-contents").textContent = claim.request
+      ? "Includes the signed findings, test rule and capture source, plus the original shop request and issuer fingerprint."
+      : "Includes the signed findings, test rule and capture source.";
+  }
   const timer = byId("consent-timer");
   const seconds = Math.ceil(state.consentRemainingMs / 1000);
   timer.hidden = stage !== "review" || reconnecting || !Number.isInteger(seconds) || seconds <= 0;

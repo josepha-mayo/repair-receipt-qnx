@@ -40,7 +40,7 @@ Open the printed shop and driver URLs. In the driver, save the public key under 
 
 Copy the full **Request SHA-256** line from **Request details**. Paste it under **Check the shop request fingerprint** on the driver page after choosing the request file. Change one hex digit to see the review stay disabled, then restore the original fingerprint. The consent view shows when the request matches.
 
-In the driver page, load that request, run **Trip A** and review the preview. Approve and choose **Download verification packet**. In the shop register, open the packet under **Find a request from a receipt or packet**. The register opens the matching job and verifies it against the request and key on file. Choose **File verified receipt** and load the packet again to observe repeat handling. In the standalone verifier, try a freshly generated idle-only request against the same valid packet to see the request mismatch.
+In the driver page, load that request, run **Trip A** and review the preview. Expand **Verification packet** to check the contents and note the byte count. Approve, choose **Download verification packet**, and compare the downloaded size with the preview. In the shop register, open the packet under **Find a request from a receipt or packet**. The register opens the matching job and verifies it against the request and key on file. Choose **File verified receipt** and load the packet again to observe repeat handling. In the standalone verifier, try a freshly generated idle-only request against the same valid packet to see the request mismatch.
 
 The consent timer starts when QNX presents the preview. Refresh the driver tab during a sample review to confirm the same review resumes with its original deadline.
 

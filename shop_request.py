@@ -36,6 +36,22 @@ def verification_packet(request, receipt, fingerprint):
     return {"format": PACKET_FORMAT, "request": request, "receipt": receipt, "fingerprint": fingerprint}
 
 
+def signed_receipt_format(request, source):
+    if source == BENCH_SOURCE:
+        return "repair-receipt/v3"
+    if source is not None:
+        return "repair-receipt/v5" if request is not None else "repair-receipt/v6"
+    return "repair-receipt/v2" if request is not None else "repair-receipt/v4"
+
+
+def consent_export_size(claim, request, fingerprint):
+    receipt = canonical({"format": signed_receipt_format(request, claim.get("source")),
+                         "claim": claim, "signature": "0" * 128})
+    if request is None:
+        return len(receipt)
+    return len(canonical(verification_packet(request, receipt, fingerprint)))
+
+
 def valid_threshold(value):
     return type(value) is int and MIN_TEMPERATURE_C <= value <= MAX_TEMPERATURE_C
 
