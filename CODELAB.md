@@ -6,7 +6,7 @@ Build a QNX 8.0 guest that can return a signed coolant observation from a local 
 
 Open the downloaded HTML in a current Chromium browser. It contains four receipts issued by QNX for two published drives at a 95 °C test threshold. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html)
 
-1. Choose **Check idle receipts**. Both findings are observed and both 342-byte receipts are identical. Choose **Check moving receipts**. July 26 shows an observation and July 27 has insufficient evidence.
+1. The verifier opens on the idle comparison. Both findings are observed and both drives produce the same 667-byte packet, including a 342-byte signed receipt. The page shows the sizes of the two original logs next to the packet size. Choose **Check moving receipts**. July 26 shows an observation and July 27 has insufficient evidence.
 2. Open **Download proof files**, then save the July 27 packet and the example issuer key. Under **Verification files**, load the packet and key and choose **Verify receipt**. The verifier confirms the signature and the request included in the packet.
 3. Under **Create a shop request**, choose **While moving only**, enter **95**, then select **Save request file**. This selects a fresh request with a new ID. Choose **Verify receipt** again to see the mismatch. Select **Clear original request** and verify again to return to checking the packet against its included request.
 

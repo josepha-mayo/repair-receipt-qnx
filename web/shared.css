@@ -43,6 +43,9 @@ h2 { font-size: 1.22rem; line-height: 1.22; }
 .road-example { margin-bottom: 18px; }
 .road-example .status:empty { display: none; }
 .road-example button[aria-pressed="true"] { outline: 2px solid var(--green); outline-offset: 2px; }
+#road-disclosure { margin-top: 14px; padding: 3px 12px; border-radius: 8px; background: var(--paper); font-size: .91rem; }
+#road-disclosure div:last-child { border-bottom: 0; }
+#road-packet-size { white-space: nowrap; }
 .request-card { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; gap: 18px; margin-bottom: 18px; }
 #verification-workspace + .request-card { margin-top: 18px; }
 .request-card label { margin-top: 0; }

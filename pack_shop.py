@@ -14,6 +14,8 @@ def standalone():
     script = (assets / "shop.js").read_text(encoding="utf-8")
     evidence = json.loads((root / "replay" / "qnx-road-scope-receipts.json").read_text(encoding="utf-8"))
     evidence["startup"] = json.loads((root / "replay" / "qnx-road-startup-receipts.json").read_text(encoding="utf-8"))
+    disclosure = json.loads((root / "replay" / "qnx-road-disclosure.json").read_text(encoding="utf-8"))
+    evidence["originalRoadBytes"] = [drive["original_csv"]["bytes"] for drive in disclosure["recordings"]]
     sample = json.dumps(evidence, ensure_ascii=True, separators=(",", ":")).replace("<", "\\u003c")
     return (
         page.replace('<link rel="stylesheet" href="shared.css">', f'<style>{stylesheet}</style>')

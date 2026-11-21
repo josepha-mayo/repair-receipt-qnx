@@ -389,8 +389,10 @@ if (roadEvidence) {
   const roadStatus = byId("road-status");
   const roadFindings = byId("road-findings");
   const roadSource = byId("road-source");
+  const roadDisclosure = byId("road-disclosure");
   const downloads = byId("road-downloads");
-  const controls = [[byId("check-idle"), "idle"], [byId("check-moving"), "moving"], [byId("check-startup"), "startup"]];
+  const idleControl = byId("check-idle");
+  const controls = [[idleControl, "idle"], [byId("check-moving"), "moving"], [byId("check-startup"), "startup"]];
   const saveButtons = [byId("save-road-first"), byId("save-road-second")];
   let verifiedPair = null;
   byId("shop-heading").textContent = "Verify a receipt.";
@@ -400,7 +402,7 @@ if (roadEvidence) {
   for (const [index, button] of saveButtons.entries()) {
     button.addEventListener("click", () => {
       if (!verifiedPair) return;
-      ShopRequest.save(verifiedPair.filenames[index], JSON.stringify(verifiedPair.packets[index]));
+      ShopRequest.save(verifiedPair.filenames[index], verifiedPair.files[index]);
     });
   }
   byId("save-road-key").addEventListener("click", () => {
@@ -416,6 +418,7 @@ if (roadEvidence) {
       verifiedPair = null;
       roadFindings.hidden = true;
       roadSource.hidden = true;
+      roadDisclosure.hidden = true;
       downloads.hidden = true;
       downloads.open = false;
       roadStatus.className = "status";
@@ -431,8 +434,9 @@ if (roadEvidence) {
           throw new Error("The example needs two verification packets.");
         }
         const verifier = await publicVerifier(new Blob([JSON.stringify(keyFile)]));
-        const results = await Promise.all(packets.map(async packet => {
-          const input = new Blob([JSON.stringify(packet)]);
+        const files = packets.map(packet => JSON.stringify(packet));
+        const results = await Promise.all(files.map(async file => {
+          const input = new Blob([file]);
           return verifyEvidence(await ShopRequest.readEvidence(input), verifier, null);
         }));
         const [a, b] = results.map(result => result.claim);
@@ -459,9 +463,15 @@ if (roadEvidence) {
         roadSource.textContent = startup ? "July 27, 2017 · Moving finding · 95 °C"
           : `Signed input type · ${ShopRequest.sourceLabel(a.source)} · 95 °C`;
         roadSource.hidden = false;
+        if (mode === "idle" && files[0] === files[1]) {
+          byId("road-original-sizes").textContent = sample.originalRoadBytes
+            .map(bytes => `${(bytes / 1_000_000).toFixed(2)} MB`).join(" · ");
+          byId("road-packet-size").textContent = `${new TextEncoder().encode(files[0]).byteLength} bytes`;
+          roadDisclosure.hidden = false;
+        }
         const filenames = startup ? ["road-strict-scope.json", "road-startup-scope.json"]
           : [26, 27].map(date => `kit-2017-07-${date}-${scope}-packet.json`);
-        verifiedPair = {keyFile, packets, filenames};
+        verifiedPair = {keyFile, files, filenames};
         saveButtons[0].textContent = startup ? "Save entire-recording packet" : "Save July 26 packet";
         saveButtons[1].textContent = startup ? "Save startup packet" : "Save July 27 packet";
         downloads.hidden = false;
@@ -473,4 +483,5 @@ if (roadEvidence) {
       }
     });
   }
+  idleControl.click();
 }

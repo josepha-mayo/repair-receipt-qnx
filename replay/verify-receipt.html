@@ -49,6 +49,9 @@ h2 { font-size: 1.22rem; line-height: 1.22; }
 .road-example { margin-bottom: 18px; }
 .road-example .status:empty { display: none; }
 .road-example button[aria-pressed="true"] { outline: 2px solid var(--green); outline-offset: 2px; }
+#road-disclosure { margin-top: 14px; padding: 3px 12px; border-radius: 8px; background: var(--paper); font-size: .91rem; }
+#road-disclosure div:last-child { border-bottom: 0; }
+#road-packet-size { white-space: nowrap; }
 .request-card { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; gap: 18px; margin-bottom: 18px; }
 #verification-workspace + .request-card { margin-top: 18px; }
 .request-card label { margin-top: 0; }
@@ -178,6 +181,10 @@ footer { margin-top: 18px; }
         <div><dt id="road-first-label"></dt><dd id="road-first"></dd></div>
         <div><dt id="road-second-label"></dt><dd id="road-second"></dd></div>
       </dl>
+      <dl id="road-disclosure" aria-label="Idle example file sizes" hidden>
+        <div><dt>Original logs stay with drivers</dt><dd id="road-original-sizes"></dd></div>
+        <div><dt>Shop packet from either drive</dt><dd id="road-packet-size"></dd></div>
+      </dl>
       <details id="road-downloads" class="issuer-enrollment" hidden>
         <summary>Download proof files</summary>
         <div class="actions">
@@ -288,7 +295,7 @@ footer { margin-top: 18px; }
       </li>
     </template>
   </main>
-<script id="road-evidence" type="application/json">{"issuer":{"key":"23df8bfee292ab0a1dcd8465b858647ef1ddf1c0a08823d18ebcadd02b6720cf","fingerprint":"5443292d71f03389baee52874f39d5e8aac27e66b1421b7a44f54437349acfb8","durable":false},"requests":{"idle":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"idle","id":"d4d02f7cd770ddf2448e70f682e5790d","thresholdC":95},"moving":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"moving","id":"75d8982265b83194097a355fed0f56c0","thresholdC":95}},"receipts":{"idle":["{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"d4d02f7cd770ddf2448e70f682e5790d\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"c28ea4ddbb0c2d036376cd0eaa1e5cabcfa29a5ec416f9f2d03c1e4f78f931be7481685ef59f44d2e08556c6105416057a5950af48c0164f40a653140538370e\"}","{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"d4d02f7cd770ddf2448e70f682e5790d\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"c28ea4ddbb0c2d036376cd0eaa1e5cabcfa29a5ec416f9f2d03c1e4f78f931be7481685ef59f44d2e08556c6105416057a5950af48c0164f40a653140538370e\"}"],"moving":["{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"75d8982265b83194097a355fed0f56c0\",\"scope\":\"moving\",\"moving\":\"observed\"},\"signature\":\"0c193af812850871f7d5cc096987f516b710a4714e05abedc31e3027a820d430a6a7d0cd2532fa8c3fa97e2820b30f8391d6bef49ffb5268f8988c0522ce8108\"}","{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"75d8982265b83194097a355fed0f56c0\",\"scope\":\"moving\",\"moving\":\"insufficient_evidence\"},\"signature\":\"40fdb2ca99ea5768904366cfe3e03ca7c1139ab2b5075b6eec4adadec82518f7163c025f5d9b4e25da2108998ac89306f8ec723c0b7814bfe0b48bf96b05bb0c\"}"]},"startup":{"issuer":{"format":"repair-receipt-issuer/v1","ed25519":"6a26c551b87952f88d3ef638604503aa239c54e0431096b87afcafa94118e4f8"},"packets":[{"format":"repair-receipt-verification/v1","request":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"both","id":"ff54c07e1fb735c1319de54c8c515c9e","thresholdC":95},"receipt":"{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"uploaded-csv/v1\",\"request\":\"ff54c07e1fb735c1319de54c8c515c9e\",\"scope\":\"both\",\"idle\":\"observed\",\"moving\":\"insufficient_evidence\"},\"signature\":\"a41fe49da69cf9e66fe7740bdeb273d2dfb37d505f19d19feaec554ada9fcfae58ecbc912717b76acb54faae670ff33f0f9ad0c5dedc564b4860ed40c3f4b101\"}","fingerprint":"f25bf45983d1c758d0d02cc1f839ec3b9420eeb6f0e6423bf089e35cabcafdef"},{"format":"repair-receipt-verification/v1","request":{"format":"repair-receipt-request/v2","recipe":"coolant-startup-window/v3","scope":"both","id":"27014111db5da5e3c836208e08ff23d9","thresholdC":95},"receipt":"{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-startup-window/v3\",\"thresholdC\":95,\"source\":\"uploaded-csv/v1\",\"request\":\"27014111db5da5e3c836208e08ff23d9\",\"scope\":\"both\",\"idle\":\"observed\",\"moving\":\"not_observed\"},\"signature\":\"c9906dc7284221927f34b278114229efb4913f7551e4eafab0ca7fc598a106d62337e467e20e2f33511ce3c76b8bbb06118670796e9b36a75b1f65f1545fd209\"}","fingerprint":"f25bf45983d1c758d0d02cc1f839ec3b9420eeb6f0e6423bf089e35cabcafdef"}]}}</script>
+<script id="road-evidence" type="application/json">{"issuer":{"key":"23df8bfee292ab0a1dcd8465b858647ef1ddf1c0a08823d18ebcadd02b6720cf","fingerprint":"5443292d71f03389baee52874f39d5e8aac27e66b1421b7a44f54437349acfb8","durable":false},"requests":{"idle":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"idle","id":"d4d02f7cd770ddf2448e70f682e5790d","thresholdC":95},"moving":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"moving","id":"75d8982265b83194097a355fed0f56c0","thresholdC":95}},"receipts":{"idle":["{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"d4d02f7cd770ddf2448e70f682e5790d\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"c28ea4ddbb0c2d036376cd0eaa1e5cabcfa29a5ec416f9f2d03c1e4f78f931be7481685ef59f44d2e08556c6105416057a5950af48c0164f40a653140538370e\"}","{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"d4d02f7cd770ddf2448e70f682e5790d\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"c28ea4ddbb0c2d036376cd0eaa1e5cabcfa29a5ec416f9f2d03c1e4f78f931be7481685ef59f44d2e08556c6105416057a5950af48c0164f40a653140538370e\"}"],"moving":["{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"75d8982265b83194097a355fed0f56c0\",\"scope\":\"moving\",\"moving\":\"observed\"},\"signature\":\"0c193af812850871f7d5cc096987f516b710a4714e05abedc31e3027a820d430a6a7d0cd2532fa8c3fa97e2820b30f8391d6bef49ffb5268f8988c0522ce8108\"}","{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"75d8982265b83194097a355fed0f56c0\",\"scope\":\"moving\",\"moving\":\"insufficient_evidence\"},\"signature\":\"40fdb2ca99ea5768904366cfe3e03ca7c1139ab2b5075b6eec4adadec82518f7163c025f5d9b4e25da2108998ac89306f8ec723c0b7814bfe0b48bf96b05bb0c\"}"]},"startup":{"issuer":{"format":"repair-receipt-issuer/v1","ed25519":"6a26c551b87952f88d3ef638604503aa239c54e0431096b87afcafa94118e4f8"},"packets":[{"format":"repair-receipt-verification/v1","request":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"both","id":"ff54c07e1fb735c1319de54c8c515c9e","thresholdC":95},"receipt":"{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"uploaded-csv/v1\",\"request\":\"ff54c07e1fb735c1319de54c8c515c9e\",\"scope\":\"both\",\"idle\":\"observed\",\"moving\":\"insufficient_evidence\"},\"signature\":\"a41fe49da69cf9e66fe7740bdeb273d2dfb37d505f19d19feaec554ada9fcfae58ecbc912717b76acb54faae670ff33f0f9ad0c5dedc564b4860ed40c3f4b101\"}","fingerprint":"f25bf45983d1c758d0d02cc1f839ec3b9420eeb6f0e6423bf089e35cabcafdef"},{"format":"repair-receipt-verification/v1","request":{"format":"repair-receipt-request/v2","recipe":"coolant-startup-window/v3","scope":"both","id":"27014111db5da5e3c836208e08ff23d9","thresholdC":95},"receipt":"{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-startup-window/v3\",\"thresholdC\":95,\"source\":\"uploaded-csv/v1\",\"request\":\"27014111db5da5e3c836208e08ff23d9\",\"scope\":\"both\",\"idle\":\"observed\",\"moving\":\"not_observed\"},\"signature\":\"c9906dc7284221927f34b278114229efb4913f7551e4eafab0ca7fc598a106d62337e467e20e2f33511ce3c76b8bbb06118670796e9b36a75b1f65f1545fd209\"}","fingerprint":"f25bf45983d1c758d0d02cc1f839ec3b9420eeb6f0e6423bf089e35cabcafdef"}]},"originalRoadBytes":[3037603,1070443]}</script>
 <script>"use strict";
 
 const ShopRequest = (() => {
@@ -826,8 +833,10 @@ if (roadEvidence) {
   const roadStatus = byId("road-status");
   const roadFindings = byId("road-findings");
   const roadSource = byId("road-source");
+  const roadDisclosure = byId("road-disclosure");
   const downloads = byId("road-downloads");
-  const controls = [[byId("check-idle"), "idle"], [byId("check-moving"), "moving"], [byId("check-startup"), "startup"]];
+  const idleControl = byId("check-idle");
+  const controls = [[idleControl, "idle"], [byId("check-moving"), "moving"], [byId("check-startup"), "startup"]];
   const saveButtons = [byId("save-road-first"), byId("save-road-second")];
   let verifiedPair = null;
   byId("shop-heading").textContent = "Verify a receipt.";
@@ -837,7 +846,7 @@ if (roadEvidence) {
   for (const [index, button] of saveButtons.entries()) {
     button.addEventListener("click", () => {
       if (!verifiedPair) return;
-      ShopRequest.save(verifiedPair.filenames[index], JSON.stringify(verifiedPair.packets[index]));
+      ShopRequest.save(verifiedPair.filenames[index], verifiedPair.files[index]);
     });
   }
   byId("save-road-key").addEventListener("click", () => {
@@ -853,6 +862,7 @@ if (roadEvidence) {
       verifiedPair = null;
       roadFindings.hidden = true;
       roadSource.hidden = true;
+      roadDisclosure.hidden = true;
       downloads.hidden = true;
       downloads.open = false;
       roadStatus.className = "status";
@@ -868,8 +878,9 @@ if (roadEvidence) {
           throw new Error("The example needs two verification packets.");
         }
         const verifier = await publicVerifier(new Blob([JSON.stringify(keyFile)]));
-        const results = await Promise.all(packets.map(async packet => {
-          const input = new Blob([JSON.stringify(packet)]);
+        const files = packets.map(packet => JSON.stringify(packet));
+        const results = await Promise.all(files.map(async file => {
+          const input = new Blob([file]);
           return verifyEvidence(await ShopRequest.readEvidence(input), verifier, null);
         }));
         const [a, b] = results.map(result => result.claim);
@@ -896,9 +907,15 @@ if (roadEvidence) {
         roadSource.textContent = startup ? "July 27, 2017 · Moving finding · 95 °C"
           : `Signed input type · ${ShopRequest.sourceLabel(a.source)} · 95 °C`;
         roadSource.hidden = false;
+        if (mode === "idle" && files[0] === files[1]) {
+          byId("road-original-sizes").textContent = sample.originalRoadBytes
+            .map(bytes => `${(bytes / 1_000_000).toFixed(2)} MB`).join(" · ");
+          byId("road-packet-size").textContent = `${new TextEncoder().encode(files[0]).byteLength} bytes`;
+          roadDisclosure.hidden = false;
+        }
         const filenames = startup ? ["road-strict-scope.json", "road-startup-scope.json"]
           : [26, 27].map(date => `kit-2017-07-${date}-${scope}-packet.json`);
-        verifiedPair = {keyFile, packets, filenames};
+        verifiedPair = {keyFile, files, filenames};
         saveButtons[0].textContent = startup ? "Save entire-recording packet" : "Save July 26 packet";
         saveButtons[1].textContent = startup ? "Save startup packet" : "Save July 27 packet";
         downloads.hidden = false;
@@ -910,6 +927,7 @@ if (roadEvidence) {
       }
     });
   }
+  idleControl.click();
 }
 </script>
 </body>
