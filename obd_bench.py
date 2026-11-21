@@ -5,17 +5,19 @@ import socket
 from threading import Thread
 import time
 
+FRAME_FAULTS = {"foreign-responder", "wrong-pci-length", "missing-header", "invalid-padding"}
 PROFILES = {
     "normal", "gapped", "setup-failure", "late-reply", "link-loss", "motion-change",
-    "within-sample-budget", "over-sample-budget",
+    "within-sample-budget", "over-sample-budget", *FRAME_FAULTS,
 }
-SETUP = ("ATE0", "ATL0", "ATS0", "ATH0", "ATCAF1", "ATM0", "ATTP6", "ATSH7E0", "ATCRA7E8")
+SETUP = ("ATE0", "ATL0", "ATS0", "ATH1", "ATD0", "ATCAF1", "ATM0", "ATTP6", "ATCEA", "ATSH7E0", "ATCRA7E8")
 SAMPLE_COMMANDS = ("010D", "0105", "010C", "010D")
 ALLOWED = {*SETUP, *SAMPLE_COMMANDS}
 FAULT_COMMANDS = {
     "late-reply": SETUP + SAMPLE_COMMANDS * 2 + SAMPLE_COMMANDS[:2],
     "link-loss": SETUP + SAMPLE_COMMANDS * 5,
     "over-sample-budget": SETUP + SAMPLE_COMMANDS * 3,
+    **dict.fromkeys(FRAME_FAULTS, SETUP + SAMPLE_COMMANDS * 2 + SAMPLE_COMMANDS[:2] + SAMPLE_COMMANDS * 4),
 }
 TIMED_PROMPT_DELAYS = {
     "within-sample-budget": (0.060, 0.060, 0.060, 0.050),
@@ -25,6 +27,11 @@ SAMPLES = (
     (100, 790, 0), (106, 805, 0), (108, 800, 0), (107, 815, 0),
     (101, 1450, 13), (99, 1825, 25), (98, 1950, 35),
 )
+
+
+def can_frame(payload):
+    data = f"{len(payload) // 2:02X}{payload}".ljust(16, "0")
+    return ("7E8" + data + "\r").encode("ascii")
 
 
 class AdapterBench:
@@ -72,7 +79,7 @@ class AdapterBench:
         if self.error or any(command not in ALLOWED for command in self.commands):
             raise RuntimeError("The OBD bench observed an invalid serial exchange.")
         if self.profile in FAULT_COMMANDS and tuple(self.commands) != FAULT_COMMANDS[self.profile]:
-            raise RuntimeError("The guest continued asking for readings after a failed serial exchange.")
+            raise RuntimeError("The guest did not discard or stop at the expected exchange in " + self.profile)
         if self.profile == "late-reply" and not self.late_prompt_sent:
             raise RuntimeError("The delayed prompt did not reach the guest connection.")
         if self.profile in TIMED_PROMPT_DELAYS:
@@ -131,7 +138,7 @@ class AdapterBench:
                     self.timed_exchanges.append((request_time, time.monotonic()))
                     continue
                 if self.profile == "link-loss" and sample == 4 and closing_speed:
-                    connection.sendall(b"410D")
+                    connection.sendall(b"7E803410D")
                     return
                 if self.profile == "late-reply" and sample == 2 and command_text == "0105":
                     connection.sendall(reply)
@@ -145,19 +152,31 @@ class AdapterBench:
     def pid_reply(self, command, sample, closing_speed):
         if not 0 <= sample < len(SAMPLES):
             return b"NO DATA\r", False
-        if self.profile == "gapped" and command == "0105":
-            if sample == 2:
-                return b"NO DATA\r", False
-            if sample == 6:
-                return b"41058A\r41058B\r", False
         temperature, rpm, speed = SAMPLES[sample]
         if closing_speed and speed:
             speed += 2
         if self.profile == "motion-change" and sample == 2 and not closing_speed:
             speed = 12
-        responses = {
-            "0105": f"41 05 {temperature + 40:02X}",
+        payloads = {
+            "0105": f"4105{temperature + 40:02X}",
             "010C": f"410C{rpm * 4:04X}",
             "010D": f"410D{speed:02X}",
         }
-        return (responses[command] + "\r").encode("ascii"), True
+        payload = payloads[command]
+        frame = can_frame(payload)
+        if command == "0105":
+            if self.profile == "gapped" and sample == 6:
+                return frame + can_frame("41058B"), False
+            if sample == 2:
+                faults = {
+                    "gapped": b"NO DATA\r",
+                    "foreign-responder": b"7E9" + frame[3:],
+                    "wrong-pci-length": frame[:3] + b"04" + frame[5:],
+                    "missing-header": (payload + "\r").encode("ascii"),
+                    "invalid-padding": frame[:-3] + b"G0\r",
+                }
+                if self.profile in faults:
+                    return faults[self.profile], False
+            # A compatible response can include whitespace and lowercase hex.
+            frame = frame[:3].lower() + b" " + frame[3:].lower()
+        return frame, True

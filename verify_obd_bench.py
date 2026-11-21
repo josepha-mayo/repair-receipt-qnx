@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 import time
 
 from issuer_store import Issuer
+from obd_bench import FRAME_FAULTS
 from run_qnx import build_template, review_native
 from shop_request import BENCH_SOURCE, CURRENT_RECIPE
 
@@ -22,6 +23,8 @@ def verify(qemu):
     controls = (
         ("normal", ("observed", "not_observed"), b"RR_CAPTURE_COMPLETE 7 0"),
         ("gapped", ("insufficient_evidence", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 5 2"),
+        *((profile, ("insufficient_evidence", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 6 1")
+          for profile in sorted(FRAME_FAULTS)),
         ("motion-change", ("insufficient_evidence", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 6 1"),
         ("late-reply", ("insufficient_evidence", "insufficient_evidence"), b"RR_CAPTURE_COMPLETE 2 1"),
         ("within-sample-budget", ("observed", "not_observed"), b"RR_CAPTURE_COMPLETE 7 0"),

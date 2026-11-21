@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 enum { FRAME_CAPACITY = 128, CADENCE_MS = 1250, SAMPLE_BUDGET_MS = 350, SETUP_BUDGET_MS = 1500 };
+enum { CAN_ID_DIGITS = 3, CAN_DATA_DIGITS = 16, PID_VALUE_OFFSET = 6 };
 
 static int64_t now_ms(void)
 {
@@ -128,17 +129,26 @@ static int read_pid(int fd, const char *request, int octets, int *value, int64_t
     if (exchange(fd, request, response, deadline) != 0) {
         return -1;
     }
-    if (!single_line(response, request, line) || strlen(line) != (size_t)(4 + octets * 2) ||
-        line[0] != '4' || line[1] != '1' || memcmp(line + 2, request + 2, 2) != 0) {
+    if (!single_line(response, request, line) || strlen(line) != CAN_ID_DIGITS + CAN_DATA_DIGITS ||
+        memcmp(line, "7E8", CAN_ID_DIGITS) != 0) {
+        return 0;
+    }
+    const char *frame = line + CAN_ID_DIGITS;
+    /* One ISO-TP single frame with a mode, PID and the requested data bytes. */
+    if (frame[0] != '0' || hex(frame[1]) != 2 + octets ||
+        memcmp(frame + 2, "41", 2) != 0 || memcmp(frame + 4, request + 2, 2) != 0) {
         return 0;
     }
     *value = 0;
-    for (int index = 0; index < octets * 2; ++index) {
-        const int digit = hex(line[index + 4]);
+    const int value_end = PID_VALUE_OFFSET + octets * 2;
+    for (int index = PID_VALUE_OFFSET; index < CAN_DATA_DIGITS; ++index) {
+        const int digit = hex(frame[index]);
         if (digit < 0) {
             return 0;
         }
-        *value = *value * 16 + digit;
+        if (index < value_end) {
+            *value = *value * 16 + digit;
+        }
     }
     return 1;
 }
@@ -156,8 +166,8 @@ static int initialize(int fd, const struct termios *original)
         return -1;
     }
     /* Fixed ISO 15765-4 CAN profile for one engine ECU. Adapter settings are volatile. */
-    static const char *const setup[] = {"ATE0", "ATL0", "ATS0", "ATH0", "ATCAF1", "ATM0",
-                                       "ATTP6", "ATSH7E0", "ATCRA7E8"};
+    static const char *const setup[] = {"ATE0", "ATL0", "ATS0", "ATH1", "ATD0", "ATCAF1", "ATM0",
+                                       "ATTP6", "ATCEA", "ATSH7E0", "ATCRA7E8"};
     for (size_t index = 0; index < sizeof(setup) / sizeof(*setup); ++index) {
         char response[FRAME_CAPACITY], line[FRAME_CAPACITY];
         if (exchange(fd, setup[index], response, now_ms() + SETUP_BUDGET_MS) != 0 ||

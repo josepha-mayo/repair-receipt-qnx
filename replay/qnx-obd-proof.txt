@@ -5,7 +5,7 @@ RR_LIVE_RAW_WITHHELD
 RR_SIGN_WITHHELD approval_required
 RR_CAPTURE_BEGIN obd_bench
 RR_CAPTURE_COMPLETE 7 0
-RR_EVALUATION_US 7719
+RR_EVALUATION_US [private timing]
 RR_ISSUER [issuer key]
 RR_PREVIEW [private preview]
 RR_JOB_DISK_BOUNDARY raw_device_denied
@@ -24,7 +24,87 @@ RR_LIVE_RAW_WITHHELD
 RR_SIGN_WITHHELD approval_required
 RR_CAPTURE_BEGIN obd_bench
 RR_CAPTURE_COMPLETE 5 2
-RR_EVALUATION_US 2591
+RR_EVALUATION_US [private timing]
+RR_ISSUER [issuer key]
+RR_COVERAGE [driver-only guidance]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+foreign-responder: idle=insufficient_evidence, moving=insufficient_evidence
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_COMPLETE 6 1
+RR_EVALUATION_US [private timing]
+RR_ISSUER [issuer key]
+RR_COVERAGE [driver-only guidance]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+invalid-padding: idle=insufficient_evidence, moving=insufficient_evidence
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_COMPLETE 6 1
+RR_EVALUATION_US [private timing]
+RR_ISSUER [issuer key]
+RR_COVERAGE [driver-only guidance]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+missing-header: idle=insufficient_evidence, moving=insufficient_evidence
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_COMPLETE 6 1
+RR_EVALUATION_US [private timing]
+RR_ISSUER [issuer key]
+RR_COVERAGE [driver-only guidance]
+RR_PREVIEW [private preview]
+RR_JOB_DISK_BOUNDARY raw_device_denied
+RR_CAPTURE_ACCESS adapter_denied
+RR_KEY_BOUNDARY vault_memory_denied
+RR_RECEIPT import [signed receipt]
+RR_BOUNDARY raw_channel_denied raw_file_denied
+RR_SIGN_WITHHELD review_complete
+RR_DONE
+RR_EXIT=0
+
+wrong-pci-length: idle=insufficient_evidence, moving=insufficient_evidence
+RR_PLATFORM QNX 8.0.0
+RR_ISSUER_SETUP [private boot token]
+RR_LIVE_RAW_WITHHELD
+RR_SIGN_WITHHELD approval_required
+RR_CAPTURE_BEGIN obd_bench
+RR_CAPTURE_COMPLETE 6 1
+RR_EVALUATION_US [private timing]
 RR_ISSUER [issuer key]
 RR_COVERAGE [driver-only guidance]
 RR_PREVIEW [private preview]
@@ -45,7 +125,7 @@ RR_SIGN_WITHHELD approval_required
 RR_CAPTURE_BEGIN obd_bench
 RR_CAPTURE_CONTEXT_CHANGED 1
 RR_CAPTURE_COMPLETE 6 1
-RR_EVALUATION_US 2654
+RR_EVALUATION_US [private timing]
 RR_ISSUER [issuer key]
 RR_COVERAGE [driver-only guidance]
 RR_PREVIEW [private preview]
@@ -65,7 +145,7 @@ RR_LIVE_RAW_WITHHELD
 RR_SIGN_WITHHELD approval_required
 RR_CAPTURE_BEGIN obd_bench
 RR_CAPTURE_COMPLETE 2 1
-RR_EVALUATION_US 3165
+RR_EVALUATION_US [private timing]
 RR_ISSUER [issuer key]
 RR_COVERAGE [driver-only guidance]
 RR_PREVIEW [private preview]
@@ -85,7 +165,7 @@ RR_LIVE_RAW_WITHHELD
 RR_SIGN_WITHHELD approval_required
 RR_CAPTURE_BEGIN obd_bench
 RR_CAPTURE_COMPLETE 7 0
-RR_EVALUATION_US 2434
+RR_EVALUATION_US [private timing]
 RR_ISSUER [issuer key]
 RR_PREVIEW [private preview]
 RR_JOB_DISK_BOUNDARY raw_device_denied
@@ -104,7 +184,7 @@ RR_LIVE_RAW_WITHHELD
 RR_SIGN_WITHHELD approval_required
 RR_CAPTURE_BEGIN obd_bench
 RR_CAPTURE_COMPLETE 2 1
-RR_EVALUATION_US 2410
+RR_EVALUATION_US [private timing]
 RR_ISSUER [issuer key]
 RR_COVERAGE [driver-only guidance]
 RR_PREVIEW [private preview]
@@ -124,7 +204,7 @@ RR_LIVE_RAW_WITHHELD
 RR_SIGN_WITHHELD approval_required
 RR_CAPTURE_BEGIN obd_bench
 RR_CAPTURE_COMPLETE 4 1
-RR_EVALUATION_US 2743
+RR_EVALUATION_US [private timing]
 RR_ISSUER [issuer key]
 RR_COVERAGE [driver-only guidance]
 RR_PREVIEW [private preview]

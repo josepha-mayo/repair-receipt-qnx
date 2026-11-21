@@ -202,6 +202,8 @@ Run `python verify_obd_bench.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe`. The 
 | --- | --- |
 | Complete capture | Idle threshold observed and moving threshold not observed |
 | Missing and ambiguous frames | Insufficient evidence for both conditions |
+| The third hot idle reading arrives from CAN address `7E9` | QNX drops the sample and resumes polling. Both findings are insufficient. |
+| Missing responder header, wrong ISO-TP length or malformed frame padding | QNX drops the sample and resumes polling. Both findings are insufficient. |
 | Vehicle stops between the two speed reads for one sample | QNX drops the ambiguous sample and reports insufficient evidence for both conditions |
 | Prompt arrives after the reply deadline | Capture ends before another request. Both findings are insufficient. |
 | Four delayed prompts complete within the shared sample budget | QNX accepts the third hot idle sample. The receipt observes the idle crossing. |
@@ -209,7 +211,7 @@ Run `python verify_obd_bench.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe`. The 
 | Link drops partway through a speed response | QNX retains the completed idle crossing. Moving coverage is insufficient. |
 | Adapter setup fails | QNX stops before preview, without producing a receipt. |
 
-The exporter tests that the UART and capture file are inaccessible. [Native bench traces](replay/qnx-obd-proof.txt)
+In [obd_capture.c](obd_capture.c), follow `initialize` and `read_pid` to see the adapter setup and the independent response check. The ID is the responder field reported by the adapter. The exporter tests that the UART and capture file are inaccessible. [ELM327 datasheet](https://www.elmelectronics.com/wp-content/uploads/2016/07/ELM327DS.pdf) · [Native bench traces](replay/qnx-obd-proof.txt)
 
 ## 5. Check elapsed time before accepting a finding
 
