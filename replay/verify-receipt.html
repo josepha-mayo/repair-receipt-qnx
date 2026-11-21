@@ -139,7 +139,8 @@ footer { margin-top: 18px; }
 @media print {
   body { background: white; color: black; font-size: 11pt; }
   main { max-width: none; padding: 0; }
-  main:has(#result-card) > :not(.workspace), main:has(#result-card) .workspace > :not(.verified-receipt), #intake-actions {
+  main:has(#result-card) > :not(.workspace), main:has(#result-card) .workspace > :not(.verified-receipt),
+  #intake-actions, #filed-receipt-search {
     display: none !important;
   }
   .workspace { display: block; }
@@ -443,6 +444,7 @@ const expectedIssuer = byId("expected-issuer");
 const requestFile = byId("expected-request");
 const verifyButton = byId("verify");
 const result = byId("result");
+const resultCard = byId("result-card");
 const receiptDigestInput = byId("filed-receipt-digest");
 const batchResults = byId("batch-results");
 const digestSearch = byId("filed-receipt-search");
@@ -473,7 +475,8 @@ function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   byId("findings").hidden = !verifiedReceipt;
   byId("evidence-details").hidden = !verifiedReceipt;
   byId("intake-actions").hidden = !verifiedReceipt;
-  byId("result-card").classList.toggle("verified-receipt", verifiedReceipt);
+  resultCard.classList.toggle("verified-receipt", verifiedReceipt);
+  delete resultCard.dataset.receiptDigest;
   byId("matched-request").hidden = true;
   byId("included-request-note").hidden = true;
   byId("issuer-match").hidden = true;
@@ -654,12 +657,14 @@ byId("create-request").addEventListener("click", () => {
 byId("print-finding").addEventListener("click", () => window.print());
 
 function findFiledReceipt() {
+  if (digestSearch.hidden) return;
   const input = receiptDigestInput.value.trim();
   const digest = input.replace(/^receipt\s+sha-256\s+/i, "").replace(/\s+/g, "").toLowerCase();
   const valid = sha256Hex.test(digest);
+  const singleDigest = resultCard.dataset.receiptDigest;
   let matches = 0;
   let filename = "";
-  for (const row of batchResults.querySelectorAll("[data-receipt-digest]")) {
+  for (const row of batchResults.hidden ? [] : batchResults.querySelectorAll("[data-receipt-digest]")) {
     const match = valid && row.dataset.receiptDigest === digest;
     row.querySelector(".batch-match").hidden = !match;
     if (match) {
@@ -671,7 +676,11 @@ function findFiledReceipt() {
   let message = "";
   if (input) {
     if (!valid) message = "Enter the full 64-character receipt digest.";
-    else if (!matches) message = "No verified attachment matches that digest.";
+    else if (singleDigest) {
+      message = singleDigest === digest
+        ? "This signed receipt matches the work-order digest."
+        : "This signed receipt differs from the work-order digest.";
+    } else if (!matches) message = "No verified attachment matches that digest.";
     else message = matches === 1 ? `Matching attachment · ${filename}` : `${matches} verified attachments match.`;
   }
   if (status.textContent !== message) status.textContent = message;
@@ -777,6 +786,9 @@ verifyButton.addEventListener("click", async () => {
     const requestStatus = driverStarted ? " Driver-started review." :
       matchedIncludedRequest ? " Included request matched." : claim.request ? " Request matched." : "";
     update("Signature verified." + requestStatus, "good");
+    resultCard.dataset.receiptDigest = receiptSha256;
+    digestSearch.hidden = false;
+    findFiledReceipt();
     byId("issuer-match").hidden = !verifier.fingerprintMatched;
     byId("included-request-note").hidden = !matchedIncludedRequest;
     const printIssuer = byId("print-issuer");

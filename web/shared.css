@@ -133,7 +133,8 @@ footer { margin-top: 18px; }
 @media print {
   body { background: white; color: black; font-size: 11pt; }
   main { max-width: none; padding: 0; }
-  main:has(#result-card) > :not(.workspace), main:has(#result-card) .workspace > :not(.verified-receipt), #intake-actions {
+  main:has(#result-card) > :not(.workspace), main:has(#result-card) .workspace > :not(.verified-receipt),
+  #intake-actions, #filed-receipt-search {
     display: none !important;
   }
   .workspace { display: block; }
