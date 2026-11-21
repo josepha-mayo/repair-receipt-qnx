@@ -105,6 +105,8 @@ Open the downloaded HTML in a current Chromium browser. **Check idle receipts** 
 
 To exercise the uploaded-CSV path, choose `fixtures\kit-july-26.csv` and `fixtures\kit-july-27.csv` with **Import an OBD-II recording**. The importer also accepts the original `2017-07-26_Seat_Leon_RT_S_Stau.csv` and `2017-07-27_Seat_Leon_KA_KA_2_Normal.csv` from KIT. Both forms reproduce the findings with an uploaded-CSV label. Run `node --test verify_obd_import.cjs` to check opening and closing gaps, a clean midnight rollover and a short clock reversal across midnight.
 
+You can also select an original metric Torque Pro CSV with English dated **Device Time**, engine RPM, OBD speed and coolant temperature. The browser projects just those four columns and uses elapsed milliseconds. Before importing, keep the original export so the date and full clock are available.
+
 When a different request reuses the most recent uploaded samples in the same driver session, the consent preview identifies the match. This exercise deliberately reuses the published recordings. In a follow-up that calls for a fresh capture, decline the reused preview and select the new recording.
 
 For a work-order trial, request both conditions at 95 °C. Upload July 27, approve, file and open **View work-order findings**. **Where to start** points to idle and flags incomplete moving coverage. Choose **Request moving-only follow-up** in that report and download the new request. Load it on the driver side, upload July 26 and file the returned receipt. Both conditions now have a threshold observation. The detailed findings show the two separate receipts. Use the recordings as example data for this exercise.

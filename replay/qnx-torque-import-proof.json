@@ -1,0 +1,45 @@
+{
+  "source": "https://github.com/prithvisekhar/VehicalDiagnosticAlgo/tree/d86adf6cd31112fe7c992d782309333724334204",
+  "format": "Original metric Torque Pro CSV with English dated Device Time",
+  "verification": {
+    "browser": "Brave",
+    "guest": "QNX 8.0 x86-64 on QEMU",
+    "recipe": "coolant-duration-demo/v2",
+    "testThresholdC": 80,
+    "projectedColumns": [
+      "elapsed milliseconds",
+      "engine RPM",
+      "OBD speed in km/h",
+      "coolant temperature in C"
+    ],
+    "requestBytesMatchedIndependentProjection": true,
+    "approvedPacketsVerifiedAndReexportedUnchangedByShop": true
+  },
+  "regression": {
+    "obdAutoDoctorArchiveCsvFiles": 81,
+    "projectionsMatchingArchivedHashes": 81,
+    "spreadsheetShortenedTorqueExportsRejected": 2
+  },
+  "checks": [
+    {
+      "file": "Function/Driving analysis/data/14-Aug-2021-1.csv",
+      "rows": 596,
+      "sourceSha256": "8d60038719253a2c270768fdaa41b2a41a6a9c738bbdacd3dcd4124b80d96ba3",
+      "projectedSha256": "268fc5585ad7f0df1eb0cd4551350f583a0eb95c22800ff1d7dbb1e0d134a032",
+      "findings": {
+        "idle": "not_observed",
+        "moving": "observed"
+      }
+    },
+    {
+      "file": "Function/Turn Analysis/Swift/MarL1.csv",
+      "rows": 203,
+      "sourceSha256": "d8d61e3e2d1b73df5fb48ed531860d488b5d0e7b6cc7b0e5a81d09c80fdd31bd",
+      "projectedSha256": "b3f2eff82cc240dd63aaeaf224b576d768e4b795c9d9da97ac84294239e2b62e",
+      "findings": {
+        "idle": "observed",
+        "moving": "observed"
+      }
+    }
+  ]
+}

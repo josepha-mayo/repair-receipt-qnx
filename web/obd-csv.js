@@ -5,7 +5,9 @@ const ObdCsv = (() => {
   const exportLimit = 8 * 1024 * 1024;
   const dayMs = 86400000;
   const maxClockRollback = 1000;
-  const signals = ["Time", "Engine RPM [RPM]", "Vehicle Speed Sensor [km/h]", "Engine Coolant Temperature [°C]"];
+  const autoDoctorSignals = ["Time", "Engine RPM [RPM]", "Vehicle Speed Sensor [km/h]", "Engine Coolant Temperature [°C]"];
+  const torqueSignals = ["Device Time", "Engine RPM(rpm)", "Speed (OBD)(km/h)", "Engine Coolant Temperature(°C)"];
+  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
   function fields(line) {
     const values = [];
@@ -39,12 +41,38 @@ const ObdCsv = (() => {
     return number;
   }
 
+  function torqueClock(value) {
+    const parts = /^(\d{1,2})-([A-Za-z]{3})-(\d{4}) (\d\d:\d\d:\d\d(?:\.\d{1,3})?)$/.exec(value);
+    if (!parts) throw new Error("Use an original Torque Pro CSV with dated Device Time values in English.");
+    const day = Number(parts[1]);
+    const month = months.indexOf(parts[2].toLowerCase());
+    const year = Number(parts[3]);
+    const date = new Date(Date.UTC(year, month, day));
+    if (month < 0 || date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
+      throw new Error("The Torque Pro recording contains an invalid Device Time date.");
+    }
+    return date.getTime() + clock(parts[4]);
+  }
+
+  function torqueRpm(value) {
+    const number = Number(value);
+    if (!/^\d+(?:\.\d+)?$/.test(value) || number > 14000) {
+      throw new Error("Use Torque Pro engine RPM readings between 0 and 14000.");
+    }
+    // QNX uses RPM only to distinguish a stopped engine from a running one.
+    return Math.ceil(number);
+  }
+
   function project(text) {
     const lines = text.split(/\r?\n/);
     const header = fields(lines[0]).map(name => name.trim().replace("Â°", "°"));
+    const torque = !autoDoctorSignals.every(name => header.includes(name)) && header.includes("Device Time");
+    const signals = torque ? torqueSignals : autoDoctorSignals;
     const indices = signals.map(name => header.indexOf(name));
     if (indices.some((index, field) => index === -1 || index !== header.lastIndexOf(signals[field]))) {
-      throw new Error("Use a normalized CSV or a metric OBD Auto Doctor export with Time, RPM, vehicle speed and coolant temperature.");
+      throw new Error(torque
+        ? "Log Device Time, Engine RPM, OBD speed in km/h and coolant temperature in °C in Torque Pro."
+        : "Use a normalized CSV or a metric OBD Auto Doctor or Torque Pro export with RPM, vehicle speed and coolant temperature.");
     }
     const rows = [];
     let first;
@@ -58,17 +86,18 @@ const ObdCsv = (() => {
       const row = fields(line);
       if (row.length !== header.length) throw new Error("The export row does not match its header.");
       const [time, rpm, speed, temperature] = indices.map(index => row[index].trim());
-      const timeOfDay = clock(time);
-      const sample = rpm && speed && temperature
-        ? [sensor(rpm, 0, 14000), sensor(speed, 0, 400), sensor(temperature, -40, 200)].join(",")
+      const timestamp = torque ? torqueClock(time) : clock(time);
+      const sample = [rpm, speed, temperature].every(value => value && (!torque || value !== "-"))
+        ? [torque ? torqueRpm(rpm) : sensor(rpm, 0, 14000),
+          sensor(speed, 0, 400), sensor(temperature, -40, 200)].join(",")
         : null;
-      let current = timeOfDay + offset;
-      if (!offset && last >= 64800000 && timeOfDay <= 21600000) {
+      let current = timestamp + offset;
+      if (!torque && !offset && last >= 64800000 && timestamp <= 21600000) {
         offset = dayMs;
         current += offset;
-      } else if (offset && last - timeOfDay <= maxClockRollback) {
+      } else if (!torque && offset && last - timestamp <= maxClockRollback) {
         // A late pre-midnight sample can belong to the previous day.
-        current = timeOfDay;
+        current = timestamp;
       }
       if (last !== undefined && current <= last) {
         if (last - current > maxClockRollback || current < first) {
@@ -108,7 +137,7 @@ const ObdCsv = (() => {
   }
 
   async function reviewInput(file) {
-    if (file.size > exportLimit) throw new Error("Choose an OBD Auto Doctor export of at most 8 MiB.");
+    if (file.size > exportLimit) throw new Error("Choose a scan-tool export of at most 8 MiB.");
     const firstLine = (await file.slice(0, 256).text()).split(/\r?\n/, 1)[0];
     if (/^\s*\+?\d+$/.test(firstLine)) {
       if (file.size > normalizedLimit) throw new Error("Choose a normalized recording of at most 4 MiB.");
