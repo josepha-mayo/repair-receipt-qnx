@@ -475,14 +475,14 @@ function intakeSummary(contexts) {
 
   const conditionText = items => items.map(({condition}) => conditions[condition].toLowerCase()).join(" and ");
   const observed = uploaded.filter(({evidence}) => evidence.finding === "observed");
+  const belowRule = uploaded.filter(({evidence}) => evidence.finding === "not_observed");
   const incomplete = uploaded.filter(({evidence}) => evidence.finding === "insufficient_evidence");
   const summary = [];
   if (observed.length) {
     const first = observed.length === 1 && contexts.length > 1 ? " first" : "";
     summary.push(`Confirm the data came from this vehicle. Review the complaint ${conditionText(observed)}${first}.`);
-  } else if (!incomplete.length) {
-    summary.push(`No crossing met the test rule ${conditionText(uploaded)} in the reviewed data.`);
   }
+  if (belowRule.length) summary.push(`No crossing met the test rule ${conditionText(belowRule)} in the reviewed data.`);
   if (incomplete.length) summary.push(`Coverage was insufficient ${conditionText(incomplete)}.`);
   const other = filed.filter(({evidence}) => evidence.source !== "uploaded-csv/v1");
   if (other.length) summary.push(`Use a recording from this vehicle to assess the complaint ${conditionText(other)}.`);

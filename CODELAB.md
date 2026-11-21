@@ -113,7 +113,7 @@ For a work-order trial, request both conditions at 95 °C. Upload July 27, appro
 
 ### Request a startup window
 
-For the same July 27 CSV, create a separate request for both conditions at 95 °C. Under **Recording window**, choose **Allow 1 second for startup**. The driver preview reports that QNX excluded the first 0.21 s. It shows **Threshold observed** at idle and **Threshold not observed** while moving. The scope of that moving finding is the reviewed window. File it, then verify the packet offline with the original request and trusted issuer key. Change the request recipe to the entire-recording rule to see verification reject the mismatch.
+For the same July 27 CSV, create a separate request for both conditions at 95 °C. Under **Recording window**, choose **Allow 1 second for startup**. The driver preview reports that QNX excluded the first 0.21 s. It shows **Threshold observed** at idle and **Threshold not observed** while moving. The scope of that moving finding is the reviewed window. File it and open **View work-order findings**. Its summary points you to idle first and says no moving crossing met the rule in the reviewed data. Verify the packet offline with the original request and trusted issuer key. Change the request recipe to the entire-recording rule to see verification reject the mismatch.
 
 The allowance covers incomplete rows only before the first complete sample, and only when that sample arrives within 1 second. Any later gap still affects coverage. Follow-ups and rechecks inherit the selected rule.
 
