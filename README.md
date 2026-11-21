@@ -198,6 +198,8 @@ The original logs contain 47,350 and 16,961 timestamped rows across ten vehicle 
 
 A 64-receipt QNX sweep across 90–105 °C reproduced that pattern at 95 °C and at 98–100 °C. At 98–100 °C both drives returned insufficient evidence at idle, and July 26 retained a moving observation. At 96–97 °C, the idle findings differed and the signed idle receipts differed too. These results cover the two KIT recordings under the test recipe. [Complete results](replay/qnx-road-threshold-sweep.json) · [Reproduce the sweep](CODELAB.md#vary-the-test-threshold)
 
+To measure answer coverage beyond the two examples, QNX signed both conditions for each of the archive's 81 recordings at 95 °C and 105 °C. At 95 °C, 8 recordings answered both conditions, 14 answered one and 59 had insufficient evidence for both. At the 105 °C default, all 81 had insufficient evidence for both. The results show how often the archive supports an answer under this test recipe. [162-receipt corpus report](replay/qnx-road-corpus-proof.json) · [Reproduce the coverage check](CODELAB.md#measure-archive-wide-answer-coverage)
+
 ## Current scope
 
 The signed browser workflow runs against QNX in QEMU on the same host. The archived replay uses captured fixture outputs. The UART path has been tested with a simulated adapter. Physical adapter integration, secure vehicle-side key provisioning and vehicle-specific mechanic validation remain open. The proof covers deterministic signed output and the raw access paths exercised in the configured guest.

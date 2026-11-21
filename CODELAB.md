@@ -139,6 +139,23 @@ The harness verifies four QNX-signed receipts per whole-degree threshold. Each s
 
 Equal findings within a scope produced byte-identical receipts. At 96–97 °C the requested idle findings differed and the receipts reflected it. These thresholds describe this test on the two published recordings. [Full QNX sweep](replay/qnx-road-threshold-sweep.json)
 
+### Measure archive-wide answer coverage
+
+Download the original KIT ZIP, then run this from the QNX SDK prompt with Node.js 24 available. The harness uses the browser's CSV normalizer and verifies 162 newly signed QNX receipts. It asks for both conditions on all 81 recordings at 95 °C and at the 105 °C default. [KIT archive record](https://publikationen.bibliothek.kit.edu/1000085073)
+
+```bat
+python verify_road_corpus.py "path\to\OBD-II-Dataset.zip" --qemu "C:\QNX\qemu\qemu-system-x86_64.exe" --proof road-coverage.json
+```
+
+The report counts a condition as answerable when the signed result is **Observed** or **Not observed**.
+
+| Test threshold | Both conditions answerable | One answerable | Neither answerable |
+| --- | ---: | ---: | ---: |
+| 95 °C | 8 | 14 | 59 |
+| 105 °C | 0 | 0 | 81 |
+
+These results measure the evidence available in this archive under the test recipe. The July 26 and July 27 examples show what a shop can do when one or both conditions are answerable. [Per-recording results and input hashes](replay/qnx-road-corpus-proof.json)
+
 ### Run the native scope controls
 
 Run the included demo controls without a browser from Windows:

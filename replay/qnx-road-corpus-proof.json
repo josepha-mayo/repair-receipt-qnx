@@ -1,0 +1,1268 @@
+{
+  "dataset": "Marc Weber, Automotive OBD-II Dataset (CC BY 4.0)",
+  "source": "https://publikationen.bibliothek.kit.edu/1000085073",
+  "archiveSha256": "16dbfb4c7ed5543127e63ee6d8c10332b346d3e2f0a2ce8bb6b22841f4d6e9db",
+  "platform": "QNX SDP 8.0 x86-64 on QEMU",
+  "recipe": "coolant-duration-demo/v2",
+  "scope": "both",
+  "signedInputType": "uploaded-csv/v1",
+  "recordings": 81,
+  "signaturesVerified": 162,
+  "thresholdsC": {
+    "95": {
+      "byCondition": {
+        "idle": {
+          "observed": 9,
+          "not_observed": 0,
+          "insufficient_evidence": 72
+        },
+        "moving": {
+          "observed": 21,
+          "not_observed": 0,
+          "insufficient_evidence": 60
+        }
+      },
+      "answerableConditions": {
+        "both": 8,
+        "one": 14,
+        "neither": 59
+      }
+    },
+    "105": {
+      "byCondition": {
+        "idle": {
+          "observed": 0,
+          "not_observed": 0,
+          "insufficient_evidence": 81
+        },
+        "moving": {
+          "observed": 0,
+          "not_observed": 0,
+          "insufficient_evidence": 81
+        }
+      },
+      "answerableConditions": {
+        "both": 0,
+        "one": 0,
+        "neither": 81
+      }
+    }
+  },
+  "trials": [
+    {
+      "recording": "2017-07-05_Seat_Leon_RT_S_Stau.csv",
+      "sourceSha256": "250e9ff68162cdc2dc22e0037fed3886bcee82f89d0899a778fdcaf74853db33",
+      "normalizedSha256": "d4a9aa16a76c133b02dda2d70520db65ed49cc7ea82663ee04a585e96231def6",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-05_Seat_Leon_S_KA_Normal.csv",
+      "sourceSha256": "05c0bf00c667372a63092eb76b616870d6c1f7fdc13e9b11ff28981d9be915fe",
+      "normalizedSha256": "42bd0f24ae16049407ebd6f57b24b77f9e2f440de4802a05e94f1199c25f78e1",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-06_Seat_Leon_KA_KA_Normal.csv",
+      "sourceSha256": "cd17fb8cc8b811ad9404e5e6838ab041b675645662a76c116e2b8c757f97d9ca",
+      "normalizedSha256": "93b59c56f12074f961c3fbb0c402de2a212d922f95447a62ee42db15b3ea2bb9",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-06_Seat_Leon_KA_RT_Normal.csv",
+      "sourceSha256": "b5576f78fe97b19651510b8e23c75454da01da09a6101dd167762b48fbb3a95a",
+      "normalizedSha256": "1ed214543186c5dbef7d00b6f12facb41e6895626196a08b575462953478f6f6",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-07_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "68d8cb01bb89f385cc279f09ecaeb642d5916655c2d588d56ad57f625bf8cf8d",
+      "normalizedSha256": "bdb04f8d64fe54fc5a888c3cc183f1d736e56ea70904a54f7827c4a99be6a71d",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-07_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "8ed3d94a9a0fb3e639162a628f3357f27beb18ed2714c7fb1ffb69dc3079c151",
+      "normalizedSha256": "0445c7c446606d15dcc58813153d375b0d83f3dca50d29a7206232bfed83a3db",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-10_Seat_Leon_KA_KA_Stau.csv",
+      "sourceSha256": "1b8b3e2253008e6a48f32342625476321006ecbd9f7d3d370156846a4292f42d",
+      "normalizedSha256": "4da43d565220f22303dcb575f6fc6c4a6d940ffcd31165fa0d0fb0c61802d971",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-11_Seat_Leon_KA_KA_Stau.csv",
+      "sourceSha256": "7231d4e988a4866096071270cdb91d287b97c00ffad679a14d7e54b5650fc778",
+      "normalizedSha256": "7175349f0409a137ffc6cd1bcc654610fa646a204dcf548042bc14cd81721fa1",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-11_Seat_Leon_KA_S_Normal.csv",
+      "sourceSha256": "a55456c3a7e474789c4882a204f76cb42010935fad77268f73dca11af9e45a08",
+      "normalizedSha256": "515cc51c770dae71abaac62f5625969702e535ed3af76608c2c7d47819b54323",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-11_Seat_Leon_S_RT_Frei.csv",
+      "sourceSha256": "baa25202b16d2712398531a004dfbdf9bcc9b82503627cb410599730942c6eeb",
+      "normalizedSha256": "b3d91511dd06417e90518dad58b7b9bbd0ee13ccfc5ceab6bd6072bf7926b070",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-12_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "5a69e2d5717ab6de5f8f15fbcc54df64bb927d904b29f99c68da2062e9d5733d",
+      "normalizedSha256": "5ae52460083619a6e5b99cb269cb5517965ee7a877c887f3b73ab7d9e6875b83",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-12_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "1ce416298e154a8588bbe1fe55bbb3c143ed48d53272b41e6e40ba976c31b060",
+      "normalizedSha256": "8b00a4f947089b31ee59c4940710c8327f45e8433b2f38310f1c20c60b91e058",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-13_Seat_Leon_KA_KA_Normal.csv",
+      "sourceSha256": "ed0337f4fcc9f5e18878b02aef92c0901ce36b545528bfd10307a3f0bc8825ed",
+      "normalizedSha256": "46a37385586e66030155b457c9969da5ea26fda26f984a0e3e0c23f160f57d1e",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-13_Seat_Leon_RT_KA_Stau_Messfehler.csv",
+      "sourceSha256": "3906221629251246da963f1df7883d9c89281deb6099246900c5e1e9d2cc72ac",
+      "normalizedSha256": "5216e34eac816a33984ef7d45752a29382456f9018706db046de298217577847",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-14_Seat_Leon_KA_KA_Frei.csv",
+      "sourceSha256": "a5430dbfad877991546d2a23322386a123100a883fc21e5fb5c30953525c3020",
+      "normalizedSha256": "a4d50a184dd285ea89f16cd490f8e5425423ecc69daee314611582f2b8155a60",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-14_Seat_Leon_KA_RT_Normal.csv",
+      "sourceSha256": "0b32ac66ac749e76ed4739b4241c036b6ac8d346bf4e8ab010cb038d6cba1f74",
+      "normalizedSha256": "dd15174059529d1a6412b572327d62719d6b4db003174f6d1d0fa033e06c4189",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-24_Seat_Leon_RT_KA_Normal.csv",
+      "sourceSha256": "b3899b9507f512df9b7e2b7437b0f48a7c39e2d417040d4d0ef53a12906e757e",
+      "normalizedSha256": "f0c81a917b2375094e0713ba089bff36d1165afa4f961a661e2df00fab113210",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-26_Seat_Leon_RT_S_Stau.csv",
+      "sourceSha256": "13116c2435977ea6beb1a8940650c9058a75198c81d97e2101f208375e11114c",
+      "normalizedSha256": "c8cedc5bbeea1a87a36f1e44899956f2b99e6943326d66d17f68af171a5af83d",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-26_Seat_Leon_S_KA_Normal.csv",
+      "sourceSha256": "dd7c3add13da18e0232d4663a50ace98a3e0f1d7df6808a468c9ddeb6dbdd498",
+      "normalizedSha256": "08642dc9b49ca21a2603ba33dbff0a7aac783ef99a62a54df4cd98144782d2f7",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-27_Seat_Leon_KA_KA_2_Normal.csv",
+      "sourceSha256": "1bc325937e4421ab88f057a56272589aae1fb4859525b2f872a8e5386953f349",
+      "normalizedSha256": "6bbd7898d0ba00512387b93677797738474a75f3c5553d89fdc9fa41623516b3",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-27_Seat_Leon_KA_KA_Normal.csv",
+      "sourceSha256": "302e031a1cee3e0bd1849b901aa344ebc89bc28409183f20dbd2173c927d8471",
+      "normalizedSha256": "4bc79481763344b20323c978323f2c66af698e97718bbdc29ba498838a3ac025",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-28_Seat_Leon_KA_KA_Normal.csv",
+      "sourceSha256": "ce2f2932347fc82c4ce09d50bb0f21f1f25901169f2ef8de87b0e53bc10c90d1",
+      "normalizedSha256": "0a4eedabc3ea85a7726f9ba39eb93e2a77db127500a438b6f6694b489b620c13",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-28_Seat_Leon_KA_RT_Stau.csv",
+      "sourceSha256": "3ccff44c1aeb3c36b5f9ded44046eb83339f8e24d55d2850a0d865186a9e3dc4",
+      "normalizedSha256": "d83969b8f77727c6624a5458ab0fd03103c6cc7da01d107f6fb19c81ccffff3c",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-31_Seat_Leon_KA_KA_Frei.csv",
+      "sourceSha256": "2955417aba813463656f9326aaa40aa88f5f6120a4a70094bd73191f0bc8d810",
+      "normalizedSha256": "be4bf553fd425de24d86876a2bf6163685add1e171674b99a7a9c45853abdebd",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-07-31_Seat_Leon_RT_KA_Normal.csv",
+      "sourceSha256": "ab2d4a6ea4f5255dd8a01a0691b4d5b3b9f0ec9f46459f824f5f565bb14f6282",
+      "normalizedSha256": "48cf1a6cb84dc5897605fbc2af7a37541b86218c7049137a77a0722c8bc3b6f9",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-01_Seat_Leon_KA_KA_Frei.csv",
+      "sourceSha256": "fcd86f5e4538de004ab3dbf42cdc234c388cb47ea52b1054ef157ed9cdb0c34f",
+      "normalizedSha256": "c25fb069af44417e3decc97c42621755ad3c305194f3fc45c4dde830ea58f83b",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-01_Seat_Leon_KA_RT_Normal.csv",
+      "sourceSha256": "c18a10b6c04a3e510a84a1bed51cdacf073fe85c9284f9868231ece2dd4b2552",
+      "normalizedSha256": "50d49544be89e1de3cd4c3ad0f7c6da812856cba32bf13fb3498472fbb1d5a82",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-02_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "b5550761c52cb8c12332bd5aa70ae8ee758e6363cb27df0fec8af5bbce158612",
+      "normalizedSha256": "a36544acbfa0c5d7aecd574c6297ab140f727deb62aaf51e9490870d6a35f560",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-03_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "765591222c7ddf80a23fe29b1a851ab191d4b42dbb2e7a086cad406d65bf84e7",
+      "normalizedSha256": "dce248ff2c98ae2732498629dd2f139dc106a0af1b35c2f90c5936422a0f0480",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-04_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "52e6f032506d2fb18d530c1c3b4cba31668dfaf0c0096d1572e31bd154b9b35f",
+      "normalizedSha256": "22a87851d8551bd559412299351fce0e6e29f7c0a84e5c7d2a98843a0815aaa0",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-05_Seat_Leon_S_CW_Normal.csv",
+      "sourceSha256": "9f1aa9be9e10ea82f3b14ba324f5b3f116c3cf5bca4f86eed164845c4956e3d5",
+      "normalizedSha256": "165e85c11216daa1ddb5c9dda50712a9f4d4de131593a042834f68b819aa67ba",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-07_Seat_Leon_KA_RT_Frei.csv",
+      "sourceSha256": "ee95a63585f334a71de5dcac5001feec805feb62d6323a7c725ea5fc6eb2014e",
+      "normalizedSha256": "e45b39a8be6675fa2e85d9c13a6f8e56b048b622d8e869c218a3668b48f7f940",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-07_Seat_Leon_RT_KA_Frei_Vollbremsung.csv",
+      "sourceSha256": "543646e2b7c4b44177298199afdac9f0126e0102ff0f46e1ae48fde89f93e46a",
+      "normalizedSha256": "c2f0bd03defad4c8c99d05d36f140b56cb92e5c5a395334082ef8df9511ebb2a",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-08_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "9d2bb021b0d0f154aa2ca0c23112170990a85f3df0c3aeac4b7418f3ffbd12fb",
+      "normalizedSha256": "f71b71a83ba22e33acf87d5b65df817ce65ba289917dc9e38b5bac987616a65f",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-08_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "c4080386992d4b2fc9df7e370f2ae6fec0909b7398432ae484a7737827c6c8ee",
+      "normalizedSha256": "06095613f3a4d0fda70c0a1c3538b78404d0c9b87829c6e1d2bce8ebc9bbeca9",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-09_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "188da85a2c78fc7a0a66f433116fdbac8ff2c23a8756bf198c846ee46504f722",
+      "normalizedSha256": "6e0024c44065b1832e43181b3c53788546bac395428300860c709bf5c50fb818",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-09_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "194ca1b73c3bfec9191e86211501334ed141be5a217675b82f9ba96facde2731",
+      "normalizedSha256": "2800fda7c41435e84c4b3d9447492f188ba1b4f1f149b14fe07c6c9bad61bcec",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-10_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "6f38affd6981f3bc19ac4743cf32419325bcad0de3833520c0005751158a1b7d",
+      "normalizedSha256": "49133038045d6a401d4870b5393fd94095cd814b5bef8cdcdd88663d7c7c9ee7",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2017-08-10_Seat_Leon_S_RT_Frei.csv",
+      "sourceSha256": "c4ad9cbdb406c275904c4e09828c67913ec6bf68d59f873c98a006c1869680f6",
+      "normalizedSha256": "06466ae2adb8962ed041de6eec47815d61c4e560d41c5b7fcee19a5d25c1c9a3",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-14_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "6555daabbccd27554a8c73dd237ecac20d47a7926395fb0b6a9844404d8b9b2f",
+      "normalizedSha256": "74cd9c70eaa96c395441abd7d7911a528664c7a2879d0af035dc207e2c5a4f3f",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-14_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "0bedc934d68ac455479dac7d6b3a4271e5792d328942fc582bf70fef2d202449",
+      "normalizedSha256": "c0428caa0170342311947b0330edcee6a8f2e16a5a5d55a7d19ca619177c238c",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-16_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "1b672b6ef7b6a4a8ea257e614151ae9717fffcdf50836548105a99e51a671a2d",
+      "normalizedSha256": "918bb18b6b3be9cc2f6e3de96ab466049ceb65ac33cc408a7f3434801f54cae6",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-17_Seat_Leon_BB_RT_Normal_Glatteis.csv",
+      "sourceSha256": "074867b4c00880c831f7ac5b81f85cdc16f789ddfc1dea3ea64ee3f07783208d",
+      "normalizedSha256": "d22d412cbe2e55ae189367459507919787f038d145231d8240fd242c0ecddcec",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-17_Seat_Leon_RT_BB_Frei.csv",
+      "sourceSha256": "6e8f231fda54c02ca98c39d6bc45893d65382391f241e28b7dd8786e8d23f31f",
+      "normalizedSha256": "83e74f4989604902c0c4b0bf5b54533ddd5736a4d73ade54670b73e7a14cb15f",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-18_Seat_Leon_RT_KA_Stau.csv",
+      "sourceSha256": "5e7d56740efe97eba450b35524c0ea1c274f0c68b3a701c0d0bab108a5bbae66",
+      "normalizedSha256": "660a960777bde904cf28972cc9c9e2d9ca1066e32738ca45eaea13f0e265be53",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-20_Seat_Leon_KA_KA_Frei.csv",
+      "sourceSha256": "9c7a6c43be05a4bd25b1d11f1a30daf7671bbb287b9cd4e42501d3865fdb9606",
+      "normalizedSha256": "87e517708289a55ed851b549f63ffa2560a8b198b00440cd2f355d51df28e1e6",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-21_Seat_Leon_BB_RT_Normal.csv",
+      "sourceSha256": "a22270c3e5b37e2e5df542856d05736a22c0cc9472ab4a4f450e89b7314ddf62",
+      "normalizedSha256": "6a806339891bef76e91f6b671355f1f74fdc9e1dabbffc59092946e85d2e2bd4",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-21_Seat_Leon_KA_BB_Normal.csv",
+      "sourceSha256": "f07213c31cf3bfbf05ae26c63c83d864a7d9e69de36540c2efb5167b5dacf9d5",
+      "normalizedSha256": "9bf90186a3ad3de52c8b92a6f239ed4ae56de3068719bac05dbb4479d82613fa",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-21_Seat_Leon_KA_KA_Normal.csv",
+      "sourceSha256": "49d4587c73eb5d7ac53c7c34e9550c64e02ba6ddc361162b2bc5696bc253fe4c",
+      "normalizedSha256": "9bd604eedd41517d9cf8a6ccd71525dfe5fa8cc80768450aff7222675f9b7395",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-22_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "c943e0b291dab8ad853a454dc009f9f482e1606a75867aa2dfbc97c27714041b",
+      "normalizedSha256": "0639537a9369529e620d47954a74edc48dfd7670dcfa9e22600f921f5f84012f",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-23_Seat_Leon_RT_RT_Frei_Beschleunigung.csv",
+      "sourceSha256": "a3967da1cd5d681de87fabfb4d560f5dd9c29748bfbe959e583dbe58fea27b66",
+      "normalizedSha256": "6198a3bdcf6556612acb56ca3c3ee68cc56da547cd7cf1afd5bc4ef6f5f86598",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-23_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "488474f56e302b918ba51f6fb09fcaa683111c420da81e939385e83382b4d2f8",
+      "normalizedSha256": "5c6f244967a6a1c1d5a88d2fd1b3335078e7f14cb6732a17f70d30890179967b",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-23_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "203b4d365d31b71bfab2e9087297173f64a8a1cd5a050c93d9bd26366fd90e26",
+      "normalizedSha256": "1ce3fd6a991ba5c4ea7000f31f7a2bf75055e382488a0366c65ec384ff165637",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-23_Seat_Leon_S_S_Stau.csv",
+      "sourceSha256": "bd173d3dcd487d95891b57580c259137348c7081848f9b3dcb330e0b5c9b5c89",
+      "normalizedSha256": "bfb21121368a1199f0e05f26fdd5649ccdcd4e29c615513465bd1dbf51e1a3a7",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-26_Seat_Leon_KA_KA_Frei.csv",
+      "sourceSha256": "779bafddce7f5e8716cbb8d6118cba49bf0bd90c6a4b3a76dc4d8993210c7c6c",
+      "normalizedSha256": "b124cafc9a9840b131aa98123e47e506dcc6984f181e4b5daaa0f8e6ae41cc8d",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-26_Seat_Leon_RT_KA_Normal.csv",
+      "sourceSha256": "9ecba432a00a380208d31515738a5293ef9ed68fcf2d52c310d5d1ee9d7ace40",
+      "normalizedSha256": "26417d264ee916da0aad180ec8596686b51dc775514151b8867ebfc140fbffab",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-26_Seat_Leon_RT_RT_Frei.csv",
+      "sourceSha256": "6c119871743267ad714754e1bdef9d9dae41dedf5ee3650c3ae992c7af4e2179",
+      "normalizedSha256": "d933141e445d7a4c18b6f196cb7a1af9482b3bb7528d40d5bcc4f673302f981f",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-27_Seat_Leon_KA_KA_Normal.csv",
+      "sourceSha256": "d88e7985cf63f803afa9c8440da4abc9b65b7e254e0d983be73dbedb8e6802c4",
+      "normalizedSha256": "24309be35f904cbf1ebfe1ceb34f6c17d3fdf977ef8e0b4f662d4f74032539bf",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-27_Seat_Leon_KA_RT_Normal.csv",
+      "sourceSha256": "f658818c7dc5de53e14d818cf5a9745534bd84aa46d0573a983e848356568de8",
+      "normalizedSha256": "b6f5e742b56bdcb4c741dd6dabd2f12a96d47a1994d4629b6e6a90e12e900e46",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-28_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "427c67c14192d3fc77d29e3e8a6f77115b4b2b1fcbb7ec533e79fdff7617037d",
+      "normalizedSha256": "edc7dd5efeee5f8cee53d7b41cbb6f85538c8d14c0e919b4fa785da88deecbf5",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-02-28_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "5b5597b6ce7d0f8e4dad14afc0677894016f2cee42c5dabbefec0eb1d02b76b6",
+      "normalizedSha256": "3a72788e040355d75cb8742bfa962e8a6058723db0f82f2559cd1e94af95d4a8",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-01_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "82c2795aca31e047642ee3d616dff5d5d29871cabbf4a7e4aa4195a64fd3f8f6",
+      "normalizedSha256": "e315fc42a737db754c5ce8509615c62edacbccd72ec796386a0d6fd76e92fbc4",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-01_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "a67d04bd0d2dec2edc7c6a1d26f699b01c1bedec98f9dcbb845df106d2b409e4",
+      "normalizedSha256": "6c8a5723a174a598585d7e0a74be657e243768658af9ed2934644e62a0a218c4",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-02_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "137c24f38acb8bfc3800e9187535a821973d26698f98e11c3c3663e0cd0fa0f5",
+      "normalizedSha256": "c887ef1388b228849f278dff8c4d2e235903334f025dcd15165a0de83adc928e",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-06_Seat_Leon_KA_RT_Normal.csv",
+      "sourceSha256": "ae06c91e1213e7e596d48ad066e78f41c3726c3efa2abfe3dcf6c7a1847b04fd",
+      "normalizedSha256": "eae7a4409f22c21451f64f6ee0c85f8fa12a35e8da356b16a190d7f5608c87ee",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-07_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "ed0d73a8906f7020238a428a3c4f7fd09d293645b9c1210612bd193e3c063193",
+      "normalizedSha256": "2759486720a3980af9f5780e6a56577f27c3d37113f83fa43b8fa9c5dd88c6ad",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-07_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "d4ccbf20175a235e5d1167ff7fbf98168cdc402ff6e9ebd927e0b520525104b9",
+      "normalizedSha256": "ee7fbb3d2e304de75afb41809884a3bd34a3358a9dd9d1f32b6c62116ec3a399",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-08_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "4d672f4a8cb7284169fb11388a15118d23d856982b3806ced7e934e7dd96831c",
+      "normalizedSha256": "1285828580a5ba45d69661805d8199ed3d6ce9ed7a5508ef6087d86026ddac90",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-19_Seat_Leon_KA_KA_Frei.csv",
+      "sourceSha256": "3b863afe3a432503afaf149be43e9a181a939673cbf24cd15f50ac605ee82c9e",
+      "normalizedSha256": "483c208582c97656a8f2a69d5c1a80b3cdc03cad9f7558ebd2bafe8b9aa55107",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-19_Seat_Leon_RT_KA_Normal.csv",
+      "sourceSha256": "8c21ca9047c6297d6874f6d4455f83d53e57cf36f24095b8bd5640e361f16d92",
+      "normalizedSha256": "bab2e1f90afec212f8101823159f992b00c9bfb5d2b2e7c3eb1c3b61149b5d0f",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-20_Seat_Leon_KA_KA_Normal.csv",
+      "sourceSha256": "9a3c7c8285cb4dc6d4dc49443d27406070dc3d6ca756630a2d0f60c3d9da9774",
+      "normalizedSha256": "8acceddd27e1e81abcfca90ebe73b7c39659527df92e138ce14b982e9c432376",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-21_Seat_Leon_KA_RT_Normal.csv",
+      "sourceSha256": "72bb4a10a8e4a6d5987c6db5a807996b02c38f78577935793ce75641574a4b8c",
+      "normalizedSha256": "da8551d74ab9860d272300ead0e62c2b09162a63532316bc4becacd16c336447",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-22_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "d7b923ed10af76b6cf1205cb74972068543db8479f50a6e1da7384a8ef56b0b8",
+      "normalizedSha256": "e4152e312e7593652211177df553a3a7f8ee59da3dfbd3cd596b11b653afe19f",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-22_Seat_Leon_S_RT_Normal.csv",
+      "sourceSha256": "b6aac4167accb9b4f890e21baaca8677d998f5c4622f2c35a2f221f071e05140",
+      "normalizedSha256": "f2a6851b476cb5c998c87cb79dff89d42672d8b1c7f61b06d4f1441c2efe63d9",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-23_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "dbfeffec5b4ff719a98818126bcba20e0c1412133a6e0a12765e970e570403e0",
+      "normalizedSha256": "1a9a1a4f0c4164df0689850bd01ade42f6be664abba2118e8308b9be73539135",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-23_Seat_Leon_S_RT_Stau.csv",
+      "sourceSha256": "551da35dceb3cabcb936c15deffd096e6187c2655043fc37ec134253ef6eb5a8",
+      "normalizedSha256": "8dc3695a8c788d84701f7ea6ceba30cbdf3e1d2e53e17011b272e5ca8140e056",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-26_Seat_Leon_RT_S_Normal.csv",
+      "sourceSha256": "5bd8fa3d6047cdf53987ac2b2fba68e90988abb1dc490eccf370be667308aaab",
+      "normalizedSha256": "10ac338802724ac5343282f21b1eeabfb1d8b4a15db957094ba7d65e3bcaddd4",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-26_Seat_Leon_S_RT_Stau.csv",
+      "sourceSha256": "a0c7d8e8fc79d10fa61f941cdff607529bd6af9f86425971b8a0edf1b68b2533",
+      "normalizedSha256": "ccb587d98839a43452ce20e3b963806ee9b5921b64e3acd241b6fd16e6659664",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-03-29_Seat_Leon_KA_RT_Stau.csv",
+      "sourceSha256": "296a43ea5b9dea2e010298a8362fce4dcdbfda3c826c1338596af536f791fcc9",
+      "normalizedSha256": "1c7dca590d51d4f582f8380a977e9648ed236a86766f339d87326d7b068fc2ee",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-04-23_Seat_Leon_KA_KA_Frei.csv",
+      "sourceSha256": "e94fe8a06da8ceb0da1ba814236bf90a2ff18105a489ce3bd9087db41c7f51b7",
+      "normalizedSha256": "be74a2291475aff469bde910534444e2ae2cda0a002b4d3646c076c7454faf90",
+      "findings": {
+        "95": {
+          "idle": "insufficient_evidence",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    },
+    {
+      "recording": "2018-04-23_Seat_Leon_RT_KA_Normal.csv",
+      "sourceSha256": "21d93aab881b015ecd14b83e412c77280389594f73cfde22b607ecaf6400b1eb",
+      "normalizedSha256": "09c9a9d43f5213f200a925f60039c3ada99c14309ba3b1fffce30849cb2cd1a6",
+      "findings": {
+        "95": {
+          "idle": "observed",
+          "moving": "observed"
+        },
+        "105": {
+          "idle": "insufficient_evidence",
+          "moving": "insufficient_evidence"
+        }
+      }
+    }
+  ]
+}
