@@ -69,7 +69,7 @@ function showCoverage(claim, coverage) {
 
 function render() {
   const {stage, message} = state;
-  const claim = newSelection || stage === "error" || stage === "expired" ? null : state.claim;
+  const claim = reconnecting || newSelection || stage === "error" || stage === "expired" ? null : state.claim;
   byId("recipe-rule").textContent = ShopRequest.rule(claim || ticket || undefined);
   const reviewing = busyStages.has(stage);
   const busy = reviewing || stage === "occupied" || changing || reconnecting;
