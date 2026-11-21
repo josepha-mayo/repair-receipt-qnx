@@ -39,7 +39,7 @@ For a separate workshop installation, install the Python dependencies and run `p
 
 Run `start-live.cmd --self-test` to verify the QNX path with the included demo recordings. It checks four signed receipts, confirms that declining produces no receipt, and repeats an approved review with the exporter channel grant removed. Both policy variants use the same guest executable. The command uses a temporary issuer and scratch directory and requires no browser interaction.
 
-Run `start-live.cmd --policy-lab` to reproduce three native trials with the same recording, request and issuer. The JSON report shows the QNX channel denial after approval, the result of declining under the standard policy, and the signed result after approving under the standard policy. [Native policy exercise](CODELAB.md#remove-one-channel-grant)
+Run `start-live.cmd --policy-lab` to reproduce three native trials with the same recording, request and issuer. Add `--policy-transcript "%TEMP%\repair-receipt-policy-lab.md"` to save selected native serial events and the one-line policy diff. Compare the QNX channel denial, the consent refusal and the successful signed export. [Native policy exercise](CODELAB.md#remove-one-channel-grant)
 
 [Host checks](.github/workflows/host-checks.yml) verify the shop register, the four archived QNX signatures, browser-script syntax and the generated offline verifier on Windows and Ubuntu. To reproduce the receipt and bundle checks locally, run `python verify_shop_register.py` and `python pack_shop.py --check`. The QNX self-test above exercises the live guest.
 

@@ -59,3 +59,5 @@ jobs:
         run: python verify_shop_server.py
       - name: Verify the consent deadline
         run: python verify_consent.py
+      - name: Verify codelab transcript filtering
+        run: python verify_policy_transcript.py

@@ -598,6 +598,7 @@ def main():
     setup.add_argument("--practice", action="store_true", help="run with a temporary driver key and shop register")
     setup.add_argument("--shop-only", action="store_true", help="run the shop register without QNX or a driver key")
     setup.add_argument("--driver-only", action="store_true", help="run the QNX review without a shop register")
+    parser.add_argument("--policy-transcript", type=Path, help="save a new Markdown transcript from --policy-lab")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--open", action="store_true", help="open the active driver or shop page in your browser")
     parser.add_argument("--shop-register", type=Path, help="path for the local SQLite shop register")
@@ -607,6 +608,8 @@ def main():
     args = parser.parse_args()
     if args.qemu and args.qemu_path:
         parser.error("Supply one QEMU executable path.")
+    if args.policy_transcript is not None and not args.policy_lab:
+        parser.error("--policy-transcript requires --policy-lab.")
     if args.practice and (args.issuer_store or args.ephemeral_issuer or args.shop_register):
         parser.error("--practice already uses a temporary issuer and shop register.")
     if args.shop_only and (args.qemu or args.qemu_path or args.issuer_store or args.ephemeral_issuer):
@@ -631,7 +634,7 @@ def main():
                 if args.policy_lab:
                     from verify_policy import verify
 
-                    print(json.dumps(verify(qemu), indent=2))
+                    print(json.dumps(verify(qemu, args.policy_transcript), indent=2))
                     return
                 if args.self_test:
                     from verify_requests import verify

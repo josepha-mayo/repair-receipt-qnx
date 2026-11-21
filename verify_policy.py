@@ -1,6 +1,7 @@
 """Verify that native receipt export requires both driver consent and the QNX channel grant."""
 
 import argparse
+from difflib import unified_diff
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -15,6 +16,23 @@ from shop_request import CURRENT_RECIPE, DEMO_SOURCE, request_document
 
 EXPORT_GRANT = "allow receipt_export_t receipt_owner_t:channel connect;"
 EXPORT_DENIAL = b"RR_FAIL connect to receipt channel errno=1"
+TRANSCRIPT_EVENTS = frozenset({
+    b"RR_PLATFORM QNX 8.0.0",
+    b"RR_RECORDING_AUTHENTICATED",
+    b"RR_LIVE_RAW_WITHHELD",
+    b"RR_PREVIEW [private preview]",
+    b"RR_SIGN_WITHHELD approval_required",
+    b"RR_SIGN_WITHHELD review_complete",
+    b"RR_PLAINTEXT_BOUNDARY no_staged_file",
+    b"RR_JOB_DISK_BOUNDARY raw_device_denied",
+    b"RR_KEY_BOUNDARY vault_memory_denied",
+    b"RR_BOUNDARY raw_channel_denied raw_file_denied",
+    b"RR_UNAPPROVED refused",
+    b"RR_RECEIPT import [signed receipt]",
+    EXPORT_DENIAL,
+    b"RR_DONE",
+    b"RR_EXIT=0",
+})
 
 
 def compile_template(workspace, policy):
@@ -49,7 +67,30 @@ def verify_export_denial(workspace, approve):
         raise RuntimeError("The channel denial occurred before the native review preview.")
 
 
-def verify(qemu):
+def policy_transcript(workspace, executable_digest, standard, restricted):
+    change = "".join(unified_diff(standard.splitlines(keepends=True), restricted.splitlines(keepends=True),
+                                  fromfile="standard", tofile="restricted", n=0))
+    sections = [
+        "# Repair Receipt native QNX policy lab",
+        "All three trials used the same application binary, sample recording, request and temporary issuer.",
+        f"Application SHA-256 `{executable_digest}`",
+        "## Policy change\n\n```diff\n" + change + "```",
+    ]
+    for folder, heading in (
+        ("policy-denied", "Export grant removed · driver approves"),
+        ("consent-declined", "Standard policy · driver declines"),
+        ("export-approved", "Standard policy · driver approves"),
+    ):
+        trace = (workspace / folder / "serial.log").read_bytes().splitlines()
+        lines = (line.lstrip(b"\x11\x13") for line in trace)
+        events = "\n".join(event.decode("ascii") for event in lines if event in TRANSCRIPT_EVENTS)
+        sections.append(f"## {heading}\n\n```text\n{events}\n```")
+    return "\n\n".join(sections) + "\n"
+
+
+def verify(qemu, transcript=None):
+    if transcript is not None and transcript.exists():
+        raise FileExistsError("Choose a new filename for the policy transcript.")
     standard = (ROOT / "policy.conf").read_text(encoding="utf-8")
     restricted = without_export_grant(standard)
 
@@ -93,6 +134,10 @@ def verify(qemu):
             raise RuntimeError("A native trial did not complete its intended consent step.")
         if sha256(executable.read_bytes()).hexdigest() != executable_digest:
             raise RuntimeError("The guest executable changed during the experiment.")
+        if transcript is not None:
+            document = policy_transcript(scratch, executable_digest, standard, restricted)
+            with transcript.open("x", encoding="utf-8", newline="\n") as output:
+                output.write(document)
 
     return {
         "platform": "QNX SDP 8.0 x86-64 guest on QEMU",
@@ -112,5 +157,6 @@ def verify(qemu):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qemu", type=Path, required=True)
+    parser.add_argument("--transcript", type=Path, help="write a new Markdown file of selected native events")
     args = parser.parse_args()
-    print(json.dumps(verify(args.qemu.resolve(strict=True)), indent=2))
+    print(json.dumps(verify(args.qemu.resolve(strict=True), args.transcript), indent=2))

@@ -2,6 +2,8 @@
 
 Build a QNX 8.0 guest that can return a signed coolant observation from a local recording. You will test which processes can reach the recording, when the vault will issue, and whether changing a withheld finding changes the exported file.
 
+For the native exercise, [build the application](#1-compile-and-run) and [remove one QNX channel grant](#remove-one-channel-grant). The three trials let you see where QNX enforces the channel policy and where the application enforces consent.
+
 ## Verify two real drives offline
 
 Open the downloaded HTML in a current Chromium browser. It contains four receipts issued by QNX for two published drives at a 95 °C test threshold. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html)
@@ -22,6 +24,11 @@ call .venv\Scripts\activate.bat
 python -m pip install -r requirements-live.txt
 build-qnx.cmd
 start-live.cmd --check
+```
+
+Run the [native policy exercise](#remove-one-channel-grant) from this prompt, or start the browser walkthrough.
+
+```bat
 start-live.cmd --practice
 ```
 
@@ -73,11 +80,15 @@ The native guest uses `ConnectAttach`, `MsgSend`, `MsgReceive` and `MsgReply`. T
 
 After building, run the native policy exercise from the same Command Prompt. The launcher finds QEMU the same way it does in practice mode. If needed, append `--qemu "C:\path to\qemu-system-x86_64.exe"`.
 
+Predict which of the three trials will issue a receipt, then run the exercise.
+
 ```bat
-start-live.cmd --policy-lab
+start-live.cmd --policy-lab --policy-transcript "%TEMP%\repair-receipt-policy-lab.md"
 ```
 
-The script compiles two policies in a temporary directory, runs three QNX guests with the same app binary and prints a JSON report after all trials pass. Each trial uses the same idle-only request, recording and temporary issuer. The restricted policy removes this line:
+The script compiles two policies in a temporary directory and runs three QNX guests with the same app binary. Each trial uses the same idle-only request, recording and temporary issuer. The console prints the JSON result. The Markdown file contains the policy diff and selected lines from each guest's serial log. Use a new output filename each time. [Open the example transcript](replay/qnx-policy-transcript.md)
+
+The restricted policy removes this line.
 
 ```text
 allow receipt_export_t receipt_owner_t:channel connect;
@@ -88,6 +99,8 @@ allow receipt_export_t receipt_owner_t:channel connect;
 | Export grant removed | Approve | QNX denies the exporter's channel connection after the preview. The trace contains `RR_FAIL connect to receipt channel errno=1` and no receipt. |
 | Standard | Decline | The consent gate withholds the receipt. |
 | Standard | Approve | The script verifies the signed receipt against the exact preview. The exporter is denied access to the raw channel, file, job disk and vault memory. |
+
+In the transcript, find the preview in all three trials. In the first trial, the exporter fails at `ConnectAttach`. In the second, the exporter reaches the supervisor and the consent gate refuses the request. In the third, find the receipt marker alongside the raw access denials. Use the one-line diff to identify what changed between the two policies.
 
 For the remaining command-line exercises that call Python directly, load your SDK in the current prompt first. With the default installation, run `call "%USERPROFILE%\qnx800\qnxsdp-env.bat"`. In those exercises, pass your own QEMU executable path if it differs from the example.
 
