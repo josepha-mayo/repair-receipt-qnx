@@ -12,7 +12,7 @@ Open the downloaded HTML in a current Chromium browser. It contains four receipt
 
 ## 1. Compile and run
 
-Use a Windows command prompt with QNX SDP 8.0, QEMU for x86-64 and 64-bit Python 3.10 or later. From this directory:
+Install QNX SDP 8.0, QEMU for x86-64 and 64-bit Python 3.10 or later. Open **Command Prompt** in the extracted source folder. The scripts load the default Windows SDK at `%USERPROFILE%\qnx800`. For an SDK installed elsewhere, run `call "C:\path\to\qnxsdp-env.bat"` with your SDK path in this prompt before building. [QNX SDP installation guide](https://www.qnx.com/developers/docs/8.0/com.qnx.doc.qnxsdp.quickstart/topic/install_host.html)
 
 ```bat
 python -m venv .venv
@@ -59,13 +59,13 @@ The native guest uses `ConnectAttach`, `MsgSend`, `MsgReceive` and `MsgReply`. T
 
 ### Remove one channel grant
 
-After building the app, run the check from a QNX SDP 8.0 command prompt. Use the path to your QEMU executable.
+After building, run the native policy exercise from the same Command Prompt. The launcher finds QEMU the same way it does in practice mode. If needed, append `--qemu "C:\path to\qemu-system-x86_64.exe"`.
 
 ```bat
-python verify_policy.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe
+start-live.cmd --policy-lab
 ```
 
-The script compiles two policies in a temporary directory and boots the same app executable with each one. Each run uses the same idle-only request, recording and issuer. The restricted policy removes exactly this line:
+The script compiles two policies in a temporary directory, runs three QNX guests with the same app binary and prints a JSON report after all trials pass. Each trial uses the same idle-only request, recording and temporary issuer. The restricted policy removes this line:
 
 ```text
 allow receipt_export_t receipt_owner_t:channel connect;
@@ -76,6 +76,8 @@ allow receipt_export_t receipt_owner_t:channel connect;
 | Export grant removed | Approve | QNX denies the exporter's channel connection after the preview. The trace contains `RR_FAIL connect to receipt channel errno=1` and no receipt. |
 | Standard | Decline | The consent gate withholds the receipt. |
 | Standard | Approve | The script verifies the signed receipt against the exact preview. The exporter is denied access to the raw channel, file, job disk and vault memory. |
+
+For the remaining command-line exercises that call Python directly, load your SDK in the current prompt first. With the default installation, run `call "%USERPROFILE%\qnx800\qnxsdp-env.bat"`. In those exercises, pass your own QEMU executable path if it differs from the example.
 
 To observe the denial in the browser, use a separate project copy. Remove the line from its `policy.conf`, rebuild with `build-qnx.cmd` and start a fresh app instance. Load the idle-only request and approve **Trip A**. The preview appears and export fails. Restore the grant and rebuild to run the successful control. [Recorded QNX trials](replay/qnx-policy-lab-proof.json)
 

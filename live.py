@@ -483,6 +483,8 @@ def main():
     setup.add_argument("--check", action="store_true", help="check available SDK tools, QEMU and the build")
     setup.add_argument("--self-test", action="store_true",
                        help="boot QNX and verify scoped signing, consent and the native export grant")
+    setup.add_argument("--policy-lab", action="store_true",
+                       help="run the native channel-grant and consent trials and print their JSON results")
     setup.add_argument("--practice", action="store_true", help="run with a temporary driver key and shop register")
     setup.add_argument("--shop-only", action="store_true", help="run the shop register without QNX or a driver key")
     setup.add_argument("--driver-only", action="store_true", help="run the QNX review without a shop register")
@@ -508,6 +510,13 @@ def main():
                 qemu, version = startup_check(args.qemu or args.qemu_path)
                 if args.check:
                     print(f"Ready to start Repair Receipt. {version}\nQEMU: {qemu}")
+                    return
+                if (args.self_test or args.policy_lab) and not shutil.which("secpolcompile"):
+                    raise ValueError("Missing SDK tool (secpolcompile). Load the QNX SDP 8.0 environment.")
+                if args.policy_lab:
+                    from verify_policy import verify
+
+                    print(json.dumps(verify(qemu), indent=2))
                     return
                 if args.self_test:
                     from verify_requests import verify
