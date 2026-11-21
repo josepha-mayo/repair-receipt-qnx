@@ -34,8 +34,7 @@ THRESHOLD_COLUMN = (
     "threshold_c INTEGER CHECK(threshold_c IS NULL OR "
     f"(typeof(threshold_c) = 'integer' AND threshold_c BETWEEN {MIN_TEMPERATURE_C} AND {MAX_TEMPERATURE_C}))"
 )
-# Keep the retired column so older builds can open the register with the actual recipe.
-# A zero-only constraint prevents them from writing the former split representation.
+# Keep the retired column while migrating registers with the former split recipe.
 STARTUP_COLUMN = "startup_window INTEGER NOT NULL DEFAULT 0 CHECK(startup_window = 0)"
 JOB_SELECT = """SELECT request.*, child.id AS follow_up, retired.id AS replaces_review
     FROM intake_requests AS request
@@ -200,6 +199,14 @@ class ShopRegister:
                 ON intake_requests(superseded_by) WHERE repeats IS NULL AND superseded_by IS NOT NULL""")
             db.execute("""CREATE INDEX IF NOT EXISTS intake_work_order_lookup
                 ON intake_requests(work_order, number) WHERE work_order IS NOT NULL""")
+            db.execute("""CREATE TRIGGER IF NOT EXISTS intake_withdrawn_read_only
+                BEFORE UPDATE OF receipt, accepted_at ON intake_requests WHEN OLD.superseded_by IS NOT NULL
+                BEGIN SELECT RAISE(ABORT, 'The request has been withdrawn.'); END""")
+            db.execute("""CREATE TRIGGER IF NOT EXISTS intake_withdrawn_no_follow_up
+                BEFORE INSERT ON intake_requests WHEN EXISTS (
+                    SELECT 1 FROM intake_requests WHERE id = NEW.repeats AND superseded_by IS NOT NULL
+                )
+                BEGIN SELECT RAISE(ABORT, 'The previous request has been withdrawn.'); END""")
 
     def connect(self):
         db = sqlite3.connect(self.path)

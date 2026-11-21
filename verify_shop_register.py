@@ -659,6 +659,21 @@ def verify_review_replacement():
         assert register.fetch(request["id"])["receipt"] == original
         assert register.fetch(request["id"])["accepted_at"] == timestamp
         assert register.fetch(pending["id"])["receipt"] is None
+        with closing(register.connect()) as db:
+            stale_writes = [
+                ("UPDATE intake_requests SET receipt = ?, accepted_at = ? WHERE id = ? AND receipt IS NULL",
+                 (late_packet, timestamp, pending["id"])),
+                ("""INSERT INTO intake_requests (id, scope, issuer, created_at, repeats)
+                    VALUES (?, ?, ?, ?, ?)""",
+                 ("52" * 16, "moving", owner.public_key().public_bytes_raw(), timestamp, pending["id"])),
+            ]
+            for sql, parameters in stale_writes:
+                try:
+                    db.execute(sql, parameters)
+                except sqlite3.IntegrityError as error:
+                    assert "withdrawn" in str(error)
+                else:
+                    raise AssertionError("A stale register writer changed the withdrawn review.")
         for write in (lambda: register.match(late_packet), lambda: register.attach(pending["id"], late_packet),
                       lambda: register.follow_up(request["id"])):
             try:
