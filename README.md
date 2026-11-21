@@ -31,6 +31,8 @@ start-live.cmd
 
 The scripts use the active QNX SDK environment or load it from `%USERPROFILE%\qnx800` if present. The launcher looks for `qemu-system-x86_64` on PATH and then under `C:\QNX\qemu`. Use `start-live.cmd --qemu "C:\path to\qemu-system-x86_64.exe" --open` for another location. `--check` checks the setup without starting the app or creating an issuer profile.
 
+Use `build-qnx.cmd aarch64le` to cross-compile the native evaluator and security policy into `build\aarch64le`. The browser launcher and automated QEMU exercises currently use the x86-64 guest. Booting an AArch64 image requires the QNX QEMU startup package. [QNX image builder reference](https://qnx.com/developers/docs/8.0/com.qnx.doc.neutrino.utilities/topic/m/mkqnximage.html)
+
 Use `start-live.cmd --practice` for a hands-on trial. The driver gets a temporary signing key and the shop starts with an empty register for this session. The app discards the practice register on normal exit. Files you deliberately download remain on your PC.
 
 For a separate workshop installation, install the Python dependencies and run `python live.py --shop-only --open`. That instance serves the local register and verifier using Python and SQLite. On the driver’s Windows PC with QNX and QEMU set up, use `start-live.cmd --driver-only --open`. The driver’s signing key stays on that side, and the workshop keeps the SQLite work orders and enrolled public keys. Exchange the public key, request and verification packet as files. [Two-instance codelab](CODELAB.md#7-run-the-driver-and-shop-separately)
