@@ -6,6 +6,7 @@
   <title>Repair Receipt | Shop</title>
   <link rel="stylesheet" href="shared.css">
   <script defer src="request.js"></script>
+  <script defer src="work-order-archive.js"></script>
   <script defer src="shop.js"></script>
 </head>
 <body>
@@ -70,9 +71,9 @@
     <div class="workspace" id="verification-workspace">
       <section class="card" aria-labelledby="file-heading">
         <h2 id="file-heading">Verification files</h2>
-        <label for="receipt-file">Receipt or verification packets</label>
-        <input id="receipt-file" type="file" accept=".json,application/json" aria-describedby="verification-file-help" multiple>
-        <p id="verification-file-help" class="help input-note">For a work order, extract the downloaded ZIP and select its packet files together.</p>
+        <label for="receipt-file">Receipt, verification packets or work-order ZIP</label>
+        <input id="receipt-file" type="file" accept=".json,.zip,application/json,application/zip" aria-describedby="verification-file-help" multiple>
+        <p id="verification-file-help" class="help input-note">Use the ZIP downloaded from a work order or select its individual packet files.</p>
         <label for="issuer-file">Trusted issuer public key</label>
         <input id="issuer-file" type="file" accept=".json,application/json" aria-describedby="pin-fingerprint">
         <p id="pin-fingerprint" class="fingerprint" hidden></p>

@@ -12,6 +12,7 @@ const receiptDigestInput = byId("filed-receipt-digest");
 const batchResults = byId("batch-results");
 const digestSearch = byId("filed-receipt-search");
 const sha256Hex = /^[a-f0-9]{64}$/;
+const zipExtension = /\.zip$/i;
 const labels = new Map([
   ["observed", "Observed"],
   ["not_observed", "Not observed"],
@@ -142,13 +143,15 @@ async function verifyEvidence(evidence, {key, issuerFingerprint}, ticket) {
 
 function resetVerification() {
   ++generation;
-  const batch = receiptFile.files.length > 1;
-  const error = batch ? "" : requestError;
-  const ready = receiptFile.files.length && issuerFile.files.length && (batch || !requestLoading && !error);
+  const archive = [...receiptFile.files].some(file => zipExtension.test(file.name));
+  const batch = archive || receiptFile.files.length > 1;
+  const error = archive && receiptFile.files.length !== 1 ? "Choose one work-order ZIP or select the JSON packets."
+    : batch ? "" : requestError;
+  const ready = receiptFile.files.length && issuerFile.files.length && !error && (batch || !requestLoading);
   byId("request-selection").hidden = batch;
   byId("clear-expected").hidden = !expected && !requestLoading && !requestError;
-  byId("batch-mode-help").hidden = !batch;
-  verifyButton.textContent = batch ? "Verify packets" : "Verify receipt";
+  byId("batch-mode-help").hidden = !batch || !!error;
+  verifyButton.textContent = archive ? "Verify work-order ZIP" : batch ? "Verify packets" : "Verify receipt";
   verifyButton.disabled = !ready;
   update(error || (ready ? "Ready to verify." : "Waiting for a receipt and key."), error ? "bad" : "");
   byId("expected-status").textContent = expected
@@ -251,7 +254,7 @@ function findFiledReceipt() {
 
 receiptDigestInput.addEventListener("input", findFiledReceipt);
 
-async function verifyBatch(files, verifier, attempt) {
+async function verifyBatch(files, verifier, attempt, fromArchive = false) {
   const rows = document.createDocumentFragment();
   const requests = new Map();
   let verified = 0;
@@ -264,6 +267,9 @@ async function verifyBatch(files, verifier, attempt) {
       const evidence = await ShopRequest.readEvidence(file);
       if (!evidence.packetRequest) throw new Error("This file needs a verification packet with the original request.");
       const {claim, receiptSha256} = await verifyEvidence(evidence, verifier, null);
+      if (fromArchive && file.name !== `repair-verification-${claim.request}.json`) {
+        throw new Error("The archive filename does not match the signed request ID.");
+      }
       const item = row.querySelector("li");
       item.dataset.receiptDigest = receiptSha256;
       item.dataset.attachmentName = file.name;
@@ -304,7 +310,9 @@ async function verifyBatch(files, verifier, attempt) {
     }
   }
   const outcome = verified !== files.length ? "bad" : conflicts ? "" : "good";
-  update(`Verified ${verified} of ${files.length} packets.`, outcome, false);
+  const message = files.length === 1 ? (verified ? "Verified 1 packet." : "No packets verified.")
+    : `Verified ${verified} of ${files.length} packets.`;
+  update(message, outcome, false);
   byId("issuer-match").hidden = !verifier.fingerprintMatched;
   if (conflicts) {
     const warning = byId("batch-warning");
@@ -323,7 +331,8 @@ verifyButton.addEventListener("click", async () => {
   const files = [...receiptFile.files];
   const issuer = issuerFile.files[0];
   const ticket = expected;
-  const batch = files.length > 1;
+  const archive = files.length === 1 && zipExtension.test(files[0].name);
+  const batch = archive || files.length > 1;
   const moveFocus = document.activeElement === verifyButton;
   verifyButton.disabled = true;
   update(batch ? "Checking each signature." : "Checking the signature.");
@@ -331,7 +340,8 @@ verifyButton.addEventListener("click", async () => {
     const verifier = await publicVerifier(issuer, expectedIssuer.value);
     if (attempt !== generation) return;
     if (batch) {
-      await verifyBatch(files, verifier, attempt);
+      const packets = archive ? await WorkOrderArchive.open(files[0], () => attempt === generation) : files;
+      if (attempt === generation) await verifyBatch(packets, verifier, attempt, archive);
       return;
     }
     const {claim, issuerFingerprint, receiptSha256, matchedIncludedRequest, driverStarted} =

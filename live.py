@@ -45,6 +45,7 @@ SAMPLES = {"trip-a", "trip-b", "moving", "gap", "scope-control"}
 PUBLISHED_SAMPLES = {"kit-obd", "kit-july-26", "kit-july-27"}
 ASSETS = {
     "/shop.js": ("shop.js", "text/javascript"),
+    "/work-order-archive.js": ("work-order-archive.js", "text/javascript"),
     "/request.js": ("request.js", "text/javascript"),
     "/shared.css": ("shared.css", "text/css"),
     "/shop": ("shop.html", "text/html"),

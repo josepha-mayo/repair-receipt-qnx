@@ -10,8 +10,11 @@ def standalone():
     assets = root / "web"
     page = (assets / "shop.html").read_text(encoding="utf-8")
     stylesheet = (assets / "shared.css").read_text(encoding="utf-8")
-    requests = (assets / "request.js").read_text(encoding="utf-8")
-    script = (assets / "shop.js").read_text(encoding="utf-8")
+    scripts = []
+    for name in ("request.js", "work-order-archive.js", "shop.js"):
+        page = page.replace(f'  <script defer src="{name}"></script>\n', "")
+        script = (assets / name).read_text(encoding="utf-8")
+        scripts.append(f"<script>{script}</script>\n")
     evidence = json.loads((root / "replay" / "qnx-road-scope-receipts.json").read_text(encoding="utf-8"))
     evidence["startup"] = json.loads((root / "replay" / "qnx-road-startup-receipts.json").read_text(encoding="utf-8"))
     disclosure = json.loads((root / "replay" / "qnx-road-disclosure.json").read_text(encoding="utf-8"))
@@ -19,10 +22,8 @@ def standalone():
     sample = json.dumps(evidence, ensure_ascii=True, separators=(",", ":")).replace("<", "\\u003c")
     return (
         page.replace('<link rel="stylesheet" href="shared.css">', f'<style>{stylesheet}</style>')
-        .replace('  <script defer src="shop.js"></script>\n', "")
-        .replace('  <script defer src="request.js"></script>\n', "")
         .replace("</body>", f'<script id="road-evidence" type="application/json">{sample}</script>\n'
-                 f"<script>{requests}</script>\n<script>{script}</script>\n</body>")
+                 + "".join(scripts) + "</body>")
         .replace(' <a href="verify-receipt.html" download>Save offline verifier</a>', "")
     ).encode("utf-8")
 

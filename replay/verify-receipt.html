@@ -222,9 +222,9 @@ footer { margin-top: 18px; }
     <div class="workspace" id="verification-workspace">
       <section class="card" aria-labelledby="file-heading">
         <h2 id="file-heading">Verification files</h2>
-        <label for="receipt-file">Receipt or verification packets</label>
-        <input id="receipt-file" type="file" accept=".json,application/json" aria-describedby="verification-file-help" multiple>
-        <p id="verification-file-help" class="help input-note">For a work order, extract the downloaded ZIP and select its packet files together.</p>
+        <label for="receipt-file">Receipt, verification packets or work-order ZIP</label>
+        <input id="receipt-file" type="file" accept=".json,.zip,application/json,application/zip" aria-describedby="verification-file-help" multiple>
+        <p id="verification-file-help" class="help input-note">Use the ZIP downloaded from a work order or select its individual packet files.</p>
         <label for="issuer-file">Trusted issuer public key</label>
         <input id="issuer-file" type="file" accept=".json,application/json" aria-describedby="pin-fingerprint">
         <p id="pin-fingerprint" class="fingerprint" hidden></p>
@@ -444,6 +444,126 @@ const ShopRequest = (() => {
 </script>
 <script>"use strict";
 
+// The register writes flat, single-disk ZIPs with DEFLATE and no extra fields.
+// APPNOTE 4.3.7, 4.3.12 and 4.3.16 specify the three headers below.
+const WorkOrderArchive = (() => {
+  const endHeader = 22;
+  const centralHeader = 46;
+  const localHeader = 30;
+  const maxEntries = 512;
+  const maxPacketBytes = 4096;
+  const maxCompressedBytes = maxPacketBytes + 64;
+  const maxArchiveBytes = maxEntries * (maxCompressedBytes + 192) + endHeader;
+  const filename = /^repair-verification-[a-f0-9]{32}\.json$/;
+  const invalid = "Choose an intact work-order ZIP exported by Repair Receipt.";
+
+  function entries(buffer) {
+    const header = new DataView(buffer);
+    const word = offset => header.getUint16(offset, true);
+    const integer = offset => header.getUint32(offset, true);
+    const end = buffer.byteLength - endHeader;
+    const decode = new TextDecoder();
+    if (end < 0 || integer(end) !== 0x06054b50 || word(end + 4) || word(end + 6) || word(end + 20)) {
+      throw new Error(invalid);
+    }
+    const count = word(end + 10);
+    if (count > maxEntries) {
+      throw new Error(`Extract the packet files to verify a work order with more than ${maxEntries} receipts.`);
+    }
+    let central = integer(end + 16);
+    const centralStart = central;
+    if (!count || word(end + 8) !== count || central + integer(end + 12) !== end) throw new Error(invalid);
+    const result = [];
+    const names = new Set();
+    let local = 0;
+    for (let index = 0; index < count; index++) {
+      if (central + centralHeader > end || integer(central) !== 0x02014b50 || word(central + 8) ||
+          word(central + 10) !== 8 || word(central + 30) || word(central + 32) || word(central + 34) ||
+          integer(central + 42) !== local) throw new Error(invalid);
+      const crc = integer(central + 16);
+      const compressed = integer(central + 20);
+      const size = integer(central + 24);
+      const nameLength = word(central + 28);
+      const nameStart = central + centralHeader;
+      if (nameStart + nameLength > end || local + localHeader > centralStart ||
+          !compressed || compressed > maxCompressedBytes || !size || size > maxPacketBytes) throw new Error(invalid);
+      const name = decode.decode(new Uint8Array(buffer, nameStart, nameLength));
+      if (!filename.test(name) || names.has(name)) throw new Error(invalid);
+      const localName = local + localHeader;
+      const data = localName + nameLength;
+      if (data + compressed > centralStart || integer(local) !== 0x04034b50 || word(local + 6) ||
+          word(local + 8) !== 8 || integer(local + 14) !== crc || integer(local + 18) !== compressed ||
+          integer(local + 22) !== size || word(local + 26) !== nameLength || word(local + 28) ||
+          decode.decode(new Uint8Array(buffer, localName, nameLength)) !== name) throw new Error(invalid);
+      names.add(name);
+      result.push({name, data, compressed, size, crc});
+      local = data + compressed;
+      central = nameStart + nameLength;
+    }
+    if (local !== centralStart || central !== end) throw new Error(invalid);
+    return result;
+  }
+
+  function crc32(bytes) {
+    let crc = 0xffffffff;
+    for (const byte of bytes) {
+      crc ^= byte;
+      for (let bit = 0; bit < 8; bit++) {
+        crc = (crc >>> 1) ^ (-(crc & 1) & 0xedb88320);
+      }
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  async function inflate(buffer, entry) {
+    const input = new Blob([new Uint8Array(buffer, entry.data, entry.compressed)]);
+    let decompressor;
+    try {
+      decompressor = new DecompressionStream("deflate-raw");
+    } catch {
+      throw new Error("Use a current Chromium browser to open the ZIP, or extract its packet files and select them.");
+    }
+    const reader = input.stream().pipeThrough(decompressor).getReader();
+    const bytes = new Uint8Array(entry.size);
+    let length = 0;
+    try {
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        if (length + value.byteLength > bytes.length) {
+          await reader.cancel();
+          throw new Error(invalid);
+        }
+        bytes.set(value, length);
+        length += value.byteLength;
+      }
+    } catch {
+      throw new Error(invalid);
+    } finally {
+      reader.releaseLock();
+    }
+    if (length !== bytes.length || crc32(bytes) !== entry.crc) throw new Error(invalid);
+    return new File([bytes], entry.name, {type: "application/json"});
+  }
+
+  async function open(file, isCurrent) {
+    if (file.size > maxArchiveBytes) {
+      throw new Error("This work-order ZIP is too large. Extract its packet files and select them.");
+    }
+    const buffer = await file.arrayBuffer();
+    const packetFiles = [];
+    for (const entry of entries(buffer)) {
+      if (!isCurrent()) return [];
+      packetFiles.push(await inflate(buffer, entry));
+    }
+    return packetFiles;
+  }
+
+  return Object.freeze({open});
+})();
+</script>
+<script>"use strict";
+
 const byId = id => document.getElementById(id);
 const receiptFile = byId("receipt-file");
 const issuerFile = byId("issuer-file");
@@ -456,6 +576,7 @@ const receiptDigestInput = byId("filed-receipt-digest");
 const batchResults = byId("batch-results");
 const digestSearch = byId("filed-receipt-search");
 const sha256Hex = /^[a-f0-9]{64}$/;
+const zipExtension = /\.zip$/i;
 const labels = new Map([
   ["observed", "Observed"],
   ["not_observed", "Not observed"],
@@ -586,13 +707,15 @@ async function verifyEvidence(evidence, {key, issuerFingerprint}, ticket) {
 
 function resetVerification() {
   ++generation;
-  const batch = receiptFile.files.length > 1;
-  const error = batch ? "" : requestError;
-  const ready = receiptFile.files.length && issuerFile.files.length && (batch || !requestLoading && !error);
+  const archive = [...receiptFile.files].some(file => zipExtension.test(file.name));
+  const batch = archive || receiptFile.files.length > 1;
+  const error = archive && receiptFile.files.length !== 1 ? "Choose one work-order ZIP or select the JSON packets."
+    : batch ? "" : requestError;
+  const ready = receiptFile.files.length && issuerFile.files.length && !error && (batch || !requestLoading);
   byId("request-selection").hidden = batch;
   byId("clear-expected").hidden = !expected && !requestLoading && !requestError;
-  byId("batch-mode-help").hidden = !batch;
-  verifyButton.textContent = batch ? "Verify packets" : "Verify receipt";
+  byId("batch-mode-help").hidden = !batch || !!error;
+  verifyButton.textContent = archive ? "Verify work-order ZIP" : batch ? "Verify packets" : "Verify receipt";
   verifyButton.disabled = !ready;
   update(error || (ready ? "Ready to verify." : "Waiting for a receipt and key."), error ? "bad" : "");
   byId("expected-status").textContent = expected
@@ -695,7 +818,7 @@ function findFiledReceipt() {
 
 receiptDigestInput.addEventListener("input", findFiledReceipt);
 
-async function verifyBatch(files, verifier, attempt) {
+async function verifyBatch(files, verifier, attempt, fromArchive = false) {
   const rows = document.createDocumentFragment();
   const requests = new Map();
   let verified = 0;
@@ -708,6 +831,9 @@ async function verifyBatch(files, verifier, attempt) {
       const evidence = await ShopRequest.readEvidence(file);
       if (!evidence.packetRequest) throw new Error("This file needs a verification packet with the original request.");
       const {claim, receiptSha256} = await verifyEvidence(evidence, verifier, null);
+      if (fromArchive && file.name !== `repair-verification-${claim.request}.json`) {
+        throw new Error("The archive filename does not match the signed request ID.");
+      }
       const item = row.querySelector("li");
       item.dataset.receiptDigest = receiptSha256;
       item.dataset.attachmentName = file.name;
@@ -748,7 +874,9 @@ async function verifyBatch(files, verifier, attempt) {
     }
   }
   const outcome = verified !== files.length ? "bad" : conflicts ? "" : "good";
-  update(`Verified ${verified} of ${files.length} packets.`, outcome, false);
+  const message = files.length === 1 ? (verified ? "Verified 1 packet." : "No packets verified.")
+    : `Verified ${verified} of ${files.length} packets.`;
+  update(message, outcome, false);
   byId("issuer-match").hidden = !verifier.fingerprintMatched;
   if (conflicts) {
     const warning = byId("batch-warning");
@@ -767,7 +895,8 @@ verifyButton.addEventListener("click", async () => {
   const files = [...receiptFile.files];
   const issuer = issuerFile.files[0];
   const ticket = expected;
-  const batch = files.length > 1;
+  const archive = files.length === 1 && zipExtension.test(files[0].name);
+  const batch = archive || files.length > 1;
   const moveFocus = document.activeElement === verifyButton;
   verifyButton.disabled = true;
   update(batch ? "Checking each signature." : "Checking the signature.");
@@ -775,7 +904,8 @@ verifyButton.addEventListener("click", async () => {
     const verifier = await publicVerifier(issuer, expectedIssuer.value);
     if (attempt !== generation) return;
     if (batch) {
-      await verifyBatch(files, verifier, attempt);
+      const packets = archive ? await WorkOrderArchive.open(files[0], () => attempt === generation) : files;
+      if (attempt === generation) await verifyBatch(packets, verifier, attempt, archive);
       return;
     }
     const {claim, issuerFingerprint, receiptSha256, matchedIncludedRequest, driverStarted} =

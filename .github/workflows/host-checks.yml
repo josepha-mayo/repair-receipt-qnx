@@ -51,6 +51,8 @@ jobs:
         run: node --test verify_obd_import.cjs
       - name: Check offline verifier bytes
         run: python pack_shop.py --check
+      - name: Verify work-order ZIP reads and bounds
+        run: node --test verify_work_order_archive.cjs
       - name: Verify the shop register and archived QNX signatures
         run: python verify_shop_register.py
       - name: Verify the shop-only server
