@@ -32,6 +32,7 @@ let issuer = null;
 let keyVersion = 0;
 let busy = false;
 let matchedReceipt = null;
+let pendingCreation = null;
 function showRequestRule() {
   byId("condition-note").textContent = conditionNotes[conditionInput.value];
   const value = thresholdInput.valueAsNumber;
@@ -56,7 +57,9 @@ function current() {
 function updateControls() {
   byId("new-request").disabled = !issuer || busy;
   byId("work-order").disabled = busy;
+  conditionInput.disabled = busy;
   thresholdInput.disabled = busy;
+  issuerFile.disabled = busy;
   const readyToFile = matchedReceipt?.state === "ready";
   byId("filing-actions").hidden = !readyToFile;
   byId("file-receipt").disabled = !readyToFile || busy;
@@ -314,8 +317,24 @@ byId("new-request").addEventListener("click", () => {
   if (!thresholdInput.reportValidity()) return;
   action("new-status", async () => {
     const workOrder = byId("work-order");
-    const created = await api("jobs", {scope: conditionInput.value, issuer: issuer.text,
-      workOrder: workOrder.value.trim(), thresholdC: thresholdInput.value === "" ? null : thresholdInput.valueAsNumber});
+    const details = {scope: conditionInput.value, issuer: issuer.text, workOrder: workOrder.value.trim(),
+      thresholdC: thresholdInput.value === "" ? null : thresholdInput.valueAsNumber};
+    const serialized = JSON.stringify(details);
+    if (pendingCreation?.details !== serialized) {
+      pendingCreation = {details: serialized, id: crypto.randomUUID().replaceAll("-", "")};
+    }
+    status("new-status", "Creating request.");
+    let created;
+    try {
+      created = await api("jobs", {...details, requestId: pendingCreation.id});
+    } catch (error) {
+      if (error.status >= 400 && error.status < 500) {
+        pendingCreation = null;
+        throw error;
+      }
+      throw new Error("Confirmation was interrupted. Choose Create request again with the same details.");
+    }
+    pendingCreation = null;
     workOrder.value = "";
     thresholdInput.value = "";
     showRequestRule();

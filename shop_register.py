@@ -40,6 +40,10 @@ class ReceiptConflict(ValueError):
     """A request already has a different signed receipt."""
 
 
+class RequestConflict(ValueError):
+    """A request ID is already assigned to different request details."""
+
+
 def utc_time():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -196,7 +200,7 @@ class ShopRegister:
             raise KeyError("This request was not found in the shop register.")
         return row
 
-    def create(self, scope, issuer_file, work_order=None, threshold=None):
+    def create(self, scope, issuer_file, work_order=None, threshold=None, *, request_id=None):
         if not isinstance(scope, str) or scope not in SCOPES:
             raise ValueError("Choose a supported operating condition.")
         key = read_issuer(issuer_file)
@@ -204,11 +208,19 @@ class ShopRegister:
             work_order = normalize_work_order(work_order)
         if threshold is not None and not valid_threshold(threshold):
             raise ValueError(f"Enter a whole temperature between {MIN_TEMPERATURE_C} and {MAX_TEMPERATURE_C} °C.")
-        request_id = secrets.token_hex(16)
+        if request_id is None:
+            request_id = secrets.token_hex(16)
+        elif not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+            raise ValueError("The request ID is invalid.")
         with closing(self.connect()) as db, db:
             db.execute("""INSERT INTO intake_requests(id, scope, issuer, created_at, recipe, work_order, threshold_c)
-                VALUES (?, ?, ?, ?, ?, ?, ?)""", (request_id, scope, key, utc_time(), CURRENT_RECIPE, work_order, threshold))
-            return self.job(self.find(db, request_id))
+                VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING""",
+                       (request_id, scope, key, utc_time(), CURRENT_RECIPE, work_order, threshold))
+            row = self.find(db, request_id)
+            saved = (row["scope"], row["issuer"], row["recipe"], row["work_order"], row["threshold_c"])
+            if row["repeats"] is not None or saved != (scope, key, CURRENT_RECIPE, work_order, threshold):
+                raise RequestConflict("This request ID is already registered with different details.")
+            return self.job(row)
 
     def follow_up(self, request_id):
         return self.repeat(request_id, recheck=False)

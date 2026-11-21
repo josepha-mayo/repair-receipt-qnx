@@ -14,7 +14,7 @@ from zipfile import ZipFile
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from shop_register import PAGE_SIZE, ReceiptConflict, ShopRegister, check_receipt, read_receipt
+from shop_register import PAGE_SIZE, ReceiptConflict, RequestConflict, ShopRegister, check_receipt, read_receipt
 from shop_request import (
     CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, canonical, guest_bytes,
     parse_request, verification_packet,
@@ -67,6 +67,50 @@ def sign(request, result, key):
     claim.update(result if isinstance(result, dict) else {"idle": result})
     signature = key.sign(b"Repair Receipt v2\n" + canonical(claim).encode("ascii"))
     return canonical({"format": "repair-receipt/v2", "claim": claim, "signature": signature.hex()})
+
+
+def verify_create_retry():
+    owner = Ed25519PrivateKey.generate()
+    issuer = pin(owner)
+    request_id = "31" * 16
+    details = ("idle", issuer, "Retry work order", 106)
+    with TemporaryDirectory(prefix="rr-create-retry-") as scratch:
+        path = Path(scratch) / "register.sqlite3"
+        register = ShopRegister(path)
+        start = Barrier(8)
+
+        def race(_):
+            start.wait()
+            return register.create(*details, request_id=request_id)
+
+        with ThreadPoolExecutor(max_workers=start.parties) as pool:
+            replies = list(pool.map(race, range(start.parties)))
+        job = replies[0]
+        assert job["request"]["id"] == request_id
+        assert replies == [job] * start.parties
+        register = ShopRegister(path)
+        assert register.list()["jobs"] == [job]
+        for changed in (
+            ("moving", *details[1:]),
+            ("idle", pin(Ed25519PrivateKey.generate()), *details[2:]),
+            (*details[:2], "Other work order", 106),
+            (*details[:3], 107),
+        ):
+            try:
+                register.create(*changed, request_id=request_id)
+            except RequestConflict:
+                pass
+            else:
+                raise AssertionError("A retry reused the ID for different request details.")
+        receipt = sign(job["request"], "observed", owner)
+        register.attach(request_id, receipt)
+        returned = register.create(*details, request_id=request_id)
+        assert returned["acceptedAt"] and returned["request"] == job["request"]
+        assert register.fetch(request_id)["receipt"] == receipt
+        second = register.create(*details, request_id="32" * 16)
+        assert second["request"]["id"] != request_id
+        assert len(register.lookup(details[2])["jobs"]) == 2
+    print("Verified concurrent creation retries, mismatched details, and original receipt preservation.")
 
 
 with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
@@ -395,3 +439,4 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     print("Verified matching, work-order evidence, full-scope rechecks, saved narrower rechecks, concurrency and backups.")
 
 verify_archived_road_pair()
+verify_create_retry()

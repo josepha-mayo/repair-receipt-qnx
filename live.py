@@ -27,7 +27,7 @@ from shop_request import (
 
 try:
     from issuer_store import Issuer, default_store, load_or_create_seed
-    from shop_register import ReceiptConflict, ShopRegister
+    from shop_register import ReceiptConflict, RequestConflict, ShopRegister
 except ModuleNotFoundError as error:
     if error.name != "cryptography":
         raise
@@ -322,9 +322,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             value = json.loads(body)
             fields = value.keys() if isinstance(value, dict) else set()
-            if action == "jobs" and {"scope", "issuer"} <= fields <= {"scope", "issuer", "workOrder", "thresholdC"}:
+            if action == "jobs" and {"scope", "issuer"} <= fields <= {"scope", "issuer", "workOrder", "thresholdC", "requestId"}:
                 self.json(201, self.server.register.create(value["scope"], value["issuer"], value.get("workOrder"),
-                                                          value.get("thresholdC")))
+                                                          value.get("thresholdC"), request_id=value.get("requestId")))
             elif action == "lookup" and {"workOrder"} <= fields <= {"workOrder", "before"}:
                 self.json(200, self.server.register.lookup(value["workOrder"], value.get("before")))
             elif action == "follow-up" and isinstance(value, dict) and set(value) == {"request"}:
@@ -338,7 +338,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.json(200, self.server.register.match(value["receipt"], packet=packet))
             else:
                 self.json(400, {"message": "Invalid shop register action."})
-        except ReceiptConflict as error:
+        except (ReceiptConflict, RequestConflict) as error:
             self.json(409, {"message": str(error)})
         except KeyError as error:
             self.json(404, {"message": error.args[0]})
