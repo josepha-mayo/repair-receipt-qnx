@@ -5,6 +5,7 @@ const receiptFile = byId("receipt-file");
 const issuerFile = byId("issuer-file");
 const expectedIssuer = byId("expected-issuer");
 const requestFile = byId("expected-request");
+const receiptListFile = byId("expected-receipt-list");
 const verifyButton = byId("verify");
 const result = byId("result");
 const resultCard = byId("result-card");
@@ -37,6 +38,8 @@ function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   digestSearch.hidden = true;
   byId("filed-receipt-status").textContent = "";
   byId("batch-warning").hidden = true;
+  byId("receipt-list-result").hidden = true;
+  byId("receipt-list-issues").hidden = true;
   byId("findings").hidden = !verifiedReceipt;
   byId("evidence-details").hidden = !verifiedReceipt;
   byId("receipt-intake").hidden = true;
@@ -148,13 +151,15 @@ async function verifyEvidence(evidence, {key, issuerFingerprint}, ticket) {
 function resetVerification() {
   ++generation;
   const archive = [...receiptFile.files].some(file => zipExtension.test(file.name));
-  const batch = archive || receiptFile.files.length > 1;
+  const hasList = receiptListFile.files.length > 0;
+  const batch = archive || receiptFile.files.length > 1 || hasList;
   const error = archive && receiptFile.files.length !== 1 ? "Choose one work-order ZIP or select the JSON packets."
     : batch ? "" : requestError;
   const ready = receiptFile.files.length && issuerFile.files.length && !error && (batch || !requestLoading);
   byId("request-selection").hidden = batch;
   byId("clear-expected").hidden = !expected && !requestLoading && !requestError;
   byId("batch-mode-help").hidden = !batch || !!error;
+  byId("clear-receipt-list").hidden = !hasList;
   verifyButton.textContent = archive ? "Verify work-order ZIP" : batch ? "Verify packets" : "Verify receipt";
   verifyButton.disabled = !ready;
   update(error || (ready ? "Ready to verify." : "Waiting for a receipt and key."), error ? "bad" : "");
@@ -166,6 +171,12 @@ function resetVerification() {
 for (const input of [receiptFile, issuerFile]) {
   input.addEventListener("change", resetVerification);
 }
+receiptListFile.addEventListener("change", resetVerification);
+byId("clear-receipt-list").addEventListener("click", () => {
+  receiptListFile.value = "";
+  resetVerification();
+  receiptListFile.focus();
+});
 expectedIssuer.addEventListener("input", resetVerification);
 
 issuerFile.addEventListener("change", async () => {
@@ -290,7 +301,37 @@ function findFiledReceipt() {
 
 receiptDigestInput.addEventListener("input", findFiledReceipt);
 
-async function verifyBatch(files, verifier, attempt, fromArchive = false) {
+function showReceiptList(expected, checked, failed) {
+  const differences = [];
+  for (const [request, digest] of expected) {
+    const actual = checked.get(request);
+    if (!actual) differences.push(`Missing or unverifiable receipt for request ${request}.`);
+    else if (!actual.digests.has(digest) || actual.digests.size > 1) {
+      differences.push(`Different signed receipt for request ${request}.`);
+    }
+  }
+  for (const request of checked.keys()) {
+    if (!expected.has(request)) differences.push(`Unexpected request ${request}.`);
+  }
+  if (failed) differences.push("Some selected files failed verification.");
+
+  const status = byId("receipt-list-result");
+  status.hidden = false;
+  status.className = "status " + (differences.length ? "bad" : "good");
+  status.textContent = differences.length ? "Receipt list mismatch."
+    : `Receipt list matched · ${expected.size} filed ${expected.size === 1 ? "receipt" : "receipts"}.`;
+  const issues = byId("receipt-list-issues");
+  const rows = document.createDocumentFragment();
+  for (const message of differences) {
+    const issue = document.createElement("li");
+    issue.textContent = message;
+    rows.append(issue);
+  }
+  issues.replaceChildren(rows);
+  issues.hidden = !differences.length;
+}
+
+async function verifyBatch(files, verifier, attempt, fromArchive, receiptList) {
   const rows = document.createDocumentFragment();
   const requests = new Map();
   let verified = 0;
@@ -349,6 +390,7 @@ async function verifyBatch(files, verifier, attempt, fromArchive = false) {
   const message = files.length === 1 ? (verified ? "Verified 1 packet." : "No packets verified.")
     : `Verified ${verified} of ${files.length} packets.`;
   update(message, outcome, false);
+  if (receiptList) showReceiptList(receiptList.receipts, requests, verified !== files.length);
   byId("issuer-match").hidden = !verifier.fingerprintMatched;
   if (conflicts) {
     const warning = byId("batch-warning");
@@ -366,18 +408,23 @@ verifyButton.addEventListener("click", async () => {
   const attempt = ++generation;
   const files = [...receiptFile.files];
   const issuer = issuerFile.files[0];
+  const listFile = receiptListFile.files[0];
   const ticket = expected;
   const archive = files.length === 1 && zipExtension.test(files[0].name);
-  const batch = archive || files.length > 1;
+  const batch = archive || files.length > 1 || !!listFile;
   const moveFocus = document.activeElement === verifyButton;
   verifyButton.disabled = true;
   update(batch ? "Checking each signature." : "Checking the signature.");
   try {
     const verifier = await publicVerifier(issuer, expectedIssuer.value);
+    const receiptList = listFile ? await ShopRequest.readReceiptList(listFile) : null;
+    if (receiptList && receiptList.fingerprint !== verifier.issuerFingerprint) {
+      throw new Error("The selected issuer key differs from the key on the saved receipt list.");
+    }
     if (attempt !== generation) return;
     if (batch) {
       const packets = archive ? await WorkOrderArchive.open(files[0], () => attempt === generation) : files;
-      if (attempt === generation) await verifyBatch(packets, verifier, attempt, archive);
+      if (attempt === generation) await verifyBatch(packets, verifier, attempt, archive, receiptList);
       return;
     }
     const {claim, issuerFingerprint, receiptSha256, matchedIncludedRequest, driverStarted} =

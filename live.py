@@ -380,6 +380,9 @@ class Handler(BaseHTTPRequestHandler):
             elif not path.query and re.fullmatch(r"work-order/[a-f0-9]{32}/evidence", path.path):
                 original, archive = self.server.register.work_order_archive(path.path.split("/")[1])
                 self.send(200, archive, "application/zip", f"repair-work-order-{original}.zip")
+            elif not path.query and re.fullmatch(r"work-order/[a-f0-9]{32}/receipt-list", path.path):
+                original, receipts = self.server.register.work_order_receipt_list(path.path.split("/")[1])
+                self.send(200, receipts, "application/json", f"repair-receipt-list-{original}.json")
             elif path.path == "backup" and not path.query:
                 self.shop_backup()
             else:

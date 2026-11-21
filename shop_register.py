@@ -22,6 +22,8 @@ from shop_request import (
 
 PAGE_SIZE = 40
 REGISTER_SCHEMA_VERSION = 2
+WORK_ORDER_LIST_FORMAT = "repair-receipt-work-order-list/v1"
+WORK_ORDER_LIST_MAX_BYTES = 512 * 1024
 INVALID_SAVED_RECEIPT = "The saved receipt failed verification. Check the original packet or a trusted backup."
 WITHDRAWN_REQUEST = "This request was withdrawn. Open the replacement review for this work order."
 RECIPE_COLUMN = (
@@ -470,13 +472,30 @@ class ShopRegister:
                 "nextFollowUp": None if root["superseded_by"] else follow_up, "earlierReceipts": earlier_receipts,
                 "scope": root["scope"], "supersededBy": root["superseded_by"], "replacesReview": root["replaces_review"]}
 
-    def work_order_archive(self, request_id):
+    def _exportable_work_order(self, request_id):
         chain = self.checked_work_order(request_id)
         root, _, root_claim = chain[0]
         if root["superseded_by"]:
             raise ValueError(WITHDRAWN_REQUEST)
         if root_claim is None:
             raise ValueError("File a signed receipt before downloading work-order evidence.")
+        return chain
+
+    def work_order_receipt_list(self, request_id):
+        chain = self._exportable_work_order(request_id)
+        root = chain[0][0]
+        receipts = [{"request": request["id"], "sha256": sha256(row["receipt"].encode("ascii")).hexdigest()}
+                    for row, request, claim in chain if claim is not None]
+        document = {"format": WORK_ORDER_LIST_FORMAT, "fingerprint": sha256(root["issuer"]).hexdigest(),
+                    "receipts": receipts}
+        data = canonical(document).encode("ascii")
+        if len(data) > WORK_ORDER_LIST_MAX_BYTES:
+            raise ValueError("This receipt list exceeds 512 KiB. Check individual receipt digests against the work order.")
+        return root["id"], data
+
+    def work_order_archive(self, request_id):
+        chain = self._exportable_work_order(request_id)
+        root = chain[0][0]
         output = BytesIO()
         fingerprint = sha256(root["issuer"]).hexdigest()
         with ZipFile(output, "w") as archive:

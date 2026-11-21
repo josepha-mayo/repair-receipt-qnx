@@ -20,6 +20,8 @@ const ShopRequest = (() => {
     [publishedSource]: "Published road recording",
   });
   const packetFormat = "repair-receipt-verification/v1";
+  const receiptListFormat = "repair-receipt-work-order-list/v1";
+  const sha256Hex = /^[a-f0-9]{64}$/;
   const format = "repair-receipt-request/v1";
   const thresholdFormat = "repair-receipt-request/v2";
   const scopes = Object.freeze({idle: "At idle only", moving: "While moving only", both: "At idle and while moving"});
@@ -128,6 +130,32 @@ const ShopRequest = (() => {
       fingerprint: packet.fingerprint};
   }
 
+  async function readReceiptList(file) {
+    if (file.size > 512 * 1024) throw new Error("This receipt list exceeds the 512 KiB limit.");
+    let value;
+    const invalid = "Choose a receipt list saved from the shop work order.";
+    try {
+      value = JSON.parse(await file.text());
+    } catch {
+      throw new Error(invalid);
+    }
+    if (value?.format !== receiptListFormat || Object.keys(value).length !== 3 ||
+        typeof value.fingerprint !== "string" || !sha256Hex.test(value.fingerprint) ||
+        !Array.isArray(value.receipts) || !value.receipts.length) {
+      throw new Error(invalid);
+    }
+    const receipts = new Map();
+    for (const receipt of value.receipts) {
+      if (typeof receipt?.request !== "string" || !/^[a-f0-9]{32}$/.test(receipt.request) ||
+          typeof receipt.sha256 !== "string" || !sha256Hex.test(receipt.sha256) ||
+          Object.keys(receipt).length !== 2 || receipts.has(receipt.request)) {
+        throw new Error(invalid);
+      }
+      receipts.set(receipt.request, receipt.sha256);
+    }
+    return {fingerprint: value.fingerprint, receipts};
+  }
+
   function hexBytes(hex) {
     return Uint8Array.from(hex.match(/../g), byte => Number.parseInt(byte, 16));
   }
@@ -170,5 +198,5 @@ const ShopRequest = (() => {
     fileSources, packetFormat, scopes, conditions,
     create, parse, load, rule, sourceLabel, intakeSummary,
     save, validThreshold, supportsThreshold,
-    hexBytes, readIssuer, fingerprint, requestFingerprint, readEvidence});
+    hexBytes, readIssuer, fingerprint, requestFingerprint, readEvidence, readReceiptList});
 })();

@@ -542,6 +542,9 @@ function showWorkOrder(report) {
   const evidenceLink = byId("download-work-evidence");
   evidenceLink.hidden = withdrawn || !hasFindings;
   evidenceLink.href = `work-order/${report.originalRequest}/evidence`;
+  const receiptListLink = byId("download-receipt-list");
+  receiptListLink.hidden = evidenceLink.hidden;
+  receiptListLink.href = `work-order/${report.originalRequest}/receipt-list`;
   byId("report-issuer").textContent = `Enrolled issuer SHA-256 ${report.fingerprint}`;
   for (const {condition, evidence, baseline} of report.contexts) {
     const row = byId("report-condition").content.cloneNode(true);

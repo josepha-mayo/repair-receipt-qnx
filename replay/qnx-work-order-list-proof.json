@@ -1,0 +1,23 @@
+{
+  "runtime": "QNX 8.0 x86-64, Brave offline",
+  "recordings": [
+    "KIT July 27",
+    "KIT July 26"
+  ],
+  "first_scope": "both",
+  "follow_up_scope": "moving",
+  "threshold_c": 95,
+  "archived_receipts": 2,
+  "separate_list_matches_full_archive": true,
+  "detected_differences": [
+    "missing_signed_follow_up",
+    "different_valid_receipt_same_request",
+    "matching_receipt_plus_alternate",
+    "later_receipt_against_saved_earlier_list",
+    "missing_when_only_one_packet_selected"
+  ],
+  "mismatched_issuer_refused": true,
+  "duplicate_request_in_list_refused": true,
+  "local_work_order_reference_in_list": false,
+  "single_packet_verifies_after_clearing_list": true
+}

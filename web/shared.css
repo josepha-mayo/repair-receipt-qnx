@@ -100,6 +100,8 @@ dd { text-align: right; margin: 0; font-weight: 750; }
 #batch-results .batch-file { font-weight: 650; }
 #batch-results .help { margin-top: 4px; }
 #batch-results .batch-match { color: var(--green); font-weight: 700; }
+#receipt-list-issues { overflow-wrap: anywhere; padding-inline-start: 21px; }
+#clear-receipt-list { margin-bottom: 10px; }
 #filed-receipt-search { margin-bottom: 14px; }
 #filed-receipt-status { overflow-wrap: anywhere; }
 #filed-receipt-status:empty { margin: 0; }

@@ -104,7 +104,14 @@
           <p class="help input-note" id="expected-status" role="status"></p>
           <button id="clear-expected" class="link-button" type="button" hidden>Clear original request</button>
         </div>
-        <p class="help input-note" id="batch-mode-help" hidden>Each packet is checked against its included request. Match the request IDs and receipt digests to the filed work order.</p>
+        <details class="issuer-enrollment" id="receipt-list-check">
+          <summary>Check a saved receipt list</summary>
+          <label for="expected-receipt-list">Work-order receipt list</label>
+          <input id="expected-receipt-list" type="file" accept=".json,application/json" aria-describedby="receipt-list-help">
+          <p id="receipt-list-help" class="help input-note">Use the list saved from your shop register, with the ZIP or packet files you want to check.</p>
+          <button id="clear-receipt-list" class="link-button" type="button" hidden>Clear receipt list</button>
+        </details>
+        <p class="help input-note" id="batch-mode-help" hidden>Each packet is checked against its included request. A saved list also checks which receipts belong to the work order.</p>
         <button id="verify" type="button" disabled>Verify receipt</button>
       </section>
       <section class="card receipt" id="result-card" aria-labelledby="result-heading">
@@ -115,6 +122,8 @@
         <p id="result" class="status" role="status">Waiting for a receipt and key.</p>
         <p id="issuer-match" class="help" hidden>Issuer key matches the fingerprint you entered.</p>
         <p id="batch-warning" class="status bad" role="status" hidden></p>
+        <p id="receipt-list-result" class="status" role="status" hidden></p>
+        <ul id="receipt-list-issues" aria-label="Receipt list differences" hidden></ul>
         <details class="issuer-enrollment" id="filed-receipt-search" hidden>
           <summary>Find the filed receipt</summary>
           <label for="filed-receipt-digest">Receipt SHA-256 from the work order</label>

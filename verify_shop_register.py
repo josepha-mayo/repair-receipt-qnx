@@ -414,6 +414,11 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     assert moving["evidence"]["finding"] == "insufficient_evidence" and moving["pendingRequest"] == child_id
     original_id, first_archive = reopened.work_order_archive(child_id)
     assert original_id == incomplete["id"]
+    list_id, first_list = reopened.work_order_receipt_list(child_id)
+    expected_original = {"request": original_id, "sha256": sha256(original.encode("ascii")).hexdigest()}
+    assert list_id == original_id
+    assert json.loads(first_list) == {"format": "repair-receipt-work-order-list/v1",
+                                     "fingerprint": order["fingerprint"], "receipts": [expected_original]}
     with ZipFile(BytesIO(first_archive)) as bundle:
         assert bundle.namelist() == [f"repair-verification-{original_id}.json"]
     same_reference = reopened.create("idle", pin(owner), local_reference)
@@ -437,6 +442,12 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     assert order["contexts"][1]["pendingRequest"] is None
     assert order["fingerprint"] == sha256(owner.public_key().public_bytes_raw()).hexdigest()
     _, archive = reopened.work_order_archive(child_id)
+    assert reopened.work_order_receipt_list(original_id) == reopened.work_order_receipt_list(child_id)
+    _, checked_list = reopened.work_order_receipt_list(child_id)
+    assert local_reference.encode("ascii") not in checked_list
+    assert json.loads(checked_list)["receipts"] == [
+        expected_original, {"request": child_id, "sha256": order["contexts"][1]["evidence"]["receiptSha256"]},
+    ]
     with ZipFile(BytesIO(archive)) as bundle:
         assert bundle.testzip() is None
         assert bundle.namelist() == [f"repair-verification-{request}.json" for request in (original_id, child_id)]
@@ -511,13 +522,14 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
         assert "does not match the issuer" in str(error.__cause__)
     else:
         raise AssertionError("An altered filed receipt entered the work-order findings.")
-    try:
-        reopened.work_order_archive(original_id)
-    except ValueError as error:
-        assert str(error) == INVALID_SAVED_RECEIPT
-        assert "does not match the issuer" in str(error.__cause__)
-    else:
-        raise AssertionError("An altered filed receipt entered the work-order archive.")
+    for export in (reopened.work_order_archive, reopened.work_order_receipt_list):
+        try:
+            export(original_id)
+        except ValueError as error:
+            assert str(error) == INVALID_SAVED_RECEIPT
+            assert "does not match the issuer" in str(error.__cause__)
+        else:
+            raise AssertionError("An altered filed receipt entered a work-order export.")
     with closing(restored.connect()) as db, db:
         db.execute("UPDATE intake_requests SET work_order = ? WHERE id = ?", ("Different work order", child_id))
     try:

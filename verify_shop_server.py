@@ -104,6 +104,7 @@ def main():
                 assert stored["job"] == bad and stored["receipt"] is None
                 assert json.loads(request(shop + "files/" + moving_id))["receipt"] == moving_receipt
                 request(shop + "work-order/" + request_id + "/evidence", status=400)
+                request(shop + "work-order/" + request_id + "/receipt-list", status=400)
                 request(shop + "match", {"receipt": receipt}, status=400)
                 request(shop + "file", {"request": request_id, "receipt": receipt}, status=400)
             with closing(sqlite3.connect(copied)) as db:
