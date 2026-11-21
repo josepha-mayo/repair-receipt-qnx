@@ -376,6 +376,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.json(200, self.server.register.follow_up(value["request"]))
             elif action == "recheck" and fields == {"request"}:
                 self.json(200, self.server.register.repeat(value["request"], recheck=True))
+            elif action == "replace-review" and fields == {"request"}:
+                self.json(200, self.server.register.replace_review(value["request"]))
             elif action == "file" and isinstance(value, dict) and set(value) == {"request", "receipt"}:
                 self.json(200, self.server.register.attach(value["request"], value["receipt"]))
             elif action == "match" and fields in ({"receipt"}, {"receipt", "request", "fingerprint"}):

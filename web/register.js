@@ -84,10 +84,11 @@ function updateControls() {
   byId("clear-search").hidden = search === null;
   byId("older-jobs").disabled = busy;
   byId("older-jobs").hidden = earlier === null;
-  for (const button of ["new-follow-up", "open-follow-up", "open-original", "view-work-order"]) {
+  for (const button of ["new-follow-up", "open-follow-up", "open-original", "view-work-order", "open-replacement"]) {
     byId(button).disabled = busy;
   }
   byId("report-create-follow-up").setAttribute("aria-disabled", String(busy));
+  byId("report-replace").setAttribute("aria-disabled", String(busy));
 }
 
 function renderJobs() {
@@ -102,7 +103,8 @@ function renderJobs() {
       ShopRequest.scopes[job.request.scope], id.slice(-8)]
       .filter(Boolean).join(" · ");
     const jobState = row.querySelector(".job-state");
-    jobState.textContent = job.receiptInvalid ? "Verification failed" : job.acceptedAt ? "Filed" : "Open";
+    jobState.textContent = job.receiptInvalid ? "Verification failed"
+      : job.supersededBy ? "Withdrawn" : job.acceptedAt ? "Filed" : "Open";
     jobState.classList.toggle("bad", job.receiptInvalid);
     button.dataset.request = id;
     button.setAttribute("aria-pressed", String(id === active));
@@ -148,8 +150,8 @@ function renderSelection() {
       : `Request ${job.request.id.slice(-8)}`;
     const selectedState = byId("selected-state");
     selectedState.textContent = job.receiptInvalid ? "Saved receipt failed verification. Check the original packet or a trusted backup."
-      : job.acceptedAt
-      ? filingLabel(job.acceptedAt)
+      : job.supersededBy ? "Withdrawn from this work order. The original signed files remain available."
+      : job.acceptedAt ? filingLabel(job.acceptedAt)
       : `${ShopRequest.scopes[job.request.scope]} · ${verified ? "Ready to file" : "Awaiting a receipt"}`;
     selectedState.classList.toggle("bad", job.receiptInvalid);
     byId("selected-request").textContent = `Request ${job.request.id}`;
@@ -159,12 +161,14 @@ function renderSelection() {
     byId("filed-findings").hidden = !claim || conflict;
     byId("filed-source").hidden = !claim || (conflict && claim.source !== matchedReceipt.claim.source);
     if (claim) byId("filed-source").textContent = "Input · " + ShopRequest.sourceLabel(claim.source);
-    byId("save-request").hidden = job.receiptInvalid || !!job.claim;
+    byId("save-request").hidden = job.receiptInvalid || !!job.claim || !!job.supersededBy;
     byId("save-packet").hidden = !job.claim;
-    byId("view-work-order").hidden = job.receiptInvalid || !job.claim && !job.followUp && !job.repeats;
+    byId("view-work-order").hidden = job.receiptInvalid ||
+      !(job.claim || job.followUp || job.repeats || job.replacesReview || job.supersededBy);
+    byId("open-replacement").hidden = !job.supersededBy;
     byId("individual-files").hidden = !job.claim;
     const missing = job.missingScope;
-    byId("follow-up").hidden = !job.claim;
+    byId("follow-up").hidden = !job.claim || !!job.supersededBy;
     byId("follow-up-heading").textContent = missing ? "Follow-up recording" : "Recheck after repair";
     byId("new-follow-up").hidden = !!job.followUp;
     byId("open-follow-up").hidden = !job.followUp;
@@ -426,7 +430,8 @@ async function openJob(id, fromReport = false) {
   byId("selected-title").focus();
 }
 
-for (const [button, field] of [["open-follow-up", "followUp"], ["open-original", "repeats"]]) {
+for (const [button, field] of [["open-follow-up", "followUp"], ["open-original", "repeats"],
+  ["open-replacement", "supersededBy"]]) {
   byId(button).addEventListener("click", () => action("file-status", () => openJob(current()[field])));
 }
 
@@ -509,6 +514,22 @@ function showEarlierReceipts(receipts) {
 }
 
 function showWorkOrder(report) {
+  const withdrawn = !!report.supersededBy;
+  const hasFindings = report.contexts.some(context => context.evidence || context.baseline);
+  byId("report-withdrawn").hidden = !withdrawn;
+  for (const [id, request] of [["report-open-replacement", report.supersededBy],
+    ["report-open-withdrawn", report.replacesReview]]) {
+    const button = byId(id);
+    button.hidden = !request;
+    button.dataset.request = request ?? "";
+  }
+  const correction = byId("report-correction");
+  correction.open = false;
+  correction.hidden = withdrawn || !hasFindings;
+  status("report-correction-status", "");
+  byId("report-correction-scope").textContent = "Withdraw the findings from this review and issue a fresh request " +
+    `(${ShopRequest.scopes[report.scope].toLowerCase()}). The register keeps the signed files for reference.`;
+  byId("report-replace").dataset.original = report.originalRequest;
   const pending = report.pending;
   const followUp = report.nextFollowUp;
   const createFollowUp = byId("report-create-follow-up");
@@ -526,7 +547,7 @@ function showWorkOrder(report) {
   status("report-open-status", "");
   byId("report-reference").textContent = report.workOrder
     ? `Work order ${report.workOrder}` : `Original request ${report.originalRequest.slice(-8)}`;
-  const summary = intakeSummary(report.contexts);
+  const summary = withdrawn ? "" : intakeSummary(report.contexts);
   byId("report-intake").hidden = !summary;
   byId("report-intake-summary").textContent = summary;
   const latest = report.contexts.map(context => context.evidence?.request);
@@ -539,7 +560,7 @@ function showWorkOrder(report) {
   const entries = byId("report-findings");
   entries.replaceChildren();
   const evidenceLink = byId("download-work-evidence");
-  evidenceLink.hidden = !report.contexts.some(context => context.evidence || context.baseline);
+  evidenceLink.hidden = withdrawn || !hasFindings;
   evidenceLink.href = `work-order/${report.originalRequest}/evidence`;
   byId("report-issuer").textContent = `Enrolled issuer SHA-256 ${report.fingerprint}`;
   for (const {condition, evidence, baseline} of report.contexts) {
@@ -576,6 +597,27 @@ byId("report-create-follow-up").addEventListener("click", event => action("repor
     if (error.status) throw error;
     throw new Error("Could not confirm the follow-up. Try again.");
   }
+}));
+byId("report-replace").addEventListener("click", event => action("report-correction-status", async () => {
+  status("report-correction-status", "");
+  const request = event.currentTarget.dataset.original;
+  let replacement;
+  try {
+    replacement = await api("replace-review", {request}, AbortSignal.timeout(10000));
+    if (!workOrderDialog.open) return;
+    await loadJobs();
+  } catch (error) {
+    if (error.status) throw error;
+    throw new Error("Could not confirm the replacement. Try again.");
+  }
+  if (!workOrderDialog.open) return;
+  workOrderDialog.close();
+  jobs.set(replacement.request.id, replacement);
+  renderJobs();
+  choose(replacement.request.id);
+  status("file-status", replacement.claim ? "This replacement already has a filed receipt."
+    : "Replacement ready. Download the new request for the correct recording.");
+  byId(replacement.claim || replacement.supersededBy ? "selected-title" : "save-request").focus();
 }));
 function dismissWorkOrder(event) {
   event.preventDefault();

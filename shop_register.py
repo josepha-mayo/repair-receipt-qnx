@@ -21,8 +21,9 @@ from shop_request import (
 )
 
 PAGE_SIZE = 40
-REGISTER_SCHEMA_VERSION = 1
+REGISTER_SCHEMA_VERSION = 2
 INVALID_SAVED_RECEIPT = "The saved receipt failed verification. Check the original packet or a trusted backup."
+WITHDRAWN_REQUEST = "This request was withdrawn. Open the replacement review for this work order."
 RECIPE_COLUMN = (
     f"recipe TEXT NOT NULL DEFAULT '{RECIPE}' "
     f"CHECK(recipe IN ('{RECIPE}', '{CURRENT_RECIPE}', '{STARTUP_RECIPE}'))"
@@ -36,9 +37,10 @@ THRESHOLD_COLUMN = (
 # Keep the retired column so older builds can open the register with the actual recipe.
 # A zero-only constraint prevents them from writing the former split representation.
 STARTUP_COLUMN = "startup_window INTEGER NOT NULL DEFAULT 0 CHECK(startup_window = 0)"
-JOB_SELECT = """SELECT request.*, child.id AS follow_up
+JOB_SELECT = """SELECT request.*, child.id AS follow_up, retired.id AS replaces_review
     FROM intake_requests AS request
-    LEFT JOIN intake_requests AS child ON child.repeats = request.id"""
+    LEFT JOIN intake_requests AS child ON child.repeats = request.id
+    LEFT JOIN intake_requests AS retired ON retired.superseded_by = request.id AND retired.repeats IS NULL"""
 
 
 class ReceiptConflict(ValueError):
@@ -188,10 +190,14 @@ class ShopRegister:
                     migrate_requests(db)
                 else:
                     create_requests_table(db, "intake_requests")
-                db.execute(f"PRAGMA user_version = {REGISTER_SCHEMA_VERSION}")
-            elif version != REGISTER_SCHEMA_VERSION:
+            elif version not in (1, REGISTER_SCHEMA_VERSION):
                 raise ValueError("This backup uses an unsupported register schema.")
+            if version < 2:
+                db.execute("ALTER TABLE intake_requests ADD COLUMN superseded_by TEXT REFERENCES intake_requests(id)")
+                db.execute(f"PRAGMA user_version = {REGISTER_SCHEMA_VERSION}")
             db.execute("CREATE UNIQUE INDEX IF NOT EXISTS intake_one_follow_up ON intake_requests(repeats)")
+            db.execute("""CREATE UNIQUE INDEX IF NOT EXISTS intake_one_withdrawn_review
+                ON intake_requests(superseded_by) WHERE repeats IS NULL AND superseded_by IS NOT NULL""")
             db.execute("""CREATE INDEX IF NOT EXISTS intake_work_order_lookup
                 ON intake_requests(work_order, number) WHERE work_order IS NOT NULL""")
 
@@ -244,6 +250,8 @@ class ShopRegister:
             "followUp": row["follow_up"],
             "missingScope": missing_scope(claim),
             "workOrder": row["work_order"],
+            "supersededBy": row["superseded_by"],
+            "replacesReview": row["replaces_review"],
         }
 
     @classmethod
@@ -295,6 +303,8 @@ class ShopRegister:
         with closing(self.connect()) as db, db:
             db.execute("BEGIN IMMEDIATE")
             row = self.find(db, request_id)
+            if row["superseded_by"]:
+                raise RequestConflict(WITHDRAWN_REQUEST)
             prior = self.request(row)
             claim = checked_saved_claim(row, prior)
             missing = missing_scope(claim)
@@ -314,6 +324,26 @@ class ShopRegister:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", (follow_up, scope, row["issuer"], utc_time(), row["recipe"],
                     request_id, row["work_order"], row["threshold_c"], recheck))
             return self.job(self.find(db, follow_up))
+
+    def replace_review(self, request_id):
+        if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+            raise ValueError("Choose a work order from the shop register.")
+        with closing(self.connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            chain = self._checked_work_order(db, request_id)
+            root, _, _ = chain[0]
+            if root["superseded_by"]:
+                return self.checked_job(self.find(db, root["superseded_by"]))
+            if not any(claim is not None for _, _, claim in chain):
+                raise ValueError("File a receipt before withdrawing this review.")
+            replacement = secrets.token_hex(16)
+            db.execute("""INSERT INTO intake_requests(
+                id, scope, issuer, created_at, recipe, work_order, threshold_c)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""", (replacement, root["scope"], root["issuer"], utc_time(),
+                    root["recipe"], root["work_order"], root["threshold_c"]))
+            db.executemany("UPDATE intake_requests SET superseded_by = ? WHERE id = ?",
+                           ((replacement, row["id"]) for row, _, _ in chain))
+            return self.job(self.find(db, replacement))
 
     def list(self, before=None, work_order=None):
         filters, values = [], []
@@ -365,7 +395,13 @@ class ShopRegister:
         if not rows:
             raise KeyError("This request was not found in the shop register.")
         root = rows[0]
-        same_fields = ("issuer", "recipe", "threshold_c", "work_order")
+        review_fields = ("issuer", "recipe", "threshold_c", "work_order")
+        if root["superseded_by"]:
+            replacement = self.find(db, root["superseded_by"])
+            if (replacement["number"] <= root["number"] or replacement["repeats"] is not None or
+                    any(replacement[field] != root[field] for field in (*review_fields, "scope"))):
+                raise ValueError("The saved replacement does not match the withdrawn review.")
+        same_fields = (*review_fields, "superseded_by")
         checked = []
         for row in rows:
             request = self.request(row)
@@ -384,8 +420,10 @@ class ShopRegister:
         return checked
 
     def work_order_findings(self, request_id):
-        chain = self.checked_work_order(request_id)
-        root, _, _ = chain[0]
+        with closing(self.connect()) as db, db:
+            db.execute("BEGIN")
+            chain = self._checked_work_order(db, request_id)
+            root = self.find(db, chain[0][0]["id"])
         contexts = {condition: {"condition": condition, "evidence": None, "pendingRequest": None}
                     for condition in SCOPES[root["scope"]][1]}
         for row, request, claim in chain:
@@ -420,11 +458,15 @@ class ShopRegister:
         ]
         return {"workOrder": root["work_order"], "originalRequest": root["id"],
                 "fingerprint": sha256(root["issuer"]).hexdigest(), "contexts": list(contexts.values()),
-                "pending": pending, "nextFollowUp": follow_up, "earlierReceipts": earlier_receipts}
+                "pending": None if root["superseded_by"] else pending,
+                "nextFollowUp": None if root["superseded_by"] else follow_up, "earlierReceipts": earlier_receipts,
+                "scope": root["scope"], "supersededBy": root["superseded_by"], "replacesReview": root["replaces_review"]}
 
     def work_order_archive(self, request_id):
         chain = self.checked_work_order(request_id)
         root, _, root_claim = chain[0]
+        if root["superseded_by"]:
+            raise ValueError(WITHDRAWN_REQUEST)
         if root_claim is None:
             raise ValueError("File a signed receipt before downloading work-order evidence.")
         output = BytesIO()
@@ -441,6 +483,8 @@ class ShopRegister:
     def match(self, text, *, packet=None):
         record = read_receipt(text)
         row = self.fetch(record["claim"]["request"])
+        if row["superseded_by"]:
+            raise RequestConflict(WITHDRAWN_REQUEST)
         job = self.checked_job(row)
         request = job["request"]
         if packet is not None:
@@ -460,8 +504,10 @@ class ShopRegister:
         with closing(self.connect()) as db, db:
             written = db.execute("""UPDATE intake_requests
                 SET receipt = ?, accepted_at = ?
-                WHERE id = ? AND receipt IS NULL""", (text, utc_time(), request_id)).rowcount
+                WHERE id = ? AND receipt IS NULL AND superseded_by IS NULL""", (text, utc_time(), request_id)).rowcount
             current = self.find(db, request_id)
+            if current["superseded_by"]:
+                raise RequestConflict(WITHDRAWN_REQUEST)
             saved = self.checked_job(current)
             if not written and current["receipt"] != text:
                 raise ReceiptConflict("A different signed receipt has already been filed for this request.")

@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from shop_register import (
     INVALID_SAVED_RECEIPT, PAGE_SIZE, REGISTER_SCHEMA_VERSION, ReceiptConflict, RequestConflict, ShopRegister,
-    check_receipt, read_issuer, read_receipt,
+    check_receipt, create_requests_table, read_issuer, read_receipt,
 )
 from shop_request import (
     CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, STARTUP_RECIPE, canonical, guest_bytes,
@@ -605,7 +605,98 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     assert reopened.repeat(legacy["id"], recheck=True)["request"]["scope"] == "both"
     print("Verified matching, work-order evidence, full-scope rechecks, saved narrower rechecks, concurrency and backups.")
 
+def verify_review_replacement():
+    owner = Ed25519PrivateKey.generate()
+    request = request_document("both", "51" * 16, STARTUP_RECIPE, 96)
+    original = sign(request, {"idle": "observed", "moving": "insufficient_evidence"}, owner)
+    timestamp = "2026-11-20T16:00:00+00:00"
+    with TemporaryDirectory(prefix="rr-review-replacement-") as scratch:
+        path = Path(scratch) / "register.sqlite3"
+        with closing(sqlite3.connect(path)) as db, db:
+            create_requests_table(db, "intake_requests")
+            db.execute("PRAGMA user_version = 1")
+            db.execute("""INSERT INTO intake_requests(
+                id, scope, issuer, created_at, receipt, accepted_at, recipe, work_order, threshold_c)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
+                request["id"], "both", owner.public_key().public_bytes_raw(), timestamp,
+                original, timestamp, STARTUP_RECIPE, "Bay 6", 96))
+        register = ShopRegister(path)
+        pending = register.follow_up(request["id"])["request"]
+        late_packet = sign(pending, {"moving": "observed"}, owner)
+        assert register.match(late_packet)["state"] == "ready"
+
+        with closing(register.connect()) as db, db:
+            db.execute("""CREATE TRIGGER interrupt_withdrawal BEFORE UPDATE OF superseded_by ON intake_requests
+                WHEN NEW.repeats IS NOT NULL BEGIN SELECT RAISE(ABORT, 'Simulated interruption'); END""")
+        try:
+            register.replace_review(request["id"])
+        except sqlite3.IntegrityError as error:
+            assert "Simulated interruption" in str(error)
+        else:
+            raise AssertionError("The interrupted replacement unexpectedly committed.")
+        assert register.match(late_packet)["state"] == "ready"
+        assert len(register.list()["jobs"]) == 2
+        with closing(register.connect()) as db, db:
+            db.execute("DROP TRIGGER interrupt_withdrawal")
+
+        start = Barrier(4)
+
+        def retry(index):
+            start.wait()
+            return register.replace_review(request["id"] if index % 2 == 0 else pending["id"])
+
+        with ThreadPoolExecutor(max_workers=start.parties) as pool:
+            attempts = list(pool.map(retry, range(start.parties)))
+        job = attempts[0]
+        assert all(attempt == job for attempt in attempts)
+        replacement = job["request"]
+        assert replacement == {**request, "id": replacement["id"]}
+        assert replacement["id"] != request["id"]
+        assert job["workOrder"] == "Bay 6" and job["replacesReview"] == request["id"]
+        archived = register.work_order_findings(request["id"])
+        assert archived["supersededBy"] == replacement["id"]
+        assert archived["pending"] is None and archived["nextFollowUp"] is None
+        assert register.fetch(request["id"])["receipt"] == original
+        assert register.fetch(request["id"])["accepted_at"] == timestamp
+        assert register.fetch(pending["id"])["receipt"] is None
+        for write in (lambda: register.match(late_packet), lambda: register.attach(pending["id"], late_packet),
+                      lambda: register.follow_up(request["id"])):
+            try:
+                write()
+            except RequestConflict as error:
+                assert "withdrawn" in str(error)
+            else:
+                raise AssertionError("A withdrawn request could still receive evidence.")
+        fresh = register.work_order_findings(replacement["id"])
+        assert fresh["replacesReview"] == request["id"]
+        assert all(context["evidence"] is None and "baseline" not in context for context in fresh["contexts"])
+        try:
+            register.replace_review(replacement["id"])
+        except ValueError as error:
+            assert "File a receipt" in str(error)
+        else:
+            raise AssertionError("An empty replacement could create another review.")
+        corrected = sign(replacement, {"idle": "not_observed", "moving": "observed"}, owner)
+        assert not register.attach(replacement["id"], corrected)["alreadyFiled"]
+        backup = path.with_name("backup.sqlite3")
+        register.backup(backup)
+        restored = ShopRegister(backup)
+        assert restored.replace_review(request["id"])["request"] == replacement
+        assert restored.work_order_findings(request["id"]) == archived
+        with ZipFile(BytesIO(restored.work_order_archive(replacement["id"])[1])) as bundle:
+            assert bundle.namelist() == [f"repair-verification-{replacement['id']}.json"]
+            assert json.loads(bundle.read(bundle.namelist()[0]))["receipt"] == corrected
+        try:
+            restored.work_order_archive(request["id"])
+        except ValueError as error:
+            assert "withdrawn" in str(error)
+        else:
+            raise AssertionError("The active evidence export included a withdrawn review.")
+    print("Verified withdrawal rollback, concurrent retries, late receipt refusal and audit preservation after restore.")
+
+
 verify_archived_road_pair()
 verify_archived_startup_pair()
 verify_create_retry()
 verify_register_migration()
+verify_review_replacement()

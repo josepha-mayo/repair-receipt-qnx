@@ -48,6 +48,7 @@
             <button id="view-work-order" type="button" class="secondary" hidden>View work-order findings</button>
             <button id="save-packet" type="button" class="secondary" hidden>Download verification packet</button>
           </div>
+          <button id="open-replacement" type="button" class="link-button" hidden>Open replacement review</button>
           <section id="follow-up" class="follow-up" aria-labelledby="follow-up-heading" hidden>
             <h3 id="follow-up-heading">Follow-up recording</h3>
             <p id="follow-up-note" class="help"></p>
@@ -140,6 +141,9 @@
       <button id="close-work-order" type="button" class="secondary">Close</button>
     </div>
     <p id="report-reference" class="help"></p>
+    <p id="report-withdrawn" class="report-outcome" hidden>Withdrawn from this work order. These findings are kept for the record.</p>
+    <button id="report-open-replacement" type="button" class="link-button" hidden>Open replacement review</button>
+    <button id="report-open-withdrawn" type="button" class="link-button" hidden>Open the withdrawn review</button>
     <section id="report-intake" aria-labelledby="report-intake-heading" hidden>
       <h3 id="report-intake-heading">Where to start</h3>
       <p id="report-intake-summary"></p>
@@ -164,6 +168,12 @@
       <button id="print-work-order" type="button">Print work order</button>
       <a id="download-work-evidence" hidden>Download verification files</a>
     </div>
+    <details id="report-correction" class="issuer-enrollment" hidden>
+      <summary>Wrong recording filed?</summary>
+      <p id="report-correction-scope" class="help"></p>
+      <button id="report-replace" type="button" class="secondary">Withdraw and issue replacement</button>
+      <p id="report-correction-status" class="status" role="status"></p>
+    </details>
   </dialog>
   <template id="report-condition">
     <section class="report-condition">

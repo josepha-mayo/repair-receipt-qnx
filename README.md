@@ -93,6 +93,8 @@ After filing, choose **View work-order findings** from the request. Each conditi
 
 Open **Earlier receipts** to see filed results that are no longer shown in the current or prior finding cards. Choose a receipt to open its exact request and download its verification packet.
 
+If a filed packet came from the wrong recording, open **Wrong recording filed?** in the work-order findings and choose **Withdraw and issue replacement**. The replacement asks for the original conditions under the same rule and keeps the same issuer and work-order reference. It starts with an empty evidence view. The shop can still inspect and export individual signed packets from the withdrawn review. The register marks its printout as withdrawn, refuses late returns to its requests and keeps its receipts out of the replacement's evidence ZIP. Withdrawal is local to the shop register. Copies of the signed packet already shared can still verify offline.
+
 When a filed receipt has incomplete coverage, create the missing-coverage follow-up from the work-order report. The action opens the existing follow-up if another shop tab already created it.
 
 **Where to start** uses the current filed findings to identify the operating conditions in which an uploaded CSV met the test rule. It highlights incomplete uploaded coverage separately and asks the shop to confirm the data came from the vehicle. Built-in recordings, published examples, simulated captures and unspecified sources stay in the detailed findings for review.

@@ -47,6 +47,8 @@ Download a **verification packet** from a filed request. Open the standalone ver
 
 In the work-order view, choose **Download verification files**. Extract the ZIP, select both packet files together and choose **Verify packets** in the offline verifier. The earlier packet still shows insufficient evidence and the follow-up carries the later finding. Paste each digest from the printed work order into **Find the filed receipt** and compare the matching request IDs.
 
+Use this practice review to simulate filing the wrong recording. In **View work-order findings**, open **Wrong recording filed?** and choose **Withdraw and issue replacement**. Download the new request and check that its ID changed and its rule and scope stayed the same. Try to return the original packet to the register. The shop reports that its request was withdrawn. Open **View work-order findings** on the replacement and choose **Open the withdrawn review** to recover the original signed packet for audit. Complete the replacement with a fresh driver review and confirm its verification ZIP contains only packets filed under the replacement.
+
 Download a **Register backup** from the shop intake page. Start a separate session with `start-live.cmd --ephemeral-issuer --shop-register "C:\path\practice-backup-copy.sqlite3"` pointing at a copy of that file. Reopen the work order and follow its source receipt links. The register verifies prior receipts using the public keys saved with those requests, even with a different local driver key.
 
 ## 2. Follow the QNX boundary
