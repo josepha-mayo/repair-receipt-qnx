@@ -8,6 +8,9 @@
 #selected-title, #new-heading { scroll-margin-block-start: 16px; }
 #selected-state, #selected-rule { margin-top: 5px; }
 #file-receipt { min-height: 44px; }
+#report-intake { margin: 14px 0; padding: 3px 0 3px 12px; border-inline-start: 3px solid var(--green); }
+#report-intake h3 { margin: 0 0 4px; font-size: .95rem; }
+#report-intake p { margin: 0; font-size: .94rem; }
 #report-pending { margin: 12px 0; }
 #report-open-pending { margin-top: 8px; }
 #report-open-status:empty { display: none; }
@@ -32,4 +35,5 @@
 }
 @media print {
   #report-open-pending, #report-open-status { display: none; }
+  #report-intake { break-inside: avoid; }
 }

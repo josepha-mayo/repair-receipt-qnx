@@ -437,6 +437,28 @@ function compareReadings(baseline, recheck) {
   return "Both receipts report that the test rule was not met.";
 }
 
+function intakeSummary(contexts) {
+  const filed = contexts.filter(({evidence}) => evidence);
+  if (!filed.length) return "";
+  const uploaded = filed.filter(({evidence}) => evidence.source === "uploaded-csv/v1");
+  if (!uploaded.length) return "Use a recording from this vehicle to decide which condition to check first.";
+
+  const conditionText = items => items.map(({condition}) => conditions[condition].toLowerCase()).join(" and ");
+  const observed = uploaded.filter(({evidence}) => evidence.finding === "observed");
+  const incomplete = uploaded.filter(({evidence}) => evidence.finding === "insufficient_evidence");
+  const summary = [];
+  if (observed.length) {
+    const first = observed.length === 1 && contexts.length > 1 ? " first" : "";
+    summary.push(`Confirm the data came from this vehicle. Review the complaint ${conditionText(observed)}${first}.`);
+  } else if (!incomplete.length) {
+    summary.push(`No crossing met the test rule ${conditionText(uploaded)} in the reviewed data.`);
+  }
+  if (incomplete.length) summary.push(`Coverage was insufficient ${conditionText(incomplete)}.`);
+  const other = filed.filter(({evidence}) => evidence.source !== "uploaded-csv/v1");
+  if (other.length) summary.push(`Use a recording from this vehicle to assess the complaint ${conditionText(other)}.`);
+  return summary.join(" ");
+}
+
 function showWorkOrder(report) {
   const pending = report.pending;
   byId("report-pending").hidden = !pending;
@@ -450,6 +472,9 @@ function showWorkOrder(report) {
   status("report-open-status", "");
   byId("report-reference").textContent = report.workOrder
     ? `Work order ${report.workOrder}` : `Original request ${report.originalRequest.slice(-8)}`;
+  const summary = intakeSummary(report.contexts);
+  byId("report-intake").hidden = !summary;
+  byId("report-intake-summary").textContent = summary;
   const latest = report.contexts.map(context => context.evidence?.request);
   const receiptSummary = byId("report-receipt-summary");
   receiptSummary.hidden = latest.length !== 2 || !latest.every(Boolean);
