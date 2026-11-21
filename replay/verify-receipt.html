@@ -50,11 +50,13 @@ h2 { font-size: 1.22rem; line-height: 1.22; }
 .road-example .status:empty { display: none; }
 .road-example button[aria-pressed="true"] { outline: 2px solid var(--green); outline-offset: 2px; }
 .request-card { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; gap: 18px; margin-bottom: 18px; }
+#verification-workspace + .request-card { margin-top: 18px; }
 .request-card label { margin-top: 0; }
 .request-actions { display: flex; gap: 8px; align-items: stretch; }
 .request-actions button { flex-shrink: 0; }
 .input-note { margin: 0 0 10px; }
 .link-button { background: transparent; color: var(--green); border: 0; padding: 0; text-decoration: underline; }
+#clear-expected { display: block; margin-bottom: 10px; }
 .receipt-title { border-bottom: 1px solid var(--line); padding-bottom: 14px; }
 label { display: block; margin-top: 16px; margin-bottom: 5px; font-size: .91rem; font-weight: 650; }
 button, select, input::file-selector-button { font: inherit; border-radius: 6px; padding: 8px 13px; }
@@ -197,7 +199,7 @@ footer { margin-top: 18px; }
         </div>
       </div>
     </section>
-    <div class="workspace">
+    <div class="workspace" id="verification-workspace">
       <section class="card" aria-labelledby="file-heading">
         <h2 id="file-heading">Verification files</h2>
         <label for="receipt-file">Receipt or verification packets</label>
@@ -210,13 +212,15 @@ footer { margin-top: 18px; }
           <label for="expected-request">Original shop request</label>
           <input id="expected-request" type="file" accept=".json,application/json" aria-describedby="expected-status">
           <p class="help input-note" id="expected-status" role="status"></p>
+          <button id="clear-expected" class="link-button" type="button" hidden>Clear original request</button>
         </div>
+        <p class="help input-note" id="batch-mode-help" hidden>Each packet is checked against its included request. Match the request IDs and receipt digests to the filed work order.</p>
         <button id="verify" type="button" disabled>Verify receipt</button>
       </section>
       <section class="card receipt" id="result-card" aria-labelledby="result-heading">
         <div class="receipt-title">
           <p class="eyebrow">Coolant temperature</p>
-          <h2 id="result-heading">Verification result</h2>
+          <h2 id="result-heading" tabindex="-1">Verification result</h2>
         </div>
         <p id="result" class="status" role="status">Waiting for a receipt and key.</p>
         <p id="batch-warning" class="status bad" role="status" hidden></p>
@@ -526,6 +530,8 @@ function resetVerification() {
   const error = batch ? "" : requestError;
   const ready = receiptFile.files.length && issuerFile.files.length && (batch || !requestLoading && !error);
   byId("request-selection").hidden = batch;
+  byId("clear-expected").hidden = !expected && !requestLoading && !requestError;
+  byId("batch-mode-help").hidden = !batch;
   verifyButton.textContent = batch ? "Verify packets" : "Verify receipt";
   verifyButton.disabled = !ready;
   update(error || (ready ? "Ready to verify." : "Waiting for a receipt and key."), error ? "bad" : "");
@@ -554,7 +560,7 @@ issuerFile.addEventListener("change", async () => {
   }
 });
 
-requestFile.addEventListener("change", async () => {
+async function loadExpectedRequest() {
   const version = ++pendingRequest;
   expected = null;
   requestError = "";
@@ -572,6 +578,13 @@ requestFile.addEventListener("change", async () => {
       resetVerification();
     }
   }
+}
+
+requestFile.addEventListener("change", loadExpectedRequest);
+byId("clear-expected").addEventListener("click", () => {
+  requestFile.value = "";
+  loadExpectedRequest();
+  requestFile.focus();
 });
 
 byId("create-request").addEventListener("click", () => {
@@ -654,6 +667,7 @@ verifyButton.addEventListener("click", async () => {
   const files = [...receiptFile.files];
   const issuer = issuerFile.files[0];
   const batch = files.length > 1;
+  const moveFocus = document.activeElement === verifyButton;
   verifyButton.disabled = true;
   update(batch ? "Checking each signature." : "Checking the signature.");
   try {
@@ -693,7 +707,12 @@ verifyButton.addEventListener("click", async () => {
   } catch (error) {
     if (attempt === generation) update(error.message, "bad");
   } finally {
-    if (attempt === generation) verifyButton.disabled = false;
+    if (attempt === generation) {
+      verifyButton.disabled = false;
+      if (moveFocus && [document.body, verifyButton].includes(document.activeElement)) {
+        byId("result-heading").focus();
+      }
+    }
   }
 });
 
@@ -711,6 +730,7 @@ if (roadEvidence) {
   let verifiedPair = null;
   byId("shop-heading").textContent = "Verify a receipt.";
   byId("shop-intro").textContent = "Check the signed QNX example, or verify your own receipt and issuer key.";
+  byId("verification-workspace").after(byId("create-request").closest("section"));
   byId("road-example").hidden = false;
   for (const [index, id] of ["save-road-first", "save-road-second"].entries()) {
     byId(id).addEventListener("click", () => {

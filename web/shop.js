@@ -132,6 +132,8 @@ function resetVerification() {
   const error = batch ? "" : requestError;
   const ready = receiptFile.files.length && issuerFile.files.length && (batch || !requestLoading && !error);
   byId("request-selection").hidden = batch;
+  byId("clear-expected").hidden = !expected && !requestLoading && !requestError;
+  byId("batch-mode-help").hidden = !batch;
   verifyButton.textContent = batch ? "Verify packets" : "Verify receipt";
   verifyButton.disabled = !ready;
   update(error || (ready ? "Ready to verify." : "Waiting for a receipt and key."), error ? "bad" : "");
@@ -160,7 +162,7 @@ issuerFile.addEventListener("change", async () => {
   }
 });
 
-requestFile.addEventListener("change", async () => {
+async function loadExpectedRequest() {
   const version = ++pendingRequest;
   expected = null;
   requestError = "";
@@ -178,6 +180,13 @@ requestFile.addEventListener("change", async () => {
       resetVerification();
     }
   }
+}
+
+requestFile.addEventListener("change", loadExpectedRequest);
+byId("clear-expected").addEventListener("click", () => {
+  requestFile.value = "";
+  loadExpectedRequest();
+  requestFile.focus();
 });
 
 byId("create-request").addEventListener("click", () => {
@@ -260,6 +269,7 @@ verifyButton.addEventListener("click", async () => {
   const files = [...receiptFile.files];
   const issuer = issuerFile.files[0];
   const batch = files.length > 1;
+  const moveFocus = document.activeElement === verifyButton;
   verifyButton.disabled = true;
   update(batch ? "Checking each signature." : "Checking the signature.");
   try {
@@ -299,7 +309,12 @@ verifyButton.addEventListener("click", async () => {
   } catch (error) {
     if (attempt === generation) update(error.message, "bad");
   } finally {
-    if (attempt === generation) verifyButton.disabled = false;
+    if (attempt === generation) {
+      verifyButton.disabled = false;
+      if (moveFocus && [document.body, verifyButton].includes(document.activeElement)) {
+        byId("result-heading").focus();
+      }
+    }
   }
 });
 
@@ -317,6 +332,7 @@ if (roadEvidence) {
   let verifiedPair = null;
   byId("shop-heading").textContent = "Verify a receipt.";
   byId("shop-intro").textContent = "Check the signed QNX example, or verify your own receipt and issuer key.";
+  byId("verification-workspace").after(byId("create-request").closest("section"));
   byId("road-example").hidden = false;
   for (const [index, id] of ["save-road-first", "save-road-second"].entries()) {
     byId(id).addEventListener("click", () => {
