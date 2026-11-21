@@ -5,6 +5,7 @@ const issuerFile = byId("trusted-key");
 const receiptFile = byId("returned-receipt");
 const workOrderDialog = byId("work-order-dialog");
 const conditionInput = byId("condition");
+const windowInput = byId("recording-window");
 const thresholdInput = byId("threshold");
 const orderReference = byId("order-reference");
 let jobs = new Map();
@@ -48,11 +49,12 @@ function filingLabel(value) {
 function showRequestRule() {
   byId("condition-note").textContent = conditionNotes[conditionInput.value];
   const value = thresholdInput.valueAsNumber;
-  byId("new-rule").textContent = ShopRequest.rule({recipe: ShopRequest.recipe,
+  byId("new-rule").textContent = ShopRequest.rule({recipe: windowInput.value,
     thresholdC: ShopRequest.validThreshold(value) ? value : null});
 }
 
 conditionInput.addEventListener("change", showRequestRule);
+windowInput.addEventListener("change", showRequestRule);
 thresholdInput.addEventListener("input", showRequestRule);
 showRequestRule();
 
@@ -70,6 +72,7 @@ function updateControls() {
   byId("new-request").disabled = !issuer || busy;
   byId("work-order").disabled = busy;
   conditionInput.disabled = busy;
+  windowInput.disabled = busy;
   thresholdInput.disabled = busy;
   issuerFile.disabled = busy;
   const readyToFile = matchedReceipt?.state === "ready";
@@ -341,7 +344,7 @@ byId("new-request").addEventListener("click", () => {
   if (!thresholdInput.reportValidity()) return;
   action("new-status", async () => {
     const workOrder = byId("work-order");
-    const details = {scope: conditionInput.value, issuer: issuer.text, workOrder: workOrder.value.trim(),
+    const details = {scope: conditionInput.value, issuer: issuer.text, workOrder: workOrder.value.trim(), recipe: windowInput.value,
       thresholdC: thresholdInput.value === "" ? null : thresholdInput.valueAsNumber};
     const serialized = JSON.stringify(details);
     if (pendingCreation?.details !== serialized) {
@@ -361,6 +364,7 @@ byId("new-request").addEventListener("click", () => {
     pendingCreation = null;
     workOrder.value = "";
     thresholdInput.value = "";
+    windowInput.value = ShopRequest.recipe;
     showRequestRule();
     jobs.set(created.request.id, created);
     renderJobs();

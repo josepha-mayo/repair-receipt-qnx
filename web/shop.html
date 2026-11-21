@@ -47,6 +47,11 @@
       <div>
         <label for="offline-threshold">Test threshold in °C (optional)</label>
         <input id="offline-threshold" type="number" min="-40" max="200" step="1" placeholder="105">
+        <label for="offline-window">Recording window</label>
+        <select id="offline-window">
+          <option value="coolant-duration-demo/v2">Entire recording</option>
+          <option value="coolant-startup-window/v3">Allow 1 second for startup</option>
+        </select>
         <label for="scope-select">Findings to request</label>
         <div class="request-actions">
           <select id="scope-select">

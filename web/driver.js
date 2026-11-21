@@ -86,15 +86,20 @@ function render() {
   const retry = byId("retry-preparation");
   retry.hidden = !preparationFailed;
   retry.disabled = busy;
-  const benchWithoutRequest = byId("sample").value === "obd-bench" && !ticket;
+  const benchSelected = byId("sample").value === "obd-bench";
+  const benchNeedsRequest = benchSelected && !ticket;
+  const benchNeedsRecording = benchSelected && ticket?.recipe === ShopRequest.startupRecipe;
   file.disabled = busy;
   requestFile.disabled = busy;
   byId("clear-request").hidden = !requestFile.files.length;
   byId("clear-request").disabled = busy;
   byId("sample").disabled = busy;
   byId("import").disabled = blocked || !file.files.length;
-  byId("sample-run").disabled = blocked || benchWithoutRequest;
-  byId("bench-help").hidden = !benchWithoutRequest;
+  byId("sample-run").disabled = blocked || benchNeedsRequest || benchNeedsRecording;
+  const benchHelp = byId("bench-help");
+  benchHelp.hidden = !benchNeedsRequest && !benchNeedsRecording;
+  benchHelp.textContent = benchNeedsRecording ? "Choose a recording for this request’s startup allowance."
+    : "Load a shop request to capture from the simulated adapter.";
   byId("recording-reselection").hidden = !recordingCleared;
   byId("choose-recording").hidden = stage !== "expired";
   byId("actions").hidden = stage !== "review" || reconnecting;

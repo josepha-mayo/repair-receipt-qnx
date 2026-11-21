@@ -91,12 +91,13 @@ async function verifyEvidence(evidence, {key, issuerFingerprint}, ticket) {
   if (!version || typeof claim?.recipe !== "string" || !Object.hasOwn(ShopRequest.recipes, claim.recipe) ||
       (version === 1 && claim.recipe !== ShopRequest.legacyRecipe) ||
       (driverStarted && claim.recipe !== ShopRequest.recipe) ||
+      (claim.recipe === ShopRequest.startupRecipe && (!bound || bench)) ||
       typeof record.signature !== "string" || !/^[0-9a-f]{128}$/.test(record.signature)) {
     throw new Error("The receipt format or findings are invalid.");
   }
   const canonicalClaim = {recipe: claim.recipe};
   if (Object.hasOwn(claim, "thresholdC")) {
-    if (!bound || claim.recipe !== ShopRequest.recipe || !ShopRequest.validThreshold(claim.thresholdC)) {
+    if (!bound || !ShopRequest.supportsThreshold(claim.recipe) || !ShopRequest.validThreshold(claim.thresholdC)) {
       throw new Error("The receipt has an invalid temperature threshold.");
     }
     canonicalClaim.thresholdC = claim.thresholdC;
@@ -208,7 +209,8 @@ byId("create-request").addEventListener("click", () => {
   requestFile.value = "";
   requestError = "";
   requestLoading = false;
-  expected = ShopRequest.create(byId("scope-select").value, threshold.value === "" ? null : threshold.valueAsNumber);
+  expected = ShopRequest.create(byId("scope-select").value, threshold.value === "" ? null : threshold.valueAsNumber,
+    byId("offline-window").value);
   ShopRequest.save("repair-request.json", JSON.stringify(expected));
   resetVerification();
 });

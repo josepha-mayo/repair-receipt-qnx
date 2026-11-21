@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from shop_request import (
     BENCH_SOURCE, CURRENT_RECIPE, FILE_SOURCES, MAX_TEMPERATURE_C, MIN_TEMPERATURE_C, RECEIPT_VERSIONS, RECIPE, SCOPES,
-    canonical, matches_claim, request_document, valid_threshold, verification_packet,
+    STARTUP_RECIPE, canonical, matches_claim, request_document, valid_threshold, verification_packet,
 )
 
 PAGE_SIZE = 40
@@ -31,6 +31,10 @@ RECHECK_COLUMN = "recheck INTEGER NOT NULL DEFAULT 0 CHECK(recheck IN (0, 1) AND
 THRESHOLD_COLUMN = (
     "threshold_c INTEGER CHECK(threshold_c IS NULL OR "
     f"(typeof(threshold_c) = 'integer' AND threshold_c BETWEEN {MIN_TEMPERATURE_C} AND {MAX_TEMPERATURE_C}))"
+)
+STARTUP_COLUMN = (
+    "startup_window INTEGER NOT NULL DEFAULT 0 "
+    f"CHECK(startup_window = 0 OR (startup_window = 1 AND recipe = '{CURRENT_RECIPE}'))"
 )
 JOB_SELECT = """SELECT request.*, child.id AS follow_up
     FROM intake_requests AS request
@@ -84,6 +88,8 @@ def check_receipt(text, record, request, key):
     version = RECEIPT_VERSIONS[record["format"]]
     source = None
     if version == 3:
+        if request["recipe"] == STARTUP_RECIPE:
+            raise ValueError("Use a recording for the startup window.")
         source = BENCH_SOURCE
     elif version == 5:
         source = claim.get("source")
@@ -147,6 +153,7 @@ class ShopRegister:
                 {WORK_ORDER_COLUMN},
                 {THRESHOLD_COLUMN},
                 {RECHECK_COLUMN},
+                {STARTUP_COLUMN},
                 CHECK ((receipt IS NULL) = (accepted_at IS NULL))
             )""")
             columns = {column["name"] for column in db.execute("PRAGMA table_info(intake_requests)")}
@@ -160,6 +167,8 @@ class ShopRegister:
                 db.execute(f"ALTER TABLE intake_requests ADD COLUMN {THRESHOLD_COLUMN}")
             if "recheck" not in columns:
                 db.execute(f"ALTER TABLE intake_requests ADD COLUMN {RECHECK_COLUMN}")
+            if "startup_window" not in columns:
+                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {STARTUP_COLUMN}")
             db.execute("CREATE UNIQUE INDEX IF NOT EXISTS intake_one_follow_up ON intake_requests(repeats)")
             db.execute("""CREATE INDEX IF NOT EXISTS intake_work_order_lookup
                 ON intake_requests(work_order, number) WHERE work_order IS NOT NULL""")
@@ -188,7 +197,8 @@ class ShopRegister:
 
     @staticmethod
     def request(row):
-        return request_document(row["scope"], row["id"], row["recipe"], row["threshold_c"])
+        recipe = STARTUP_RECIPE if row["startup_window"] else row["recipe"]
+        return request_document(row["scope"], row["id"], recipe, row["threshold_c"])
 
     @classmethod
     def job(cls, row):
@@ -229,9 +239,11 @@ class ShopRegister:
             raise KeyError("This request was not found in the shop register.")
         return row
 
-    def create(self, scope, issuer_file, work_order=None, threshold=None, *, request_id=None):
+    def create(self, scope, issuer_file, work_order=None, threshold=None, *, recipe=CURRENT_RECIPE, request_id=None):
         if not isinstance(scope, str) or scope not in SCOPES:
             raise ValueError("Choose a supported operating condition.")
+        if recipe not in (CURRENT_RECIPE, STARTUP_RECIPE):
+            raise ValueError("Choose a supported recording window.")
         key = read_issuer(issuer_file)
         if work_order is not None:
             work_order = normalize_work_order(work_order)
@@ -242,12 +254,14 @@ class ShopRegister:
         elif not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
             raise ValueError("The request ID is invalid.")
         with closing(self.connect()) as db, db:
-            db.execute("""INSERT INTO intake_requests(id, scope, issuer, created_at, recipe, work_order, threshold_c)
-                VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING""",
-                       (request_id, scope, key, utc_time(), CURRENT_RECIPE, work_order, threshold))
+            db.execute("""INSERT INTO intake_requests(
+                id, scope, issuer, created_at, recipe, work_order, threshold_c, startup_window)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING""",
+                       (request_id, scope, key, utc_time(), CURRENT_RECIPE, work_order, threshold, recipe == STARTUP_RECIPE))
             row = self.find(db, request_id)
-            saved = (row["scope"], row["issuer"], row["recipe"], row["work_order"], row["threshold_c"])
-            if row["repeats"] is not None or saved != (scope, key, CURRENT_RECIPE, work_order, threshold):
+            saved = self.request(row), row["issuer"], row["work_order"]
+            expected = request_document(scope, request_id, recipe, threshold), key, work_order
+            if row["repeats"] is not None or saved != expected:
                 raise RequestConflict("This request ID is already registered with different details.")
             return self.checked_job(row)
 
@@ -275,9 +289,9 @@ class ShopRegister:
             scope = self._checked_work_order(db, request_id)[0][1]["scope"] if recheck else missing
             follow_up = secrets.token_hex(16)
             db.execute("""INSERT INTO intake_requests(
-                id, scope, issuer, created_at, recipe, repeats, work_order, threshold_c, recheck)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", (follow_up, scope, row["issuer"], utc_time(), row["recipe"],
-                    request_id, row["work_order"], row["threshold_c"], recheck))
+                id, scope, issuer, created_at, recipe, repeats, work_order, threshold_c, recheck, startup_window)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (follow_up, scope, row["issuer"], utc_time(), row["recipe"],
+                    request_id, row["work_order"], row["threshold_c"], recheck, row["startup_window"]))
             return self.job(self.find(db, follow_up))
 
     def list(self, before=None, work_order=None):
@@ -330,7 +344,7 @@ class ShopRegister:
         if not rows:
             raise KeyError("This request was not found in the shop register.")
         root = rows[0]
-        same_fields = ("issuer", "recipe", "threshold_c", "work_order")
+        same_fields = ("issuer", "recipe", "threshold_c", "work_order", "startup_window")
         checked = []
         for row in rows:
             request = self.request(row)

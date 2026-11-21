@@ -3,10 +3,13 @@
 const ShopRequest = (() => {
   const legacyRecipe = "coolant-context-demo/v1";
   const recipe = "coolant-duration-demo/v2";
+  const startupRecipe = "coolant-startup-window/v3";
+  const sustained = "in at least three consecutive samples spanning at least 2 seconds";
   const defaultThreshold = 105;
   const recipes = Object.freeze({
     [legacyRecipe]: "for three consecutive samples",
-    [recipe]: "in at least three consecutive samples spanning at least 2 seconds",
+    [recipe]: sustained,
+    [startupRecipe]: sustained,
   });
   const benchSource = "obd-bench/v1";
   const publishedSource = "published-road/v1";
@@ -24,8 +27,15 @@ const ShopRequest = (() => {
     return Number.isInteger(value) && value >= -40 && value <= 200;
   }
 
+  function supportsThreshold(selectedRecipe) {
+    return selectedRecipe === recipe || selectedRecipe === startupRecipe;
+  }
+
   function rule(request = {recipe}) {
-    return `${request.thresholdC ?? defaultThreshold} °C or higher ${recipes[request.recipe]}`;
+    const check = `${request.thresholdC ?? defaultThreshold} °C or higher ${recipes[request.recipe]}`;
+    return request.recipe === startupRecipe
+      ? check + ". Allows missing readings before the first complete sample if it arrives within 1 second."
+      : check;
   }
 
   function sourceLabel(source) {
@@ -33,13 +43,14 @@ const ShopRequest = (() => {
     return Object.hasOwn(fileSources, source) ? fileSources[source] : "Recording source unspecified";
   }
 
-  function create(scope, threshold = null) {
+  function create(scope, threshold = null, selectedRecipe = recipe) {
     if (!Object.hasOwn(scopes, scope)) throw new Error("Choose a supported operating condition.");
+    if (!supportsThreshold(selectedRecipe)) throw new Error("Choose a supported recording window.");
     if (threshold !== null && !validThreshold(threshold)) throw new Error("Choose a whole temperature between -40 and 200 °C.");
     const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte =>
       byte.toString(16).padStart(2, "0")).join("");
-    return threshold === null ? {format, recipe, scope, id}
-      : {format: thresholdFormat, recipe, scope, id, thresholdC: threshold};
+    return threshold === null ? {format, recipe: selectedRecipe, scope, id}
+      : {format: thresholdFormat, recipe: selectedRecipe, scope, id, thresholdC: threshold};
   }
 
   function parse(text) {
@@ -57,7 +68,7 @@ const ShopRequest = (() => {
     }
     const expected = {format: value.format, recipe: value.recipe, scope: value.scope, id: value.id};
     if (value.format === thresholdFormat) {
-      if (value.recipe !== recipe || !validThreshold(value.thresholdC)) {
+      if (!supportsThreshold(value.recipe) || !validThreshold(value.thresholdC)) {
         throw new Error("The shop request has an invalid temperature threshold.");
       }
       expected.thresholdC = value.thresholdC;
@@ -127,8 +138,8 @@ const ShopRequest = (() => {
     setTimeout(() => URL.revokeObjectURL(href), 1000);
   }
 
-  return Object.freeze({recipe, legacyRecipe, recipes, benchSource, publishedSource, fileSources, packetFormat, scopes,
+  return Object.freeze({recipe, startupRecipe, legacyRecipe, recipes, benchSource, publishedSource, fileSources, packetFormat, scopes,
     create, parse, load, rule, sourceLabel,
-    save, validThreshold,
+    save, validThreshold, supportsThreshold,
     hexBytes, readIssuer, fingerprint, readEvidence});
 })();

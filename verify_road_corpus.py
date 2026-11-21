@@ -13,7 +13,9 @@ from zipfile import ZipFile
 
 from issuer_store import Issuer
 from run_qnx import ROOT, build_template, review_native
-from shop_request import CURRENT_RECIPE, DEFAULT_THRESHOLD_C, SCOPES, UPLOADED_SOURCE, matches_claim, request_document
+from shop_request import (
+    CURRENT_RECIPE, DEFAULT_THRESHOLD_C, SCOPES, STARTUP_RECIPE, UPLOADED_SOURCE, matches_claim, request_document,
+)
 
 
 THRESHOLDS = (95, DEFAULT_THRESHOLD_C)
@@ -37,11 +39,11 @@ def prepare_inputs(archive, directory):
             yield name, projection, sha256(raw).hexdigest(), sha256(projection.read_bytes()).hexdigest()
 
 
-def run_recording(item, qemu, template, issuer, directory):
+def run_recording(item, qemu, template, issuer, directory, recipe=CURRENT_RECIPE):
     name, projection, original_hash, normalized_hash = item
     findings = {}
     for threshold in THRESHOLDS:
-        request = request_document("both", secrets.token_hex(16), CURRENT_RECIPE, threshold)
+        request = request_document("both", secrets.token_hex(16), recipe, threshold)
 
         def approve(preview, key):
             if key.decode("ascii") != issuer.public_hex or not matches_claim(preview, request, UPLOADED_SOURCE):
@@ -77,7 +79,7 @@ def summarize(rows, threshold):
     }}
 
 
-def verify(archive, qemu, jobs):
+def verify(archive, qemu, jobs, recipe=CURRENT_RECIPE):
     issuer = Issuer(secrets.token_bytes(32))
     with TemporaryDirectory(prefix="rr-road-corpus-") as tmp:
         directory = Path(tmp)
@@ -85,7 +87,7 @@ def verify(archive, qemu, jobs):
         print(f"Normalized {len(inputs)} recordings. Building the shared QNX guest template.", flush=True)
         template = build_template(directory / "template")
         with ThreadPoolExecutor(max_workers=jobs) as pool:
-            tasks = [pool.submit(run_recording, item, qemu, template, issuer, directory) for item in inputs]
+            tasks = [pool.submit(run_recording, item, qemu, template, issuer, directory, recipe) for item in inputs]
             rows = []
             for task in tasks:
                 rows.append(task.result())
@@ -96,7 +98,7 @@ def verify(archive, qemu, jobs):
         "source": "https://publikationen.bibliothek.kit.edu/1000085073",
         "archiveSha256": sha256(archive.read_bytes()).hexdigest(),
         "platform": "QNX SDP 8.0 x86-64 on QEMU",
-        "recipe": CURRENT_RECIPE,
+        "recipe": recipe,
         "scope": "both",
         "signedInputType": UPLOADED_SOURCE,
         "recordings": len(rows),
@@ -112,8 +114,9 @@ if __name__ == "__main__":
     parser.add_argument("--qemu", required=True, type=Path)
     parser.add_argument("--proof", type=Path)
     parser.add_argument("--jobs", type=int, default=2, choices=range(1, 9))
+    parser.add_argument("--recipe", choices=(CURRENT_RECIPE, STARTUP_RECIPE), default=CURRENT_RECIPE)
     args = parser.parse_args()
-    report = verify(args.archive.resolve(strict=True), args.qemu.resolve(strict=True), args.jobs)
+    report = verify(args.archive.resolve(strict=True), args.qemu.resolve(strict=True), args.jobs, args.recipe)
     if args.proof:
         with args.proof.open("w", encoding="utf-8", newline="\n") as output:
             json.dump(report, output, indent=2)

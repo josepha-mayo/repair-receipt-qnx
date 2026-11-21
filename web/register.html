@@ -95,6 +95,11 @@
           <option value="both">At idle and while moving</option>
         </select>
         <p id="condition-note" class="help"></p>
+        <label for="recording-window">Recording window</label>
+        <select id="recording-window" aria-describedby="new-rule">
+          <option value="coolant-duration-demo/v2">Entire recording</option>
+          <option value="coolant-startup-window/v3">Allow 1 second for startup</option>
+        </select>
         <label for="threshold">Test threshold in °C (optional)</label>
         <input id="threshold" type="number" min="-40" max="200" step="1" placeholder="105" aria-describedby="new-rule">
         <p id="new-rule" class="help"></p>

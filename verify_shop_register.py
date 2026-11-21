@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from shop_register import INVALID_SAVED_RECEIPT, PAGE_SIZE, ReceiptConflict, RequestConflict, ShopRegister, check_receipt, read_receipt
 from shop_request import (
-    CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, canonical, guest_bytes,
+    CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, STARTUP_RECIPE, canonical, guest_bytes,
     parse_request, verification_packet,
 )
 from verify_requests import BUNDLED_ROAD_PAIR, load_road_pair
@@ -113,6 +113,31 @@ def verify_create_retry():
         second = register.create(*details, request_id="32" * 16)
         assert second["request"]["id"] != request_id
         assert len(register.lookup(details[2])["jobs"]) == 2
+        try:
+            register.create(*details, recipe=STARTUP_RECIPE, request_id=request_id)
+        except RequestConflict:
+            pass
+        else:
+            raise AssertionError("A retry changed the recording window on a fixed request ID.")
+        window = register.create("both", issuer, "Window control", 105, recipe=STARTUP_RECIPE)["request"]
+        assert parse_request(canonical(window)) == window
+        assert guest_bytes(window)[-2:] == bytes((5, 145))
+        partial = {"idle": "not_observed", "moving": "insufficient_evidence"}
+        try:
+            register.attach(window["id"], sign({**window, "recipe": CURRENT_RECIPE}, partial, owner))
+        except ValueError as error:
+            assert "does not match the selected request" in str(error)
+        else:
+            raise AssertionError("A whole-recording receipt was accepted for a startup window request.")
+        register.attach(window["id"], sign(window, partial, owner))
+        restored = ShopRegister(path)
+        follow_up = restored.follow_up(window["id"])["request"]
+        assert follow_up == {**window, "id": follow_up["id"], "scope": "moving"}
+        restored.attach(follow_up["id"], sign(follow_up, {"moving": "not_observed"}, owner))
+        assert all(context["evidence"]["recipe"] == STARTUP_RECIPE
+                   for context in restored.work_order_findings(window["id"])["contexts"])
+        recheck = restored.repeat(follow_up["id"], recheck=True)["request"]
+        assert recheck == {**window, "id": recheck["id"]}
     print("Verified concurrent creation retries, mismatched details, and original receipt preservation.")
 
 

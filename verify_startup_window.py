@@ -6,10 +6,14 @@ import json
 from pathlib import Path
 import secrets
 from tempfile import TemporaryDirectory
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from issuer_store import Issuer
 from run_qnx import ROOT, build_template, review_native
-from shop_request import CURRENT_RECIPE, DEFAULT_THRESHOLD_C, STARTUP_RECIPE, UPLOADED_SOURCE, request_document
+from shop_request import (
+    CURRENT_RECIPE, DEFAULT_THRESHOLD_C, STARTUP_RECIPE, UPLOADED_SOURCE,
+    canonical, request_document, verification_packet,
+)
 
 
 OPENING = "5000\n0,,,\n1000,800,0,101\n2000,800,0,101\n3000,800,0,101\n4000,800,0,101\n"
@@ -31,7 +35,7 @@ CASES = [
 ]
 
 
-def verify(qemu):
+def verify(qemu, packet_zip=None):
     issuer = Issuer(secrets.token_bytes(32))
     with TemporaryDirectory(prefix="rr-startup-window-") as tmp:
         directory = Path(tmp)
@@ -61,15 +65,25 @@ def verify(qemu):
             record = json.loads(receipt)
             if record["format"] != "repair-receipt/v5" or record["claim"] != expected:
                 raise RuntimeError(f"Unexpected signed claim in {name}.")
-            return {"case": name, "recipe": recipe, "scope": scope,
-                    "thresholdC": threshold if threshold is not None else DEFAULT_THRESHOLD_C, "findings": outcomes}
+            result = {"case": name, "recipe": recipe, "scope": scope,
+                      "thresholdC": threshold if threshold is not None else DEFAULT_THRESHOLD_C, "findings": outcomes}
+            packet = verification_packet(request, receipt.decode("ascii"), issuer.fingerprint) if recording == ROAD else None
+            return result, packet
 
         with ThreadPoolExecutor(max_workers=2) as pool:
-            return list(pool.map(run, CASES))
+            runs = list(pool.map(run, CASES))
+    if packet_zip:
+        with ZipFile(packet_zip, "x", compression=ZIP_DEFLATED) as archive:
+            archive.writestr("issuer.json", canonical({"format": "repair-receipt-issuer/v1", "ed25519": issuer.public_hex}))
+            for result, packet in runs:
+                if packet is not None:
+                    archive.writestr(result["case"] + ".json", canonical(packet))
+    return [result for result, _ in runs]
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qemu", required=True, type=Path)
+    parser.add_argument("--write-road-packets", type=Path, help="save a new ZIP with the two July 27 packets and public key")
     args = parser.parse_args()
-    print(json.dumps(verify(args.qemu.resolve(strict=True)), indent=2))
+    print(json.dumps(verify(args.qemu.resolve(strict=True), args.write_road_packets), indent=2))

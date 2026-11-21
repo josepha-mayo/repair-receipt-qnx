@@ -15,7 +15,7 @@ from threading import Thread
 import time
 
 from obd_bench import AdapterBench
-from shop_request import BENCH_SOURCE, FILE_SOURCES, guest_bytes, matches_claim, matches_driver_claim
+from shop_request import BENCH_SOURCE, FILE_SOURCES, STARTUP_RECIPE, guest_bytes, matches_claim, matches_driver_claim
 
 
 ROOT = Path(__file__).resolve().parent
@@ -418,6 +418,8 @@ def review_native(workspace, qemu, recording, decide, seed=None, request=None, b
         raise ValueError("An Ed25519 issuer seed must have 32 bytes.")
     if bench is not None and (recording is not None or request is None):
         raise ValueError("The simulated adapter requires a shop request and no CSV input.")
+    if bench is not None and request["recipe"] == STARTUP_RECIPE:
+        raise ValueError("Use a recording for the startup window.")
     if source is not None and (source not in FILE_SOURCES or bench is not None or seed is None):
         raise ValueError("A signed recording source requires a supported CSV review.")
     if image is not None and (seed is None or (recording is None and bench is None)):

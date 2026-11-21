@@ -23,7 +23,7 @@ import webbrowser
 from pack_shop import standalone
 from run_qnx import MAX_RECORDING, ROOT, build_template, review_native
 from shop_request import (
-    DEMO_SOURCE, PUBLISHED_SOURCE, UPLOADED_SOURCE, canonical, parse_request, verification_packet,
+    CURRENT_RECIPE, DEMO_SOURCE, PUBLISHED_SOURCE, STARTUP_RECIPE, UPLOADED_SOURCE, canonical, parse_request, verification_packet,
 )
 
 try:
@@ -354,9 +354,12 @@ class Handler(BaseHTTPRequestHandler):
         try:
             value = json.loads(body)
             fields = value.keys() if isinstance(value, dict) else set()
-            if action == "jobs" and {"scope", "issuer"} <= fields <= {"scope", "issuer", "workOrder", "thresholdC", "requestId"}:
+            if action == "jobs" and {"scope", "issuer"} <= fields <= {
+                "scope", "issuer", "workOrder", "thresholdC", "recipe", "requestId",
+            }:
                 self.json(201, self.server.register.create(value["scope"], value["issuer"], value.get("workOrder"),
-                                                          value.get("thresholdC"), request_id=value.get("requestId")))
+                                                          value.get("thresholdC"), recipe=value.get("recipe", CURRENT_RECIPE),
+                                                          request_id=value.get("requestId")))
             elif action == "lookup" and {"workOrder"} <= fields <= {"workOrder", "before"}:
                 self.json(200, self.server.register.lookup(value["workOrder"], value.get("before")))
             elif action == "follow-up" and isinstance(value, dict) and set(value) == {"request"}:
@@ -432,6 +435,9 @@ class Handler(BaseHTTPRequestHandler):
             if name == "obd-bench":
                 if request is None:
                     self.json(400, {"message": "Load a shop request before starting the OBD bench."})
+                    return
+                if request["recipe"] == STARTUP_RECIPE:
+                    self.json(400, {"message": "Choose a recording for this request’s startup allowance."})
                     return
                 ok = self.server.review.start(session, None, request, bench="normal")
             elif name not in SAMPLES and name not in PUBLISHED_SAMPLES:

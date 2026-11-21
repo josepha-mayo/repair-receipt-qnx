@@ -109,6 +109,18 @@ When a different request reuses the most recent uploaded samples in the same dri
 
 For a work-order trial, request both conditions at 95 °C. Upload July 27, approve, file and open **View work-order findings**. **Where to start** points to idle and flags incomplete moving coverage. Choose **Request moving-only follow-up** in that report and download the new request. Load it on the driver side, upload July 26 and file the returned receipt. Both conditions now have a threshold observation. The detailed findings show the two separate receipts. Use the recordings as example data for this exercise.
 
+### Request a startup window
+
+For the same July 27 CSV, create a separate request for both conditions at 95 °C. Under **Recording window**, choose **Allow 1 second for startup**. The driver preview describes the allowance and shows **Threshold observed** at idle and **Threshold not observed** while moving. The scope of that moving finding is the reviewed window. File it, then verify the packet offline with the original request and trusted issuer key. Change the request recipe to the entire-recording rule to see verification reject the mismatch.
+
+The allowance covers incomplete rows only before the first complete sample, and only when that sample arrives within 1 second. Any later gap still affects coverage. Follow-ups and rechecks inherit the selected rule.
+
+The release includes two QNX packets from the same July 27 recording. Extract `qnx-startup-window-packets.zip`, select both packet files in the offline verifier and load `issuer.json` as the example public key. Choose **Verify packets** to see both signed rules and their different moving findings. [Release downloads](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest)
+
+```bat
+python verify_startup_window.py --qemu "C:\QNX\qemu\qemu-system-x86_64.exe"
+```
+
 ### Measure what the shop receives
 
 With the Python dependencies installed and Node.js 24 available, run the measurement tool on both original CSVs. It regenerates the normalized inputs using the browser's parser and verifies the archived idle signature before counting the bytes of the verification packet. This check runs on the host.
@@ -147,14 +159,16 @@ Download the original KIT ZIP, then run this from the QNX SDK prompt with Node.j
 python verify_road_corpus.py "path\to\OBD-II-Dataset.zip" --qemu "C:\QNX\qemu\qemu-system-x86_64.exe" --proof road-coverage.json
 ```
 
-The report counts a condition as answerable when the signed result is **Observed** or **Not observed**.
+Add `--recipe coolant-startup-window/v3` to repeat the same run with the startup allowance on the same normalized input bytes. The report counts a condition as answerable when the signed result is **Observed** or **Not observed**.
 
-| Test threshold | Both conditions answerable | One answerable | Neither answerable |
-| --- | ---: | ---: | ---: |
-| 95 °C | 8 | 14 | 59 |
-| 105 °C | 0 | 0 | 81 |
+| Test threshold | Recording window | Both conditions answerable | One answerable | Neither answerable |
+| --- | --- | ---: | ---: | ---: |
+| 95 °C | Entire recording | 8 | 14 | 59 |
+| 95 °C | Startup allowance | 66 | 2 | 13 |
+| 105 °C | Entire recording | 0 | 0 | 81 |
+| 105 °C | Startup allowance | 65 | 0 | 16 |
 
-These results measure the evidence available in this archive under the test recipe. The July 26 and July 27 examples show what a shop can do when one or both conditions are answerable. [Per-recording results and input hashes](replay/qnx-road-corpus-proof.json)
+The 16 recordings with later gaps returned the same findings under both rules at each threshold. These results measure evidence coverage in this archive. [Entire-recording results](replay/qnx-road-corpus-proof.json) · [Startup allowance results](replay/qnx-road-startup-window-proof.json)
 
 ### Run the native scope controls
 

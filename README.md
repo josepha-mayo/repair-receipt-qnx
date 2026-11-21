@@ -79,6 +79,8 @@ When a different return verifies for an already filed request, **Two verified re
 
 Use the optional **Work order reference** to match the request to the shop's own record. The reference stays in the local register and carries forward to follow-up requests. The portable request, signed receipt, and verification packet contain no work order reference.
 
+**Recording window** defaults to **Entire recording**. For a file that begins before all sensor readings are available, the shop can choose **Allow 1 second for startup**. The signed rule allows missing readings before the first complete sample if it arrives within 1 second. Later gaps still affect coverage. The driver sees the selected rule before approving and the shop checks the rule against its original request. This option applies to recordings. [Startup window exercise](CODELAB.md#request-a-startup-window)
+
 Use **Find by work order** to recover requests by their full saved reference, including older requests outside the recent list. Enter it as saved, including letter case. Results list each matching request and follow-up. Open a request to inspect its own signed findings.
 
 If the shop loses the creation confirmation, choose **Create request** again with the same details in that tab. The register returns the existing request if it already saved it. After reloading the page, use **Find by work order** to recover a request that may have been saved.
@@ -199,6 +201,8 @@ The original logs contain 47,350 and 16,961 timestamped rows across ten vehicle 
 A 64-receipt QNX sweep across 90–105 °C reproduced that pattern at 95 °C and at 98–100 °C. At 98–100 °C both drives returned insufficient evidence at idle, and July 26 retained a moving observation. At 96–97 °C, the idle findings differed and the signed idle receipts differed too. These results cover the two KIT recordings under the test recipe. [Complete results](replay/qnx-road-threshold-sweep.json) · [Reproduce the sweep](CODELAB.md#vary-the-test-threshold)
 
 To measure answer coverage beyond the two examples, QNX signed both conditions for each of the archive's 81 recordings at 95 °C and 105 °C. At 95 °C, 8 recordings answered both conditions, 14 answered one and 59 had insufficient evidence for both. At the 105 °C default, all 81 had insufficient evidence for both. The results show how often the archive supports an answer under this test recipe. [162-receipt corpus report](replay/qnx-road-corpus-proof.json) · [Reproduce the coverage check](CODELAB.md#measure-archive-wide-answer-coverage)
+
+With the signed startup allowance and the same normalized inputs, 65 of 81 recordings supported both answers at 105 °C. At 95 °C, 66 supported both answers and 2 supported one. All 16 recordings with later gaps kept their original findings at both thresholds. [Startup allowance corpus report](replay/qnx-road-startup-window-proof.json)
 
 ## Current scope
 
