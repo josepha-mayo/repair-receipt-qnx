@@ -130,6 +130,8 @@ Older sample-count requests and receipts remain verifiable under their original 
 
 For a synthetic recording at the 4 MiB limit, bounded 8 KiB reads reduced median native evaluation time from 3.27 seconds to 0.40 seconds across five runs per build on the same QEMU host. Median time from encrypted staging to preview fell from 5.71 to 2.63 seconds. The signed receipt hash was unchanged. Both builds rejected embedded NUL bytes and overlong rows. [Native parser measurements](replay/qnx-parser-performance-proof.json)
 
+In 20 additional trials per input, median time from encrypted staging to preview was 2.18 and 2.29 seconds for the two normalized KIT drives. The 4 MiB control took a median of 2.64 seconds and its 95th percentile was 3.02 seconds. The slowest preview took 4.27 seconds on the smaller KIT recording. Each trial booted a fresh QNX guest from a template that took 16.4 seconds to prepare once. [Raw timings and signed receipt hashes](replay/qnx-preview-latency.json)
+
 ## Reproduce
 
 In a Windows command prompt with QNX SDP 8.0 loaded, run from this directory. Set the QEMU path to your installation and use a fresh path for the workspace.

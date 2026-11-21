@@ -166,6 +166,14 @@ The prepared-guest check also scans the job files for the exact preview, signed 
 
 Run `python verify_parser_perf.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe` to compare the time spent evaluating a 4 MiB recording inside QNX with the time from the host request to preview. The harness reports a receipt hash and checks a normal file with CRLF line endings and an unterminated last row. It also checks that QNX refuses embedded NUL bytes and overlong rows before approval. [Recorded comparison](replay/qnx-parser-performance-proof.json)
 
+For a distribution, reuse the two normalized files from [the threshold sweep](#vary-the-test-threshold).
+
+```bat
+python verify_parser_perf.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --road-pair first.normalized second.normalized
+```
+
+The harness interleaves 20 runs per input, including a synthetic recording at the 4 MiB limit. It uses one prepared template and a fresh guest for each run, and verifies every receipt. Host timing includes encrypted staging and guest boot. Native timing starts after authentication. The report shows every timing, the median, the nearest-rank 95th percentile and the maximum. Browser import and UI polling are outside the measured interval. [Preview latency distributions](replay/qnx-preview-latency.json)
+
 ## Trust model
 
 The shop supplies a previously trusted issuer key and retains its original request. The Windows host provides local issuer enrollment, with the persistent seed protected by DPAPI. The isolated QNX guest receives its signing key in vault memory for the review. The local register tracks filed requests and preserves the first accepted signed file. Production vehicle capture and hardware-backed issuer provisioning remain separate integration tasks.

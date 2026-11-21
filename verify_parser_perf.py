@@ -1,17 +1,21 @@
-"""Measure native QNX CSV evaluation at the 4 MiB input limit."""
+"""Measure QNX preview latency for published drives and the 4 MiB control."""
 
 import argparse
 from hashlib import sha256
 import json
+from math import ceil
 from pathlib import Path
+import platform
 import re
 from statistics import median
+import subprocess
 from tempfile import TemporaryDirectory
 import time
 
 from issuer_store import Issuer
 from run_qnx import MAX_RECORDING, build_template, review_native
-from shop_request import CURRENT_RECIPE, request_document
+from shop_request import CURRENT_RECIPE, PUBLISHED_SOURCE, request_document
+from verify_requests import load_road_pair
 
 
 def maximum_recording():
@@ -21,6 +25,26 @@ def maximum_recording():
     rows = b"".join(f"{tick},800,0,101\n".rjust(32 + (tick == count - 1)).encode("ascii")
                     for tick in range(count))
     return header + rows, count
+
+
+def measure_review(qemu, guest, image, recording, issuer, request, finding, source=None):
+    started = time.monotonic()
+    preview_seconds = None
+
+    def approve(preview, public_key):
+        nonlocal preview_seconds
+        preview_seconds = round(time.monotonic() - started, 3)
+        if (public_key != issuer.public_hex.encode("ascii") or
+                json.loads(preview)[request["scope"]] != finding):
+            raise RuntimeError("The timing control returned an unexpected preview.")
+        return True
+
+    receipt = review_native(guest, qemu, recording, approve, issuer.seed, request, image=image, source=source)
+    issuer.verify_receipt(receipt)
+    timings = re.findall(rb"^RR_EVALUATION_US ([0-9]+)\r?$", (guest / "serial.log").read_bytes(), re.MULTILINE)
+    if len(timings) != 1 or preview_seconds is None:
+        raise RuntimeError("The QNX guest did not report one measurement and preview.")
+    return int(timings[0]), preview_seconds, sha256(receipt).hexdigest()
 
 
 def verify(qemu, repetitions):
@@ -38,23 +62,12 @@ def verify(qemu, repetitions):
         evaluations, previews = [], []
         signatures = set()
         for index in range(repetitions):
-            guest = root / f"review-{index}"
-            started = time.monotonic()
-
-            def approve(claim, _issuer):
-                previews.append(round(time.monotonic() - started, 3))
-                if json.loads(claim)["idle"] != "not_observed":
-                    raise RuntimeError("The input limit control returned an unexpected finding.")
-                return True
-
-            receipt = review_native(guest, qemu, largest, approve, seed, request, image=image)
-            issuer.verify_receipt(receipt)
-            timings = re.findall(rb"^RR_EVALUATION_US ([0-9]+)\r?$", (guest / "serial.log").read_bytes(), re.MULTILINE)
-            if len(timings) != 1:
-                raise RuntimeError("The QNX guest did not report a single parser measurement.")
-            evaluations.append(int(timings[0]))
-            signatures.add(sha256(receipt).hexdigest())
-            print(f"Run {index + 1}: QNX evaluation {evaluations[-1]} us, preview {previews[-1]} s.", flush=True)
+            evaluation, preview, signature = measure_review(qemu, root / f"review-{index}", image, largest,
+                                                            issuer, request, "not_observed")
+            evaluations.append(evaluation)
+            previews.append(preview)
+            signatures.add(signature)
+            print(f"Run {index + 1}: QNX evaluation {evaluation} us, preview {preview} s.", flush=True)
         if len(signatures) != 1:
             raise RuntimeError("Identical inputs yielded different signed receipts.")
 
@@ -83,15 +96,79 @@ def verify(qemu, repetitions):
             "embedded_nul_and_long_line_rejected": True}
 
 
+def distribution(samples):
+    ordered = sorted(samples)
+    return {"samples": samples, "median": round(median(ordered), 3),
+            "p95": ordered[ceil(0.95 * len(ordered)) - 1], "max": ordered[-1]}
+
+
+def verify_preview_latency(qemu, repetitions, roads):
+    # A shared test issuer and request make the published-drive receipts comparable.
+    issuer = Issuer(sha256(b"Repair Receipt parser benchmark issuer").digest())
+    road_request = request_document("idle", "827f8d335769463dbff537dd714187cc", CURRENT_RECIPE, 95)
+    limit_request = request_document("idle", "827f8d335769463dbff537dd714187cc", CURRENT_RECIPE)
+    maximum, _ = maximum_recording()
+    if len(maximum) != MAX_RECORDING:
+        raise RuntimeError("The parser benchmark input is not exactly 4 MiB.")
+    workloads = [(name, recording, road_request, "observed", PUBLISHED_SOURCE)
+                 for name, recording, _ in load_road_pair(roads)]
+    workloads.append(("synthetic-4-mib", maximum, limit_request, "not_observed", None))
+    samples = {name: [] for name, *_ in workloads}
+    with TemporaryDirectory(prefix="rr-preview-latency-") as temporary:
+        root = Path(temporary)
+        started = time.monotonic()
+        image = build_template(root / "template")
+        preparation = round(time.monotonic() - started, 3)
+        for count in range(repetitions):
+            offset = count % len(workloads)
+            for name, recording, request, finding, source in workloads[offset:] + workloads[:offset]:
+                with TemporaryDirectory(prefix="trial-", dir=root) as run:
+                    measurement = measure_review(qemu, Path(run) / "guest", image, recording,
+                                                 issuer, request, finding, source)
+                samples[name].append(measurement)
+            print(f"Verified all three previews for round {count + 1} of {repetitions}.", flush=True)
+    profiles = []
+    for name, recording, _, _, _ in workloads:
+        evaluations, previews, digests = zip(*samples[name], strict=True)
+        if len(set(digests)) != 1:
+            raise RuntimeError(f"Repeated previews for {name} produced different signed receipts.")
+        profiles.append({
+            "recording": name, "normalized_bytes": len(recording),
+            "normalized_rows": len(recording.splitlines()) - 1,
+            "native_evaluation_us": distribution(list(evaluations)),
+            "host_to_preview_seconds": distribution(list(previews)),
+            "signed_receipt_sha256": digests[0],
+        })
+    if profiles[0]["signed_receipt_sha256"] != profiles[1]["signed_receipt_sha256"]:
+        raise RuntimeError("The two published drives did not produce the same signed idle receipt.")
+    version = subprocess.run([qemu, "--version"], text=True, capture_output=True, check=True, timeout=5)
+    return {
+        "host": f"{platform.system()} {platform.machine()}",
+        "qemu": version.stdout.splitlines()[0],
+        "guest": "QNX 8.0 x86-64",
+        "runs_per_workload": repetitions,
+        "template_preparation_seconds": preparation,
+        "percentile_method": "nearest rank",
+        "measurement": "Prepared template with a fresh guest per trial. Host timing includes encrypted staging and boot. "
+                       "Browser import and UI polling are outside host timing.",
+        "profiles": profiles,
+    }
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qemu", type=Path, required=True)
-    parser.add_argument("--runs", type=int, default=5)
+    parser.add_argument("--road-pair", type=Path, nargs=2, metavar=("FIRST_DRIVE", "SECOND_DRIVE"),
+                        help="measure the documented normalized road pair and the 4 MiB control")
+    parser.add_argument("--runs", type=int, help="number of runs per input (5 by default, 20 with --road-pair)")
     parser.add_argument("--proof", type=Path)
     args = parser.parse_args()
-    if args.runs < 1:
+    runs = args.runs if args.runs is not None else (20 if args.road_pair else 5)
+    if runs < 1:
         parser.error("Use at least one measurement.")
-    result = json.dumps(verify(args.qemu.resolve(strict=True), args.runs), indent=2) + "\n"
+    qemu = args.qemu.resolve(strict=True)
+    profile = verify_preview_latency(qemu, runs, args.road_pair) if args.road_pair else verify(qemu, runs)
+    result = json.dumps(profile, indent=2) + "\n"
     print(result, end="")
     if args.proof:
         args.proof.write_text(result, encoding="utf-8")
