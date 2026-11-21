@@ -1,0 +1,13 @@
+{
+  "environment": "Two local processes on Windows with Brave, QNX 8 and QEMU",
+  "test": "Reselected the same published CSV with a different filename and request ID",
+  "matching_samples_identified_at_preview": true,
+  "notice_survived_owner_reload": true,
+  "notice_hidden_from_separate_driver_session": true,
+  "reused_review_declined_without_receipt": true,
+  "different_uploaded_control_issued_moving_only_receipt": true,
+  "recording_fingerprint_withheld_from_driver_state_response": true,
+  "verification_packet_uses_standard_fields": true,
+  "signed_follow_up_filed": true,
+  "tested_layout_width_px": 320
+}

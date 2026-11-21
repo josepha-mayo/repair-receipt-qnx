@@ -47,6 +47,8 @@ After approving a shop-requested review, choose **Download verification packet**
 
 The driver session that starts a review can see the preview, decide and download the issued receipt. Refreshing that tab keeps the session when browser session storage is available. A separate driver session sees only that a review is active until it finishes or expires.
 
+When a new request uses the same normalized upload bytes as the driver's most recent upload, the consent preview identifies the match. The running app keeps one recent fingerprint in memory. The notice appears in the owning driver's preview. [Reused-recording check](replay/qnx-recording-reuse-proof.json)
+
 For an incomplete finding, **Recording guidance** explains which requested condition had gaps or too little continuous coverage. The driver sees this guidance in the local review. The shop receives the signed finding and test rule.
 
 Live browser receipts carry a signed input type. The driver and shop see whether QNX evaluated an uploaded CSV, a built-in demo recording, a published road recording or the simulated adapter. The CSV label describes how the app received the data. Older receipts and archived controls without a signed input type still verify and show their source as unspecified.

@@ -3,6 +3,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
+from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -92,6 +93,7 @@ class Review:
         self.decision = None
         self.deadline = None
         self.worker = None
+        self.last_import = None
 
     def owns_session(self, session):
         return session is not None and self.owner is not None and secrets.compare_digest(session, self.owner)
@@ -130,12 +132,13 @@ class Review:
         """Commit a decision with the review lock held."""
         self.decision = decision
         self.state["stage"] = "finishing"
+        self.state.pop("reusedRecording", None)
         if decision == "expired":
             for field in ("claim", "coverage", "issuer"):
                 self.state.pop(field, None)
         self.response.set()
 
-    def wait_for_decision(self, preview, issuer, guest_closed, coverage=None):
+    def wait_for_decision(self, preview, issuer, guest_closed, coverage=None, import_review=None):
         if not secrets.compare_digest(self.issuer.public_hex.encode("ascii"), issuer):
             raise RuntimeError("The guest presented a key different from the enrolled issuer.")
         with self.lock:
@@ -143,6 +146,13 @@ class Review:
             self.state.update(stage="review", claim=json.loads(preview), issuer=issuer.decode("ascii"))
             if coverage:
                 self.state["coverage"] = coverage
+            if import_review is not None:
+                current = (self.owner, *import_review)
+                # Keep the original request association while the same samples are reused.
+                if self.last_import is None or self.last_import[:2] != current[:2]:
+                    self.last_import = current
+                elif self.last_import[2] != current[2]:
+                    self.state["reusedRecording"] = True
         self.response.wait(timeout=max(0, self.deadline - time.monotonic()))
         with self.lock:
             if guest_closed.is_set():
@@ -161,9 +171,13 @@ class Review:
 
         try:
             image = self.template.result()
+            import_review = None
+            if source == UPLOADED_SOURCE:
+                import_review = (sha256(recording).digest(), request["id"] if request is not None else None)
             with TemporaryDirectory(prefix="repair-receipt-") as directory:
                 receipt = review_native(Path(directory) / "guest", self.qemu, recording,
-                                        lambda preview, issuer: self.wait_for_decision(preview, issuer, guest_closed, coverage),
+                                        lambda preview, issuer: self.wait_for_decision(
+                                            preview, issuer, guest_closed, coverage, import_review),
                                         self.issuer.seed, request, bench, image=image, on_disconnect=disconnect,
                                         source=source, on_coverage=coverage.update)
                 result = {"stage": "expired" if self.decision == "expired" else "declined"}

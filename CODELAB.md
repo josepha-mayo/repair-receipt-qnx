@@ -89,6 +89,8 @@ Open the downloaded HTML in a current Chromium browser. **Check idle receipts** 
 
 The archived run uses the normalized input hashes listed in the [paired-drive proof](replay/qnx-road-scope-proof.json). Importing the raw files through the driver page reproduces the findings and the equality comparison with an uploaded-CSV input label. To check that import preserves missing samples at either end of a recording, run `node --test verify_obd_import.cjs`.
 
+When a different request reuses the most recent uploaded samples in the same driver session, the consent preview identifies the match. This exercise deliberately reuses the published recordings. In a follow-up that calls for a fresh capture, decline the reused preview and select the new recording.
+
 For a work-order trial, create a request for both conditions at 95 °C and file the July 27 result. The shop sees the observed idle finding and the insufficient moving result together. **Create follow-up request** asks only about moving and keeps the original signed receipt in the work order.
 
 ### Measure what the shop receives

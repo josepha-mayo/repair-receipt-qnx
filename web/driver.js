@@ -93,6 +93,7 @@ function render() {
   byId("recording-reselection").hidden = !recordingCleared;
   byId("choose-recording").hidden = stage !== "expired";
   byId("actions").hidden = stage !== "review" || reconnecting;
+  byId("reused-recording").hidden = stage !== "review" || !claim || !state.reusedRecording;
   byId("share").disabled = changing;
   byId("decline").disabled = changing;
   byId("findings").hidden = !claim;
