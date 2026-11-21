@@ -79,7 +79,7 @@ When a different return verifies for an already filed request, **Two verified re
 
 Use the optional **Work order reference** to match the request to the shop's own record. The reference stays in the local register and carries forward to follow-up requests. The portable request, signed receipt, and verification packet contain no work order reference.
 
-**Recording window** defaults to **Entire recording**. For a file that begins before all sensor readings are available, the shop can choose **Allow 1 second for startup**. The signed rule allows missing readings before the first complete sample if it arrives within 1 second. Later gaps still affect coverage. The driver sees the selected rule before approving and the shop checks the rule against its original request. This option applies to recordings. [Startup window exercise](CODELAB.md#request-a-startup-window)
+**Recording window** defaults to **Entire recording**. For a file that begins before all sensor readings are available, the shop can choose **Allow 1 second for startup**. The signed rule allows missing readings before the first complete sample if it arrives within 1 second. Later gaps still affect coverage. The driver sees the rule and the exact interval QNX excluded during consent. The shop checks the signed rule against its original request. This option applies to recordings. [Startup window exercise](CODELAB.md#request-a-startup-window)
 
 Use **Find by work order** to recover requests by their full saved reference, including older requests outside the recent list. Enter it as saved, including letter case. Results list each matching request and follow-up. Open a request to inspect its own signed findings.
 

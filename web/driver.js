@@ -108,6 +108,13 @@ function render() {
   byId("decline").disabled = changing;
   byId("findings").hidden = !claim;
   showCoverage(claim, state.coverage);
+  const startupNote = byId("startup-window-note");
+  const startupMs = state.startupExcludedMs;
+  startupNote.hidden = stage !== "review" || claim?.recipe !== ShopRequest.startupRecipe || !Number.isInteger(startupMs);
+  const startupText = startupNote.hidden ? "" : startupMs
+    ? `QNX excluded the first ${startupMs / 1000} s of incomplete readings.`
+    : "QNX assessed coverage from the start of the recording.";
+  if (startupNote.textContent !== startupText) startupNote.textContent = startupText;
   byId("exports").hidden = stage !== "shared" || newSelection || reconnecting || changing;
   byId("download-packet").hidden = !state.packet;
   byId("packet-note").hidden = !state.packet;

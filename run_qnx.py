@@ -30,6 +30,7 @@ PRIVATE_REVIEW_EVENTS = {
     b"RR_ISSUER_SETUP": b"RR_ISSUER_SETUP [private boot token]\n",
     b"RR_ISSUER ": b"RR_ISSUER [issuer key]\n",
     b"RR_COVERAGE ": b"RR_COVERAGE [driver-only guidance]\n",
+    b"RR_STARTUP_WINDOW ": b"RR_STARTUP_WINDOW [driver-only interval]\n",
     b"RR_EVALUATION_US ": b"RR_EVALUATION_US [private timing]\n",
     b"RR_PREVIEW ": b"RR_PREVIEW [private preview]\n",
     b"RR_RECEIPT ": b"RR_RECEIPT import [signed receipt]\n",
@@ -235,7 +236,7 @@ def run(workspace, qemu):
 
 def collect_review(guest, transport, serial, decide, seed=None, boot_token=None, request=None,
                    bench=False, job_disk=False, recording_key=None, on_disconnect=None, *, source=None,
-                   on_coverage=None, on_evaluation=None):
+                   on_coverage=None, on_evaluation=None, on_startup_window=None):
     expected_source = BENCH_SOURCE if bench else source
     lines = Queue()
     signed = seed is not None
@@ -262,6 +263,8 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
     reader.start()
     preview = receipt = issuer = None
     coverage = None
+    startup_excluded_ms = None
+    startup_request = request is not None and request["recipe"] == STARTUP_RECIPE
     share = denied = boundary = key_denied = done = False
     raw_withheld = False
     provisioned = False
@@ -308,6 +311,12 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
                     raise RuntimeError("Invalid driver guidance from QNX.")
                 coverage = {context: int(value) for context, value in zip(("idle", "moving"), limits.groups())
                             if value != b"0"}
+            elif line.startswith(b"RR_STARTUP_WINDOW "):
+                window = re.fullmatch(rb"RR_STARTUP_WINDOW ([0-9]{1,4})", line)
+                if (issuer is None or preview is not None or not startup_request or startup_excluded_ms is not None
+                        or window is None or int(window[1]) > 1000):
+                    raise RuntimeError("Invalid private startup window from QNX.")
+                startup_excluded_ms = int(window[1])
             elif line.startswith(b"RR_PREVIEW ") and preview is None:
                 preview = line.removeprefix(b"RR_PREVIEW ")
                 if signed and issuer is None:
@@ -328,6 +337,11 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
                         raise RuntimeError("The driver guidance does not match the QNX findings.")
                     if on_coverage is not None:
                         on_coverage(coverage)
+                if startup_request:
+                    if startup_excluded_ms is None:
+                        raise RuntimeError("QNX did not report the startup window. Rebuild the guest and retry.")
+                    if on_startup_window is not None:
+                        on_startup_window(startup_excluded_ms)
                 share = decide(preview, issuer)
                 transport.sendall(b"share\n" if share else b"decline\n")
                 deadline = time.monotonic() + 15
@@ -411,7 +425,7 @@ def seal_recording(recording, source=None):
 
 
 def review_native(workspace, qemu, recording, decide, seed=None, request=None, bench=None, image=None,
-                  on_disconnect=None, *, source=None, on_coverage=None, on_evaluation=None):
+                  on_disconnect=None, *, source=None, on_coverage=None, on_evaluation=None, on_startup_window=None):
     if request is not None and seed is None:
         raise ValueError("A shop request needs a signing key.")
     if seed is not None and len(seed) != 32:
@@ -457,7 +471,7 @@ def review_native(workspace, qemu, recording, decide, seed=None, request=None, b
                                             seed=seed, boot_token=token, request=request, bench=bench is not None,
                                             job_disk=image is not None, recording_key=recording_key,
                                             on_disconnect=on_disconnect, source=source, on_coverage=on_coverage,
-                                            on_evaluation=on_evaluation)
+                                            on_evaluation=on_evaluation, on_startup_window=on_startup_window)
                     if adapter is not None:
                         adapter.check_commands()
                     return result

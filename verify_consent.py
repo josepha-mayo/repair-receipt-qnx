@@ -11,7 +11,7 @@ import live
 
 
 class ConsentDeadline(unittest.TestCase):
-    def review_at(self, instant, action, *, prior_owner="driver", request_id="follow-up"):
+    def review_at(self, instant, action, *, prior_owner="driver", request_id="follow-up", startup_excluded_ms=None):
         review = live.Review(None, Issuer(bytes(32)), Future)
         review.owner = "driver"
         review.state = {"stage": "booting", "job": "test-job"}
@@ -25,6 +25,8 @@ class ConsentDeadline(unittest.TestCase):
             nonlocal now, result, notice
             self.assertEqual(timeout, live.CONSENT_SECONDS)
             notice = review.snapshot("driver").get("reusedRecording")
+            self.assertEqual(review.snapshot("driver").get("startupExcludedMs"), startup_excluded_ms)
+            self.assertNotIn("startupExcludedMs", review.snapshot("different-driver"))
             now = instant
             result = action(review)
 
@@ -32,7 +34,7 @@ class ConsentDeadline(unittest.TestCase):
         with patch.object(live, "time", SimpleNamespace(monotonic=lambda: now)):
             shared = review.wait_for_decision(b'{"idle":"insufficient_evidence"}',
                                               review.issuer.public_hex.encode("ascii"), Event(), {"idle": 1},
-                                              (digest, request_id))
+                                              (digest, request_id), startup_excluded_ms=startup_excluded_ms)
             return shared, result, review.snapshot("driver"), notice
 
     def test_approval_before_the_deadline(self):
@@ -50,6 +52,14 @@ class ConsentDeadline(unittest.TestCase):
                 _, _, _, notice = self.review_at(live.CONSENT_SECONDS - 1,
                     lambda review: review.decide("driver", "test-job", "decline"), **options)
                 self.assertIsNone(notice)
+
+    def test_startup_window_is_private_and_ends_with_consent(self):
+        for duration in (0, 210):
+            for offset, choice in ((-1, "share"), (-1, "decline"), (0, "share")):
+                with self.subTest(duration=duration, offset=offset, choice=choice):
+                    _, _, owner, _ = self.review_at(live.CONSENT_SECONDS + offset,
+                        lambda review: review.decide("driver", "test-job", choice), startup_excluded_ms=duration)
+                    self.assertNotIn("startupExcludedMs", owner)
 
     def test_expiry_withholds_consent_and_discards_the_preview(self):
         deadline = live.CONSENT_SECONDS

@@ -27,6 +27,7 @@ struct shop_request {
 struct receipt_coverage {
     unsigned idle;
     unsigned moving;
+    int startup_excluded_ms;
 };
 
 /* Decode a local recording and emit only the findings requested by the shop. */

@@ -443,6 +443,9 @@ static int consent(const char *receipt, const char *issuer, const struct receipt
     if (coverage && (coverage->idle || coverage->moving)) {
         printf("RR_COVERAGE %u %u\n", coverage->idle, coverage->moving);
     }
+    if (coverage && coverage->startup_excluded_ms >= 0) {
+        printf("RR_STARTUP_WINDOW %d\n", coverage->startup_excluded_ms);
+    }
     printf("RR_PREVIEW %s\n", receipt);
     fflush(stdout);
     char decision[24];

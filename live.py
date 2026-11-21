@@ -151,12 +151,13 @@ class Review:
         self.decision = decision
         self.state["stage"] = "finishing"
         self.state.pop("reusedRecording", None)
+        self.state.pop("startupExcludedMs", None)
         if decision == "expired":
             for field in ("claim", "coverage", "issuer"):
                 self.state.pop(field, None)
         self.response.set()
 
-    def wait_for_decision(self, preview, issuer, guest_closed, coverage=None, import_review=None):
+    def wait_for_decision(self, preview, issuer, guest_closed, coverage=None, import_review=None, *, startup_excluded_ms=None):
         if not secrets.compare_digest(self.issuer.public_hex.encode("ascii"), issuer):
             raise RuntimeError("The guest presented a key different from the enrolled issuer.")
         with self.lock:
@@ -164,6 +165,8 @@ class Review:
             self.state.update(stage="review", claim=json.loads(preview), issuer=issuer.decode("ascii"))
             if coverage:
                 self.state["coverage"] = coverage
+            if startup_excluded_ms is not None:
+                self.state["startupExcludedMs"] = startup_excluded_ms
             if import_review is not None:
                 current = (self.owner, *import_review)
                 # Keep the original request association while the same samples are reused.
@@ -182,6 +185,11 @@ class Review:
         guest_closed = Event()
         response = self.response
         coverage = {}
+        startup_excluded_ms = None
+
+        def record_startup_window(duration):
+            nonlocal startup_excluded_ms
+            startup_excluded_ms = duration
 
         def disconnect():
             guest_closed.set()
@@ -196,9 +204,10 @@ class Review:
             with TemporaryDirectory(prefix="repair-receipt-") as directory:
                 receipt = review_native(Path(directory) / "guest", self.qemu, recording,
                                         lambda preview, issuer: self.wait_for_decision(
-                                            preview, issuer, guest_closed, coverage, import_review),
+                                            preview, issuer, guest_closed, coverage, import_review,
+                                            startup_excluded_ms=startup_excluded_ms),
                                         self.issuer.seed, request, bench, image=image, on_disconnect=disconnect,
-                                        source=source, on_coverage=coverage.update)
+                                        source=source, on_coverage=coverage.update, on_startup_window=record_startup_window)
                 result = {"stage": "expired" if self.decision == "expired" else "declined"}
                 if receipt is not None:
                     self.issuer.verify_receipt(receipt)
@@ -215,6 +224,7 @@ class Review:
         if image is None:
             result = {"stage": "error", "message": "QNX preparation failed. Retry preparation from the recording panel."}
         with self.lock:
+            self.state.pop("startupExcludedMs", None)
             self.state.update(result)
 
     def close(self):

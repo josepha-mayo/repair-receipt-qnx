@@ -205,6 +205,7 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
     bool complete = missing == 0;
     const bool sustained = recipe != RECIPE_SAMPLE_COUNT;
     bool opening = recipe == RECIPE_STARTUP_WINDOW;
+    int startup_excluded_ms = 0;
     const int threshold = request ? request->threshold_c : DEFAULT_THRESHOLD_C;
     const enum receipt_scope scope = request ? request->scope : SCOPE_BOTH;
     const bool requested[CONTEXTS] = {scope & SCOPE_IDLE, scope & SCOPE_MOVING};
@@ -227,8 +228,12 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
                 continue;
             }
             // Initial missing rows still affect coverage if the first complete sample arrives after the limit.
-            if (previous >= 0 && time_ms > STARTUP_WINDOW_MS) {
-                complete = false;
+            if (previous >= 0) {
+                if (time_ms <= STARTUP_WINDOW_MS) {
+                    startup_excluded_ms = (int)time_ms;
+                } else {
+                    complete = false;
+                }
             }
             opening = false;
         }
@@ -250,6 +255,7 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
     const struct receipt_coverage limits = {
         .idle = requested[IDLE] ? coverage_limits(&summaries[IDLE], complete, sustained) : 0,
         .moving = requested[MOVING] ? coverage_limits(&summaries[MOVING], complete, sustained) : 0,
+        .startup_excluded_ms = recipe == RECIPE_STARTUP_WINDOW ? startup_excluded_ms : -1,
     };
     if (coverage) {
         *coverage = limits;

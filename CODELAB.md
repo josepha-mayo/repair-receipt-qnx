@@ -111,7 +111,7 @@ For a work-order trial, request both conditions at 95 °C. Upload July 27, appro
 
 ### Request a startup window
 
-For the same July 27 CSV, create a separate request for both conditions at 95 °C. Under **Recording window**, choose **Allow 1 second for startup**. The driver preview describes the allowance and shows **Threshold observed** at idle and **Threshold not observed** while moving. The scope of that moving finding is the reviewed window. File it, then verify the packet offline with the original request and trusted issuer key. Change the request recipe to the entire-recording rule to see verification reject the mismatch.
+For the same July 27 CSV, create a separate request for both conditions at 95 °C. Under **Recording window**, choose **Allow 1 second for startup**. The driver preview reports that QNX excluded the first 0.21 s. It shows **Threshold observed** at idle and **Threshold not observed** while moving. The scope of that moving finding is the reviewed window. File it, then verify the packet offline with the original request and trusted issuer key. Change the request recipe to the entire-recording rule to see verification reject the mismatch.
 
 The allowance covers incomplete rows only before the first complete sample, and only when that sample arrives within 1 second. Any later gap still affects coverage. Follow-ups and rechecks inherit the selected rule.
 
@@ -120,6 +120,8 @@ The release includes two QNX packets from the same July 27 recording. Extract `q
 ```bat
 python verify_startup_window.py --qemu "C:\QNX\qemu\qemu-system-x86_64.exe"
 ```
+
+The native test uses the same request and issuer with three different opening intervals and checks that all three signed receipts are byte-identical. It checks that the native log redacts the private timing.
 
 ### Measure what the shop receives
 
