@@ -435,6 +435,7 @@ if (roadEvidence) {
   const sample = JSON.parse(roadEvidence.textContent);
   const roadStatus = byId("road-status");
   const roadFindings = byId("road-findings");
+  const roadComparison = byId("road-comparison");
   const roadSource = byId("road-source");
   const roadDisclosure = byId("road-disclosure");
   const downloads = byId("road-downloads");
@@ -442,8 +443,12 @@ if (roadEvidence) {
   const controls = [[idleControl, "idle"], [byId("check-moving"), "moving"], [byId("check-startup"), "startup"]];
   const saveButtons = [byId("save-road-first"), byId("save-road-second")];
   let verifiedPair = null;
+  let checking = false;
+  document.body.classList.add("offline-verifier");
   byId("shop-heading").textContent = "Verify a receipt.";
-  byId("shop-intro").textContent = "Check the signed QNX example, or verify your own receipt and issuer key.";
+  byId("shop-intro").textContent = "Compare what the shop learned from two drives using four QNX-signed findings.";
+  byId("shop-nav-label").hidden = true;
+  byId("verify-your-files").hidden = false;
   byId("verification-workspace").after(byId("create-request").closest("section"));
   byId("road-example").hidden = false;
   for (const [index, button] of saveButtons.entries()) {
@@ -455,70 +460,107 @@ if (roadEvidence) {
   byId("save-road-key").addEventListener("click", () => {
     if (verifiedPair) ShopRequest.save("kit-example-issuer.json", JSON.stringify(verifiedPair.keyFile));
   });
+
+  async function verifyRoadPair(mode) {
+    const startup = mode === "startup";
+    const keyFile = startup ? sample.startup.issuer : {format: "repair-receipt-issuer/v1", ed25519: sample.issuer.key};
+    const packets = startup ? sample.startup.packets : sample.receipts[mode].map(receipt => ({
+      format: ShopRequest.packetFormat, request: sample.requests[mode], receipt,
+      fingerprint: sample.issuer.fingerprint,
+    }));
+    if (packets.length !== 2 || packets.some(packet => packet.format !== ShopRequest.packetFormat)) {
+      throw new Error("The example needs two verification packets.");
+    }
+    const verifier = await publicVerifier(new Blob([JSON.stringify(keyFile)]));
+    const files = packets.map(packet => JSON.stringify(packet));
+    const [a, b] = await Promise.all(files.map(async file => {
+      const {claim} = await verifyEvidence(await ShopRequest.readEvidence(new Blob([file])), verifier, null);
+      return claim;
+    }));
+    if (startup) {
+      if (a.recipe !== ShopRequest.recipe || b.recipe !== ShopRequest.startupRecipe || a.request === b.request ||
+          [a, b].some(claim => claim.scope !== "both" || claim.thresholdC !== 95 ||
+                        claim.source !== ShopRequest.uploadedSource)) {
+        throw new Error("The startup comparison needs both road requests at 95 °C.");
+      }
+    } else if ([a, b].some(claim => claim.source !== ShopRequest.publishedSource || claim.scope !== mode ||
+                                   claim.thresholdC !== 95)) {
+      throw new Error("The example receipts must match the selected scope and published recording source.");
+    }
+    const filenames = startup ? ["road-strict-scope.json", "road-startup-scope.json"]
+      : [26, 27].map(date => `kit-2017-07-${date}-${mode}-packet.json`);
+    return {keyFile, files, filenames, claims: [a, b], receipts: packets.map(packet => packet.receipt)};
+  }
+
+  function showRoadComparison(idle, moving) {
+    for (const [scope, pair] of [["idle", idle], ["moving", moving]]) {
+      byId("road-" + scope).querySelectorAll("td").forEach((cell, index) => {
+        const finding = pair.claims[index][scope];
+        cell.dataset.finding = finding;
+        cell.textContent = labels.get(finding);
+      });
+    }
+    roadComparison.hidden = false;
+  }
+
   for (const [selected, mode] of controls) {
     selected.addEventListener("click", async () => {
+      if (checking) return;
+      checking = true;
       for (const [control] of controls) {
-        control.disabled = true;
+        control.setAttribute("aria-disabled", "true");
         control.setAttribute("aria-pressed", String(control === selected));
         control.classList.toggle("secondary", control !== selected);
       }
       verifiedPair = null;
       roadFindings.hidden = true;
+      roadComparison.hidden = true;
       roadSource.hidden = true;
       roadDisclosure.hidden = true;
       downloads.hidden = true;
       downloads.open = false;
       roadStatus.className = "status";
-      roadStatus.textContent = "Verifying both receipts.";
+      roadStatus.textContent = "Verifying the signed receipts.";
       try {
         const startup = mode === "startup";
-        const keyFile = startup ? sample.startup.issuer : {format: "repair-receipt-issuer/v1", ed25519: sample.issuer.key};
-        const packets = startup ? sample.startup.packets : sample.receipts[mode].map(receipt => ({
-          format: ShopRequest.packetFormat, request: sample.requests[mode], receipt,
-          fingerprint: sample.issuer.fingerprint,
-        }));
-        if (packets.length !== 2 || packets.some(packet => packet.format !== ShopRequest.packetFormat)) {
-          throw new Error("The example needs two verification packets.");
-        }
-        const verifier = await publicVerifier(new Blob([JSON.stringify(keyFile)]));
-        const files = packets.map(packet => JSON.stringify(packet));
-        const results = await Promise.all(files.map(async file => {
-          const input = new Blob([file]);
-          return verifyEvidence(await ShopRequest.readEvidence(input), verifier, null);
-        }));
-        const [a, b] = results.map(result => result.claim);
-        if (startup) {
-          if (a.recipe !== ShopRequest.recipe || b.recipe !== ShopRequest.startupRecipe || a.request === b.request ||
-              [a, b].some(claim => claim.scope !== "both" || claim.thresholdC !== 95 || claim.source !== "uploaded-csv/v1")) {
-            throw new Error("The startup comparison needs both road requests at 95 °C.");
-          }
-        } else if ([a, b].some(claim => claim.source !== ShopRequest.publishedSource || claim.scope !== mode ||
-                                       claim.thresholdC !== 95)) {
-          throw new Error("The example receipts must match the selected scope and published recording source.");
-        }
+        const otherMode = mode === "idle" ? "moving" : "idle";
+        const [checked, other] = await Promise.allSettled([
+          verifyRoadPair(mode), startup ? null : verifyRoadPair(otherMode),
+        ]);
+        if (checked.status === "rejected") throw checked.reason;
+        const pair = checked.value;
+        const [a, b] = pair.claims;
+        const idle = mode === "idle" ? pair : other.value;
+        const moving = mode === "moving" ? pair : other.value;
         const scope = startup ? "moving" : mode;
-        byId("road-first-label").textContent = startup ? "Entire recording" : "KIT drive · 26 July 2017";
-        byId("road-second-label").textContent = startup ? "Startup allowance" : "KIT drive · 27 July 2017";
-        byId("road-first").textContent = labels.get(a[scope]);
-        byId("road-second").textContent = labels.get(b[scope]);
-        const [first, second] = packets.map(packet => packet.receipt);
+        const [first, second] = pair.receipts;
+        const combined = !!idle && !!moving;
+        if (combined) {
+          showRoadComparison(idle, moving);
+        } else {
+          byId("road-first-label").textContent = startup ? "Entire recording" : "KIT drive · 26 July 2017";
+          byId("road-second-label").textContent = startup ? "Startup allowance" : "KIT drive · 27 July 2017";
+          byId("road-first").textContent = labels.get(a[scope]);
+          byId("road-second").textContent = labels.get(b[scope]);
+          roadFindings.hidden = false;
+        }
         roadStatus.classList.add("good");
-        roadStatus.textContent = startup ? "Both signatures verified." : first === second
-          ? `Both signatures verified. The receipts are byte-for-byte identical (${first.length} bytes each).`
-          : "Both signatures verified. The receipts differ.";
-        roadFindings.hidden = false;
+        const signatureStatus = combined ? "All four signatures verified." : "Both signatures verified.";
+        const comparison = first === second ? `The ${mode} receipts match byte for byte (${first.length} bytes each).`
+          : `The ${mode} receipts differ.`;
+        roadStatus.textContent = startup ? signatureStatus : `${signatureStatus} ${comparison}`;
+        if (other.status === "rejected") roadStatus.textContent += " The other pair could not be verified.";
         roadSource.textContent = startup ? "July 27, 2017 · Moving finding · 95 °C"
-          : `Signed input type · ${ShopRequest.sourceLabel(a.source)} · 95 °C`;
+          : `${ShopRequest.sourceLabel(a.source)} · ${a.thresholdC} °C`;
         roadSource.hidden = false;
-        if (mode === "idle" && files[0] === files[1]) {
-          byId("road-original-sizes").textContent = sample.originalRoadBytes
-            .map(bytes => `${(bytes / 1_000_000).toFixed(2)} MB`).join(" · ");
-          byId("road-packet-size").textContent = `${new TextEncoder().encode(files[0]).byteLength} bytes`;
+        if (idle && idle.files[0] === idle.files[1]) {
+          const [firstLog, secondLog] = sample.originalRoadBytes.map(bytes => `${(bytes / 1_000_000).toFixed(2)} MB`);
+          byId("road-log-first").textContent = firstLog;
+          byId("road-log-second").textContent = secondLog;
+          byId("road-packet-size").textContent = `${new TextEncoder().encode(idle.files[0]).byteLength} bytes`;
           roadDisclosure.hidden = false;
         }
-        const filenames = startup ? ["road-strict-scope.json", "road-startup-scope.json"]
-          : [26, 27].map(date => `kit-2017-07-${date}-${scope}-packet.json`);
-        verifiedPair = {keyFile, files, filenames};
+        verifiedPair = pair;
         saveButtons[0].textContent = startup ? "Save entire-recording packet" : "Save July 26 packet";
         saveButtons[1].textContent = startup ? "Save startup packet" : "Save July 27 packet";
         downloads.hidden = false;
@@ -526,7 +568,8 @@ if (roadEvidence) {
         roadStatus.classList.add("bad");
         roadStatus.textContent = error.message || "Could not verify the sample receipts.";
       } finally {
-        for (const [control] of controls) control.disabled = false;
+        checking = false;
+        for (const [control] of controls) control.removeAttribute("aria-disabled");
       }
     });
   }

@@ -8,7 +8,7 @@ For the native exercise, [build the application](#1-compile-and-run) and [remove
 
 Open the downloaded HTML in a current Chromium browser. It contains four receipts issued by QNX for two published drives at a 95 °C test threshold. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html)
 
-1. The verifier opens on the idle comparison. Both findings are observed and both drives produce the same 667-byte packet, including a 342-byte signed receipt. The page shows the sizes of the two original logs next to the packet size. Choose **Check moving receipts**. July 26 shows an observation and July 27 has insufficient evidence.
+1. The verifier checks four signatures and shows both operating conditions for both drives. At idle, both drives have an observation and produce the same 667-byte packet, including a 342-byte signed receipt. While moving, July 26 shows an observation and July 27 has insufficient evidence. The page shows the original log sizes alongside the shared idle packet size.
 2. Open **Download proof files**, then save the July 27 packet and the example issuer key. Under **Verification files**, load the packet and key and choose **Verify receipt**. The verifier confirms the signature and the request included in the packet.
 3. Under **Create a shop request**, choose **While moving only**, enter **95**, then select **Save request file**. This selects a fresh request with a new ID. Choose **Verify receipt** again to see the mismatch. Select **Clear original request** and verify again to return to checking the packet against its included request.
 
@@ -120,7 +120,7 @@ start-live.cmd --road-lab
 
 In the browser, use **July 26 · Full drive** and **July 27 · Full drive** from the sample menu. Load one idle-only shop request at 95 °C, approve each review and compare the saved packets. Both say **Threshold observed** and the packets match byte for byte. Create a new moving-only request at the same threshold and repeat. July 26 shows **Threshold observed** and July 27 shows **Insufficient evidence**. Both files start before all three signals are available. QNX preserves a fully observed crossing even when coverage is incomplete. [Paired results and input hashes](replay/qnx-road-scope-proof.json)
 
-Open the downloaded HTML in a current Chromium browser. **Check idle receipts** and **Check moving receipts** verify the signatures, request bindings and signed published-road input type. After either check, open **Download proof files** to save the two verification packets and example key. Load those files back into the verifier to check each signature and receipt hash independently. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html) · [Signed QNX evidence](replay/qnx-road-scope-receipts.json)
+Open the downloaded HTML in a current Chromium browser. It verifies the signatures, request bindings and signed published-road input type for both operating conditions. Select **Check idle receipts** or **Check moving receipts**, then open **Download proof files** to save the two verification packets for that scope and the example key. Load those files back into the verifier to check each signature and receipt hash independently. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html) · [Signed QNX evidence](replay/qnx-road-scope-receipts.json)
 
 ### Try an upload and follow-up
 

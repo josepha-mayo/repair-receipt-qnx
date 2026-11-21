@@ -11,29 +11,43 @@
 </head>
 <body>
   <main>
-    <nav><span class="brand">Repair Receipt</span><span>Shop verification</span></nav>
+    <nav>
+      <span class="brand">Repair Receipt</span>
+      <span id="shop-nav-label">Shop verification</span>
+      <a id="verify-your-files" href="#verification-workspace" hidden>Verify your files</a>
+    </nav>
     <header>
       <p class="eyebrow">Repair shop</p>
       <h1 id="shop-heading">Request a symptom check.</h1>
       <p class="lede" id="shop-intro">Choose which operating condition you need to investigate. Verify the driver’s signed answer against that request.</p>
     </header>
     <section id="road-example" class="card road-example" aria-labelledby="road-heading" hidden>
-      <h2 id="road-heading">Signed road examples</h2>
-      <div class="actions road-controls">
-        <button id="check-idle" type="button" aria-pressed="false">Check idle receipts</button>
-        <button id="check-moving" class="secondary" type="button" aria-pressed="false">Check moving receipts</button>
-        <button id="check-startup" class="secondary" type="button" aria-pressed="false">Compare startup rules</button>
-      </div>
-      <p id="road-status" class="status" role="status"></p>
+      <h2 id="road-heading">Two drives, same test</h2>
+      <dl id="road-disclosure" aria-label="Idle example file sizes" hidden>
+        <div>
+          <dt>Original logs kept by drivers</dt>
+          <dd id="road-original-sizes"><span id="road-log-first"></span> <span class="road-size-separator" aria-hidden="true">·</span> <span id="road-log-second"></span></dd>
+        </div>
+        <div><dt>Idle packet sent to the shop</dt><dd id="road-packet-size"></dd></div>
+      </dl>
       <p id="road-source" class="help" hidden></p>
+      <table id="road-comparison" aria-label="Verified coolant findings by drive" hidden>
+        <thead><tr><th scope="col">Test condition</th><th scope="col">July 26</th><th scope="col">July 27</th></tr></thead>
+        <tbody>
+          <tr id="road-idle"><th scope="row">At idle</th><td></td><td></td></tr>
+          <tr id="road-moving"><th scope="row">While moving</th><td></td><td></td></tr>
+        </tbody>
+      </table>
+      <p id="road-status" class="status" role="status"></p>
       <dl id="road-findings" hidden>
         <div><dt id="road-first-label"></dt><dd id="road-first"></dd></div>
         <div><dt id="road-second-label"></dt><dd id="road-second"></dd></div>
       </dl>
-      <dl id="road-disclosure" aria-label="Idle example file sizes" hidden>
-        <div><dt>Original logs stay with drivers</dt><dd id="road-original-sizes"></dd></div>
-        <div><dt>Shop packet from either drive</dt><dd id="road-packet-size"></dd></div>
-      </dl>
+      <div class="actions road-controls" role="group" aria-label="Receipt comparison">
+        <button id="check-idle" type="button" aria-pressed="false">Check idle receipts</button>
+        <button id="check-moving" class="secondary" type="button" aria-pressed="false">Check moving receipts</button>
+        <button id="check-startup" class="secondary" type="button" aria-pressed="false">Compare startup rules</button>
+      </div>
       <details id="road-downloads" class="issuer-enrollment" hidden>
         <summary>Download proof files</summary>
         <div class="actions">
@@ -69,7 +83,7 @@
         <p id="created-request-fingerprint" class="fingerprint" role="status" hidden></p>
       </div>
     </section>
-    <div class="workspace" id="verification-workspace">
+    <div class="workspace" id="verification-workspace" tabindex="-1">
       <section class="card" aria-labelledby="file-heading">
         <h2 id="file-heading">Verification files</h2>
         <label for="receipt-file">Receipt, verification packets or work-order ZIP</label>

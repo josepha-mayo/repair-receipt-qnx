@@ -2,7 +2,7 @@
 
 Give a repair shop the answer to a specific question without handing over a recording of the whole drive.
 
-**Try the signed QNX examples.** Open the downloaded HTML in a current Chromium browser. **Check idle receipts** verifies two independently issued, identical 342-byte receipts from two published drives. **Check moving receipts** verifies their different signed answers. **Compare startup rules** verifies the effect of the one-second allowance on the same July 27 drive. **Download proof files** saves the selected packets and their example key. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html) · [Scoped receipts](replay/qnx-road-scope-receipts.json) · [Startup receipts](replay/qnx-road-startup-receipts.json)
+**Try the signed QNX examples.** Open the downloaded HTML in a current Chromium browser. It verifies four receipts and shows the idle and moving findings side by side. The two drives share a 342-byte signed idle receipt and return different answers while moving. Select **Check idle receipts** or **Check moving receipts** to choose the packets to download. **Compare startup rules** verifies the one-second allowance on the July 27 drive. **Download proof files** saves the selected packets and their example key. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html) · [Scoped receipts](replay/qnx-road-scope-receipts.json) · [Startup receipts](replay/qnx-road-startup-receipts.json)
 
 The offline walkthrough also lets you try a mismatched request and return to checking the same signed packet. [Offline codelab steps](CODELAB.md#verify-two-real-drives-offline)
 
