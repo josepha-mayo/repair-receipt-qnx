@@ -190,7 +190,7 @@ def drive_option(path, disk_format, index):
 def qemu_command(qemu, *serial_ports, image=None):
     ports = [argument for port in serial_ports for argument in ("-serial", port)]
     output = image / "output" if image is not None else Path("output")
-    return [str(qemu), "-accel", "tcg", "-cpu", "max", "-smp", "2", "-m", "1024",
+    return [str(qemu), "-accel", "tcg", "-cpu", "max", "-smp", "2", "-m", "256",
             "-kernel", str(output / "ifs.bin"), "-snapshot",
             "-drive", drive_option(output / "disk-qemu.vmdk", "vmdk", 0),
             "-nic", "none", "-display", "none", "-monitor", "none", *ports,

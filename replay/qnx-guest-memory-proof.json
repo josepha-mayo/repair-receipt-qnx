@@ -1,0 +1,187 @@
+{
+  "host": "Windows 11 Pro, Intel Core i7-8700T",
+  "guest": "QNX 8.0 x86-64 under QEMU TCG",
+  "qemu": "QEMU emulator version 11.1.0 (v11.1.0-12130-ge470268ff4)",
+  "selected_profile": "256 MiB / 2 vCPU",
+  "method": [
+    "All timing trials reused one prepared guest template and alternated launch profiles. Each boot used a fresh encrypted job disk.",
+    "The clock starts before encrypted staging and stops when the host receives the native consent preview. Template generation is outside the timing window.",
+    "Identical requests and one synthetic issuer were used for each workload across all profiles. All signed receipts for a workload verified and were byte-identical across its 20 boots.",
+    "The memory experiment repeated the maximum-size workload with both two-vCPU profiles and read GetProcessMemoryInfo from the QEMU process immediately upon preview. Peak working set describes resident memory up to that point. Private commit describes memory committed for QEMU at that point."
+  ],
+  "workloads": {
+    "published-drive": "Normalized KIT July 26 idle test at 95 C, 872397 bytes",
+    "max-recording": "verify_parser_perf.py maximum_recording control, 4194304 bytes",
+    "simulated-uart": "Normal OBD-II bench via QNX UART, both idle and moving findings"
+  },
+  "timing_runs_per_workload_per_profile": 5,
+  "timing": {
+    "1024 MiB / 2 vCPU": {
+      "published-drive": {
+        "preview_s": [
+          2.28,
+          2.253,
+          2.28,
+          2.259,
+          2.257
+        ],
+        "median_s": 2.259
+      },
+      "max-recording": {
+        "preview_s": [
+          2.616,
+          2.584,
+          2.926,
+          2.612,
+          2.635
+        ],
+        "median_s": 2.616
+      },
+      "simulated-uart": {
+        "preview_s": [
+          11.185,
+          11.21,
+          11.272,
+          11.19,
+          11.455
+        ],
+        "median_s": 11.21
+      }
+    },
+    "256 MiB / 2 vCPU": {
+      "published-drive": {
+        "preview_s": [
+          2.261,
+          2.276,
+          2.246,
+          2.325,
+          2.262
+        ],
+        "median_s": 2.262
+      },
+      "max-recording": {
+        "preview_s": [
+          2.623,
+          2.605,
+          2.76,
+          2.618,
+          2.594
+        ],
+        "median_s": 2.618
+      },
+      "simulated-uart": {
+        "preview_s": [
+          11.189,
+          11.184,
+          11.152,
+          11.316,
+          11.502
+        ],
+        "median_s": 11.189
+      }
+    },
+    "256 MiB / 1 vCPU": {
+      "published-drive": {
+        "preview_s": [
+          2.336,
+          2.275,
+          2.268,
+          2.279,
+          2.288
+        ],
+        "median_s": 2.279
+      },
+      "max-recording": {
+        "preview_s": [
+          2.721,
+          2.686,
+          4.558,
+          2.58,
+          3.144
+        ],
+        "median_s": 2.721
+      },
+      "simulated-uart": {
+        "preview_s": [
+          11.198,
+          11.194,
+          11.239,
+          11.246,
+          11.197
+        ],
+        "median_s": 11.198
+      }
+    },
+    "128 MiB / 1 vCPU": {
+      "published-drive": {
+        "preview_s": [
+          2.307,
+          2.306,
+          2.322,
+          2.326,
+          2.348
+        ],
+        "median_s": 2.322
+      },
+      "max-recording": {
+        "preview_s": [
+          2.64,
+          2.647,
+          3.474,
+          2.634,
+          2.89
+        ],
+        "median_s": 2.647
+      },
+      "simulated-uart": {
+        "preview_s": [
+          11.248,
+          11.411,
+          11.207,
+          11.213,
+          11.229
+        ],
+        "median_s": 11.229
+      }
+    }
+  },
+  "memory_runs_per_profile": 3,
+  "memory_at_max_recording_preview": {
+    "1024 MiB / 2 vCPU": {
+      "samples": [
+        {
+          "peak_working_set_bytes": 236994560,
+          "private_commit_bytes": 2351898624
+        },
+        {
+          "peak_working_set_bytes": 237309952,
+          "private_commit_bytes": 2351980544
+        },
+        {
+          "peak_working_set_bytes": 237608960,
+          "private_commit_bytes": 2351808512
+        }
+      ],
+      "median_peak_working_set_bytes": 237309952,
+      "median_private_commit_bytes": 2351898624
+    },
+    "256 MiB / 2 vCPU": {
+      "samples": [
+        {
+          "peak_working_set_bytes": 228126720,
+          "private_commit_bytes": 1545076736
+        },
+        {
+          "peak_working_set_bytes": 227270656,
+          "private_commit_bytes": 1544441856
+        },
+        {
+          "peak_working_set_bytes": 227831808,
+          "private_commit_bytes": 1544990720
+        }
+      ],
+      "median_peak_working_set_bytes": 227831808,
+      "median_private_commit_bytes": 1544990720
+    }
+  }
+}
