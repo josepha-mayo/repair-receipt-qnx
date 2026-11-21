@@ -39,7 +39,11 @@
             <option value="scope-control">Trip C · Same idle result, warmer moving</option>
             <option value="moving">Hot while moving</option>
             <option value="gap">Missing samples</option>
-            <option value="kit-obd">KIT · Published road recording</option>
+            <optgroup label="Published KIT recordings">
+              <option value="kit-obd">90-second road excerpt</option>
+              <option value="kit-july-26">July 26 · Full drive</option>
+              <option value="kit-july-27">July 27 · Full drive</option>
+            </optgroup>
             <option value="obd-bench">Simulated OBD-II adapter · Live QNX capture</option>
           </select>
           <p id="bench-help" class="help" hidden>Load a shop request to capture from the simulated adapter.</p>

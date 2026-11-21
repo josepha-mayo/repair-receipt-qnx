@@ -85,17 +85,25 @@ To observe the denial in the browser, use a separate project copy. Remove the li
 
 Use the **same idle-only request** to approve **Trip C**. It retains the idle threshold crossing and adds a crossing while moving. Compare the full signed files from A and C. They should be byte-identical. Now create a **While moving only** request for Trip C. The result should include the driving observation.
 
-Repeat the comparison with two published recordings from the [KIT Automotive OBD-II Dataset](https://publikationen.bibliothek.kit.edu/1000085073). Import `2017-07-26_Seat_Leon_RT_S_Stau.csv` and `2017-07-27_Seat_Leon_KA_KA_2_Normal.csv` directly in the driver page. Use the same idle-only request at a test threshold of 95 °C and the same issuer. Approve each review and compare the downloaded files. Both say **Threshold observed** and the signed files are byte-identical. Run both recordings again with a new moving-only request at the same test threshold. July 26 shows **Threshold observed**, and July 27 shows **Insufficient evidence**. Both files start before all three signals are available. QNX preserves a fully observed crossing even when coverage is incomplete. [Paired real-recording results](replay/qnx-road-scope-proof.json)
+### Compare the published road pair
 
-To try the shop's **Where to start** view, request both conditions at 95 °C in a new work order. Upload July 27, approve, file and open **View work-order findings**. The report points to idle while flagging insufficient moving coverage. Create the moving-only follow-up, upload July 26 and file it. Both conditions now have a threshold observation. The detailed findings show they came from separate receipts. Use the recordings as example data for this exercise.
+The source includes both normalized drives from the [KIT Automotive OBD-II Dataset](https://publikationen.bibliothek.kit.edu/1000085073). After building, run the native check from Command Prompt. The launcher checks the input hashes, boots four QNX reviews and verifies each newly signed receipt against a temporary issuer.
+
+```bat
+start-live.cmd --road-lab
+```
+
+In the browser, use **July 26 · Full drive** and **July 27 · Full drive** from the sample menu. Load one idle-only shop request at 95 °C, approve each review and compare the saved packets. Both say **Threshold observed** and the packets match byte for byte. Create a new moving-only request at the same threshold and repeat. July 26 shows **Threshold observed** and July 27 shows **Insufficient evidence**. Both files start before all three signals are available. QNX preserves a fully observed crossing even when coverage is incomplete. [Paired results and input hashes](replay/qnx-road-scope-proof.json)
 
 Open the downloaded HTML in a current Chromium browser. **Check idle receipts** and **Check moving receipts** verify the signatures, request bindings and signed published-road input type. After either check, open **Download proof files** to save the two verification packets and example key. Load those files back into the verifier to check each signature and receipt hash independently. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html) · [Signed QNX evidence](replay/qnx-road-scope-receipts.json)
 
-The archived run uses the normalized input hashes listed in the [paired-drive proof](replay/qnx-road-scope-proof.json). Importing the raw files through the driver page reproduces the findings and the equality comparison with an uploaded-CSV input label. To check that import preserves missing samples at either end of a recording, run `node --test verify_obd_import.cjs`.
+### Try an upload and follow-up
+
+To exercise the uploaded-CSV path, choose `fixtures\kit-july-26.csv` and `fixtures\kit-july-27.csv` with **Import an OBD-II recording**. The importer also accepts the original `2017-07-26_Seat_Leon_RT_S_Stau.csv` and `2017-07-27_Seat_Leon_KA_KA_2_Normal.csv` from KIT. Both forms reproduce the findings with an uploaded-CSV label. Run `node --test verify_obd_import.cjs` to check that the import preserves gaps at either end of a recording.
 
 When a different request reuses the most recent uploaded samples in the same driver session, the consent preview identifies the match. This exercise deliberately reuses the published recordings. In a follow-up that calls for a fresh capture, decline the reused preview and select the new recording.
 
-For a work-order trial, create a request for both conditions at 95 °C and file the July 27 result. The shop sees the observed idle finding and the insufficient moving result together. **Create follow-up request** asks only about moving and keeps the original signed receipt in the work order.
+For a work-order trial, request both conditions at 95 °C. Upload July 27, approve, file and open **View work-order findings**. **Where to start** points to idle and flags incomplete moving coverage. Create the moving-only follow-up, upload July 26 and file it. Both conditions now have a threshold observation. The detailed findings show the two separate receipts. Use the recordings as example data for this exercise.
 
 ### Measure what the shop receives
 
@@ -109,12 +117,10 @@ The complete attachment is **667 bytes** for either recording in this idle-only 
 
 ### Vary the test threshold
 
-Use Node.js 24 and the same two raw CSVs. The command-line normalizer uses the driver page's parser. From the QNX SDK prompt, run these commands from the project root:
+From the QNX SDK prompt, run the sweep with the bundled normalized drives.
 
 ```bat
-node normalize-obd.cjs "path\to\2017-07-26_Seat_Leon_RT_S_Stau.csv" first.normalized
-node normalize-obd.cjs "path\to\2017-07-27_Seat_Leon_KA_KA_2_Normal.csv" second.normalized
-python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --road-sweep first.normalized second.normalized
+python verify_requests.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --road-sweep fixtures\kit-july-26.csv fixtures\kit-july-27.csv
 ```
 
 The harness verifies four QNX-signed receipts per whole-degree threshold. Each scope and threshold uses one request and issuer for both drives. The pairs below list July 26 first.
@@ -184,10 +190,10 @@ The prepared-guest check also scans the job files for the exact preview, signed 
 
 Run `python verify_parser_perf.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe` to compare the time spent evaluating a 4 MiB recording inside QNX with the time from the host request to preview. The harness collects the numeric evaluation time directly from the review callback. Saved diagnostic logs retain a redacted timing marker. The harness reports a receipt hash and checks a normal file with CRLF line endings and an unterminated last row. It also checks that QNX refuses embedded NUL bytes and overlong rows before approval. [Recorded comparison](replay/qnx-parser-performance-proof.json)
 
-For a distribution, reuse the two normalized files from [the threshold sweep](#vary-the-test-threshold).
+Use the bundled normalized drives to reproduce the latency distribution.
 
 ```bat
-python verify_parser_perf.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --road-pair first.normalized second.normalized
+python verify_parser_perf.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --road-pair fixtures\kit-july-26.csv fixtures\kit-july-27.csv
 ```
 
 The harness interleaves 20 runs per input, including a synthetic recording at the 4 MiB limit. It uses one prepared template and a fresh guest for each run, and verifies every receipt. Host timing includes encrypted staging and guest boot. Native timing starts after authentication. The report shows every timing, the median, the nearest-rank 95th percentile and the maximum. Browser import and UI polling are outside the measured interval. [Preview latency distributions](replay/qnx-preview-latency.json)
@@ -211,7 +217,7 @@ start-live.cmd --driver-only --ephemeral-issuer --open
 ```
 
 1. Download the driver’s public key and enroll it at the shop after confirming its fingerprint. Create a request for both conditions at 95 °C and download it.
-2. Open the request in the driver page and load the July 27 KIT CSV from section 3. Approve the QNX finding and download the verification packet. The shop imports and files it for the same request.
+2. Open the request in the driver page and choose **July 27 · Full drive**. Approve the QNX finding and download the verification packet. The shop imports and files it for the same request.
 3. The idle receipt shows an observation and the moving finding shows insufficient evidence. Create a moving-only follow-up and take it back to the driver. Run **Hot while moving** as the control capture, approve it and file its signed packet. Restart the shop with the same register to check the original and follow-up receipts.
 
 Run `python verify_shop_server.py` to check the shop-only startup and verify an archived QNX receipt with an SDK-free executable search path. The live walkthrough was tested with two independent local processes on one Windows PC. [Recorded two-instance results](replay/qnx-split-role-proof.json)

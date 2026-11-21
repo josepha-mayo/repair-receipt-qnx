@@ -37,7 +37,8 @@ except ModuleNotFoundError as error:
 CONSENT_SECONDS = 300
 ACTIVE_STAGES = {"booting", "review", "finishing"}
 SESSION_HEADER = "X-Repair-Session"
-SAMPLES = {"trip-a", "trip-b", "moving", "gap", "kit-obd", "scope-control"}
+SAMPLES = {"trip-a", "trip-b", "moving", "gap", "scope-control"}
+PUBLISHED_SAMPLES = {"kit-obd", "kit-july-26", "kit-july-27"}
 ASSETS = {
     "/shop.js": ("shop.js", "text/javascript"),
     "/request.js": ("request.js", "text/javascript"),
@@ -414,13 +415,17 @@ class Handler(BaseHTTPRequestHandler):
                     self.json(400, {"message": "Load a shop request before starting the OBD bench."})
                     return
                 ok = self.server.review.start(session, None, request, bench="normal")
-            elif name not in SAMPLES:
+            elif name not in SAMPLES and name not in PUBLISHED_SAMPLES:
                 self.json(400, {"message": "Unknown sample recording."})
                 return
             else:
-                source = PUBLISHED_SOURCE if name == "kit-obd" else DEMO_SOURCE
-                ok = self.server.review.start(session, (ROOT / "fixtures" / f"{name}.csv").read_bytes(),
-                                              request, source=source)
+                source = PUBLISHED_SOURCE if name in PUBLISHED_SAMPLES else DEMO_SOURCE
+                try:
+                    recording = (ROOT / "fixtures" / f"{name}.csv").read_bytes()
+                except OSError:
+                    self.json(503, {"message": "The sample recording is unavailable. Check the source download."})
+                    return
+                ok = self.server.review.start(session, recording, request, source=source)
         elif path == "decision" and size <= 256:
             try:
                 value = json.loads(body)
@@ -485,6 +490,8 @@ def main():
                        help="boot QNX and verify scoped signing, consent and the native export grant")
     setup.add_argument("--policy-lab", action="store_true",
                        help="run the native channel-grant and consent trials and print their JSON results")
+    setup.add_argument("--road-lab", action="store_true",
+                       help="compare four native QNX receipts from the two bundled KIT drives")
     setup.add_argument("--practice", action="store_true", help="run with a temporary driver key and shop register")
     setup.add_argument("--shop-only", action="store_true", help="run the shop register without QNX or a driver key")
     setup.add_argument("--driver-only", action="store_true", help="run the QNX review without a shop register")
@@ -513,6 +520,11 @@ def main():
                     return
                 if (args.self_test or args.policy_lab) and not shutil.which("secpolcompile"):
                     raise ValueError("Missing SDK tool (secpolcompile). Load the QNX SDP 8.0 environment.")
+                if args.road_lab:
+                    from verify_requests import BUNDLED_ROAD_PAIR, verify_road_pair
+
+                    print(json.dumps(verify_road_pair(qemu, BUNDLED_ROAD_PAIR), indent=2))
+                    return
                 if args.policy_lab:
                     from verify_policy import verify
 

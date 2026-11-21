@@ -19,6 +19,7 @@ from shop_request import (
     CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, canonical, guest_bytes,
     parse_request, verification_packet,
 )
+from verify_requests import BUNDLED_ROAD_PAIR, load_road_pair
 
 
 def pin(key):
@@ -30,6 +31,8 @@ def verify_archived_road_pair():
     replay = Path(__file__).resolve().parent / "replay"
     evidence = json.loads((replay / "qnx-road-scope-receipts.json").read_text(encoding="utf-8"))
     proof = json.loads((replay / "qnx-road-scope-proof.json").read_text(encoding="utf-8"))
+    for (name, recording, digest), archived in zip(load_road_pair(BUNDLED_ROAD_PAIR), proof["recordings"], strict=True):
+        assert (name, len(recording), digest) == (archived["recording"], archived["normalized_bytes"], archived["normalized_sha256"])
     key = bytes.fromhex(evidence["issuer"]["key"])
     assert sha256(key).hexdigest() == evidence["issuer"]["fingerprint"]
     for scope, findings in (("idle", ["observed", "observed"]), ("moving", ["observed", "insufficient_evidence"])):
@@ -56,7 +59,7 @@ def verify_archived_road_pair():
         assert record["name"] == native["recording"]
         assert record["normalized_qnx_input"]["bytes"] == native["normalized_bytes"]
         assert record["normalized_qnx_input"]["sha256"] == native["normalized_sha256"]
-    print("Verified the archived road signatures, request bindings and measured verification packet.")
+    print("Verified the bundled road inputs, archived signatures, request bindings and measured verification packet.")
 
 
 def sign(request, result, key):

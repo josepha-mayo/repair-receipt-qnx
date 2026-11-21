@@ -18,6 +18,7 @@ KIT_ROAD_PAIR = (
     ("2017-07-26_Seat_Leon_RT_S_Stau.csv", "c8cedc5bbeea1a87a36f1e44899956f2b99e6943326d66d17f68af171a5af83d"),
     ("2017-07-27_Seat_Leon_KA_KA_2_Normal.csv", "6bbd7898d0ba00512387b93677797738474a75f3c5553d89fdc9fa41623516b3"),
 )
+BUNDLED_ROAD_PAIR = (ROOT / "fixtures/kit-july-26.csv", ROOT / "fixtures/kit-july-27.csv")
 
 
 def verify(qemu, *, check_export_grant=False):
@@ -271,6 +272,7 @@ def verify_road_pair(qemu, recordings, signed_evidence=None):
     moving_a, moving_b = receipts["moving"]
     if idle_a != idle_b or moving_a == moving_b:
         raise RuntimeError("The signed receipts must match at idle and differ while moving.")
+    idle_packet = canonical(verification_packet(tickets["idle"], idle_a, issuer.fingerprint))
     if signed_evidence is not None:
         evidence = json.dumps({
             "issuer": issuer.public_profile(), "requests": tickets, "receipts": receipts,
@@ -279,9 +281,11 @@ def verify_road_pair(qemu, recordings, signed_evidence=None):
     return {"dataset": "Marc Weber, Automotive OBD-II Dataset (CC BY 4.0)",
             "source": "https://publikationen.bibliothek.kit.edu/1000085073", "test_threshold_c": threshold,
             "signed_input_type": PUBLISHED_SOURCE,
-            "recordings": results, "same_request_and_issuer": True, "byte_identical_idle_receipts": True,
+            "recordings": results, "signed_receipts_verified": sum(map(len, receipts.values())),
+            "same_request_and_issuer": True, "byte_identical_idle_receipts": True,
             "different_moving_receipts": True,
-            "idle_receipt_bytes": len(idle_a), "idle_receipt_sha256": sha256(idle_a.encode("ascii")).hexdigest()}
+            "idle_receipt_bytes": len(idle_a), "idle_receipt_sha256": sha256(idle_a.encode("ascii")).hexdigest(),
+            "idle_verification_packet_bytes": len(idle_packet.encode("ascii"))}
 
 
 def verify_road_sweep(qemu, recordings):
