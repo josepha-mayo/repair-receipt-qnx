@@ -1,6 +1,6 @@
 {
   "platform": "QNX SDP 8.0 x86-64 guest on QEMU",
-  "guest_executable_sha256": "cdb1f99f19bd6026be5420e0bfce155dd115c250f35eb64d46dbc53afbd5257c",
+  "guest_executable_sha256": "04d1542d185bbcadaea2fcd81d2633aed6ebdd5f4f61d6f74713513693ddf9f4",
   "same_recording_request_and_issuer": true,
   "signed_input_type": "demo-fixture/v1",
   "grant_removed": "allow receipt_export_t receipt_owner_t:channel connect;",

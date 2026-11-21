@@ -202,12 +202,12 @@ Run `python verify_obd_bench.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe`. The 
 | --- | --- |
 | Complete capture | Idle threshold observed and moving threshold not observed |
 | Missing and ambiguous frames | Insufficient evidence for both conditions |
-| The third hot idle reading arrives from CAN address `7E9` | QNX drops the sample and resumes polling. Both findings are insufficient. |
+| The third sample in the idle window arrives from CAN address `7E9` | QNX drops the sample and resumes polling. Both findings are insufficient. |
 | Missing responder header, wrong ISO-TP length or malformed frame padding | QNX drops the sample and resumes polling. Both findings are insufficient. |
 | Vehicle stops between the two speed reads for one sample | QNX drops the ambiguous sample and reports insufficient evidence for both conditions |
 | Prompt arrives after the reply deadline | Capture ends before another request. Both findings are insufficient. |
-| Four delayed prompts complete within the shared sample budget | QNX accepts the third hot idle sample. The receipt observes the idle crossing. |
-| The same readings complete beyond the shared sample budget, with every reply individually under 350 ms | QNX drops the third sample and stops polling. The receipt reports insufficient evidence for both conditions. |
+| Four delayed prompts complete within the shared sample budget | QNX accepts the delayed idle sample. The receipt observes the idle crossing. |
+| The same readings complete beyond the shared sample budget, with every reply individually under 350 ms | QNX drops the delayed sample and stops polling. The receipt reports insufficient evidence for both conditions. |
 | Link drops partway through a speed response | QNX retains the completed idle crossing. Moving coverage is insufficient. |
 | Adapter setup fails | QNX stops before preview, without producing a receipt. |
 
