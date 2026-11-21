@@ -192,11 +192,11 @@ function renderSelection() {
   updateControls();
 }
 
-async function api(path, data = null) {
+async function api(path, data = null, signal) {
   const options = data ? {
     method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data),
   } : {cache: "no-store"};
-  const response = await fetch(path, options);
+  const response = await fetch(path, {...options, signal});
   const body = await response.json();
   if (!response.ok) {
     const error = new Error(body.message || "The shop register is unavailable.");
@@ -299,10 +299,14 @@ byId("clear-search").addEventListener("click", () => action("history-status", as
     orderReference.focus();
   }
 }));
-async function showMatchedReceipt(evidence) {
+async function showMatchedReceipt(evidence, confirmFiling = false) {
   const {receiptText, packetRequest, fingerprint} = evidence;
   const match = packetRequest ? {receipt: receiptText, request: packetRequest, fingerprint} : {receipt: receiptText};
-  const {job, claim, state} = await api("match", match);
+  const {job, claim, state} = await api("match", match, AbortSignal.timeout(10000));
+  if (confirmFiling && state === "alreadyFiled") {
+    showFiledReceipt(job, false);
+    return state;
+  }
   const id = job.request.id;
   if (search !== null && job.workOrder !== search) await showRecentRequests();
   jobs.set(id, job);
@@ -319,6 +323,7 @@ async function showMatchedReceipt(evidence) {
   if (state === "ready" && byId("file-receipt").getBoundingClientRect().bottom > window.innerHeight) {
     heading.scrollIntoView({block: "start"});
   }
+  return state;
 }
 
 receiptFile.addEventListener("change", () => {
@@ -601,20 +606,24 @@ for (const [button, field, filename] of [
   }));
 }
 
+function showFiledReceipt(job, alreadyFiled) {
+  jobs.set(job.request.id, job);
+  matchedReceipt = null;
+  receiptFile.value = "";
+  status("match-status", "");
+  renderJobs();
+  renderSelection();
+  status("file-status", alreadyFiled ? "This exact receipt is already filed." : "Signature verified and receipt filed.");
+  byId("selected-title").focus();
+}
+
 byId("file-receipt").addEventListener("click", () => action("file-status", async () => {
   if (matchedReceipt?.state !== "ready") return;
   const {evidence} = matchedReceipt;
-  const receipt = evidence.receiptText;
+  status("file-status", "Filing receipt.");
+  let filed;
   try {
-    const {job, alreadyFiled} = await api("file", {request: active, receipt});
-    jobs.set(active, job);
-    matchedReceipt = null;
-    receiptFile.value = "";
-    status("match-status", "");
-    renderJobs();
-    renderSelection();
-    status("file-status", alreadyFiled ? "This exact receipt is already filed." : "Signature verified and receipt filed.");
-    byId("selected-title").focus();
+    filed = await api("file", {request: active, receipt: evidence.receiptText}, AbortSignal.timeout(10000));
   } catch (error) {
     if (error.status === 409) {
       matchedReceipt = null;
@@ -623,8 +632,19 @@ byId("file-receipt").addEventListener("click", () => action("file-status", async
       await showMatchedReceipt(evidence);
       return;
     }
-    throw error;
+    if (error.status && error.status < 500) throw error;
+    let state;
+    try {
+      state = await showMatchedReceipt(evidence, true);
+    } catch {
+      // Keep the selected receipt available if the register cannot be reached.
+    }
+    if (!state || state === "ready") {
+      status("file-status", "Could not confirm filing. Choose File verified receipt again.", true);
+    }
+    return;
   }
+  showFiledReceipt(filed.job, filed.alreadyFiled);
 }));
 
 action("history-status", loadJobs);
