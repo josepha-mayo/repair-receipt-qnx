@@ -146,6 +146,12 @@ function render() {
   byId("recording-reselection").hidden = !recordingCleared;
   byId("choose-recording").hidden = stage !== "expired";
   byId("actions").hidden = stage !== "review" || reconnecting;
+  const timer = byId("consent-timer");
+  const seconds = Math.ceil(state.consentRemainingMs / 1000);
+  timer.hidden = stage !== "review" || reconnecting || !Number.isInteger(seconds) || seconds <= 0;
+  timer.classList.toggle("soon", !timer.hidden && seconds <= 30);
+  const countdown = timer.hidden ? "" : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")} to decide`;
+  if (timer.textContent !== countdown) timer.textContent = countdown;
   byId("reused-recording").hidden = stage !== "review" || !claim || !state.reusedRecording;
   const previousRule = stage === "review" && claim && state.previousRecordingRule;
   const previousRuleNote = byId("previous-recording-rule");

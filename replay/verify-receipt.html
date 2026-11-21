@@ -61,6 +61,9 @@ h2 { font-size: 1.22rem; line-height: 1.22; }
 .link-button { background: transparent; color: var(--green); border: 0; padding: 0; text-decoration: underline; }
 #clear-expected { display: block; margin-bottom: 10px; }
 .receipt-title { border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+#driver-workspace .receipt-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+#consent-timer { flex-shrink: 0; color: var(--quiet); font-size: .82rem; font-variant-numeric: tabular-nums; }
+#consent-timer.soon { color: #922b1e; }
 label { display: block; margin-top: 16px; margin-bottom: 5px; font-size: .91rem; font-weight: 650; }
 button, select, input::file-selector-button { font: inherit; border-radius: 6px; padding: 8px 13px; }
 button { background: var(--green); color: #fff; border: 1px solid var(--green); font-size: .91rem; font-weight: 700; cursor: pointer; }

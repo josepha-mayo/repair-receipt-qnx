@@ -35,6 +35,8 @@ Copy the full **Request SHA-256** line from **Request details**. Paste it under 
 
 In the driver page, load that request, run **Trip A** and review the preview. Approve and choose **Download verification packet**. In the shop register, open the packet under **Find a request from a receipt or packet**. The register opens the matching job and verifies it against the request and key on file. Choose **File verified receipt** and load the packet again to observe repeat handling. In the standalone verifier, try a freshly generated idle-only request against the same valid packet to see the request mismatch.
 
+The consent timer starts when QNX presents the preview. Refresh the driver tab during a sample review to confirm the same review resumes with its original deadline.
+
 Run **Missing samples** under the same request, approve it and open the returned packet in the shop. **Two verified receipts** compares the filed threshold observation with the returned insufficient-evidence finding. Open the first packet again to verify the work order still holds the original answer. Load both packets in the offline verifier with the enrolled key. Both signatures verify, and the verifier flags the shared request ID. Open **Find the filed receipt** and paste the **Receipt SHA-256** line from the shop's printed work order. The verifier marks the original attachment.
 
 Clear the fingerprint on the driver page before trying the other practice requests.

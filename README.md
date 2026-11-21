@@ -67,7 +67,7 @@ The shop can use [the one-file offline verifier](replay/verify-receipt.html) wit
 
 Under **Check a separate issuer fingerprint**, enter the full SHA-256 fingerprint you confirmed with the issuer. The offline verifier compares it with the loaded key for single receipts and packet batches. The printout identifies whether the request came from a separate shop file or from the packet itself.
 
-After verification, the shop can print the requested finding, test rule, input type, full request ID and verified issuer fingerprint for a work order. An unattended driver review expires after five minutes. The app clears the preview and coverage guidance at expiry. Sharing then requires a fresh review and approval.
+After verification, the shop can print the requested finding, test rule, input type, full request ID and verified issuer fingerprint for a work order. The driver has five minutes from the first consent preview to decide. The countdown comes from the local app and continues through a refresh of the same tab. The app clears the preview and coverage guidance at expiry. Sharing then requires a fresh review and approval.
 
 If the browser loses contact with the local app, it hides the finding and pauses approval and download while it checks the current review. A decision is sent once per explicit activation. If QNX is still waiting and the interruption leaves no focused control, the page returns focus to the receipt so the driver can review it and choose again. If QEMU exits during the preview, the app ends that review so the driver can start another. If the app itself restarts, open the new Driver link printed in the console.
 

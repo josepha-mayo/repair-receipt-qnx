@@ -58,6 +58,17 @@ class ConsentDeadline(unittest.TestCase):
         self.assertIs(notice, True)
         self.assertNotIn("reusedRecording", owner)
 
+    def test_countdown_is_relative_to_the_preview_and_private_to_its_driver(self):
+        def check_remaining(review):
+            self.assertEqual(review.snapshot("driver")["consentRemainingMs"], 250)
+            self.assertEqual(review.snapshot("other-driver"), {"stage": "occupied"})
+            return review.decide("driver", "test-job", "share")
+
+        shared, accepted, state, _ = self.review_at(live.CONSENT_SECONDS - 0.25, check_remaining)
+        self.assertTrue(shared)
+        self.assertTrue(accepted)
+        self.assertNotIn("consentRemainingMs", state)
+
     def test_reuse_notice_is_scoped_to_the_same_driver_and_a_new_request(self):
         for options in ({"prior_owner": "another-driver"}, {"request_id": "original"}):
             with self.subTest(options=options):

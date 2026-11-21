@@ -7,6 +7,7 @@ from contextlib import ExitStack
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+from math import ceil
 from pathlib import Path
 import os
 import re
@@ -114,10 +115,16 @@ class Review:
 
     def snapshot(self, session):
         with self.lock:
-            if self.state["stage"] == "review" and time.monotonic() >= self.deadline:
-                self._finish_decision("expired")
+            remaining = None
+            if self.state["stage"] == "review":
+                remaining = self.deadline - time.monotonic()
+                if remaining <= 0:
+                    self._finish_decision("expired")
             if self.owns_session(session):
-                return dict(self.state)
+                state = dict(self.state)
+                if remaining is not None and remaining > 0:
+                    state["consentRemainingMs"] = ceil(remaining * 1000)
+                return state
             occupied = self.state["stage"] in ACTIVE_STAGES
             saved = self.recent_receipts.get(session)
             if saved is not None:
