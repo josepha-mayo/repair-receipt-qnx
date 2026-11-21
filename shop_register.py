@@ -21,10 +21,11 @@ from shop_request import (
 )
 
 PAGE_SIZE = 40
+REGISTER_SCHEMA_VERSION = 1
 INVALID_SAVED_RECEIPT = "The saved receipt failed verification. Check the original packet or a trusted backup."
 RECIPE_COLUMN = (
     f"recipe TEXT NOT NULL DEFAULT '{RECIPE}' "
-    f"CHECK(recipe IN ('{RECIPE}', '{CURRENT_RECIPE}'))"
+    f"CHECK(recipe IN ('{RECIPE}', '{CURRENT_RECIPE}', '{STARTUP_RECIPE}'))"
 )
 WORK_ORDER_COLUMN = "work_order TEXT CHECK(length(work_order) BETWEEN 1 AND 64)"
 RECHECK_COLUMN = "recheck INTEGER NOT NULL DEFAULT 0 CHECK(recheck IN (0, 1) AND (recheck = 0 OR repeats IS NOT NULL))"
@@ -32,10 +33,9 @@ THRESHOLD_COLUMN = (
     "threshold_c INTEGER CHECK(threshold_c IS NULL OR "
     f"(typeof(threshold_c) = 'integer' AND threshold_c BETWEEN {MIN_TEMPERATURE_C} AND {MAX_TEMPERATURE_C}))"
 )
-STARTUP_COLUMN = (
-    "startup_window INTEGER NOT NULL DEFAULT 0 "
-    f"CHECK(startup_window = 0 OR (startup_window = 1 AND recipe = '{CURRENT_RECIPE}'))"
-)
+# Keep the retired column so older builds can open the register with the actual recipe.
+# A zero-only constraint prevents them from writing the former split representation.
+STARTUP_COLUMN = "startup_window INTEGER NOT NULL DEFAULT 0 CHECK(startup_window = 0)"
 JOB_SELECT = """SELECT request.*, child.id AS follow_up
     FROM intake_requests AS request
     LEFT JOIN intake_requests AS child ON child.repeats = request.id"""
@@ -134,41 +134,63 @@ def normalize_work_order(reference):
     return reference or None
 
 
+def create_requests_table(db, table):
+    db.execute(f"""CREATE TABLE {table} (
+        number INTEGER PRIMARY KEY,
+        id TEXT NOT NULL UNIQUE,
+        scope TEXT NOT NULL CHECK(scope IN ('idle', 'moving', 'both')),
+        issuer BLOB NOT NULL CHECK(length(issuer) = 32),
+        created_at TEXT NOT NULL,
+        receipt TEXT,
+        accepted_at TEXT,
+        {RECIPE_COLUMN},
+        repeats TEXT REFERENCES {table}(id),
+        {WORK_ORDER_COLUMN},
+        {THRESHOLD_COLUMN},
+        {RECHECK_COLUMN},
+        {STARTUP_COLUMN},
+        CHECK ((receipt IS NULL) = (accepted_at IS NULL))
+    )""")
+
+
+def migrate_requests(db):
+    columns = {column["name"] for column in db.execute("PRAGMA table_info(intake_requests)")}
+    recipe = "recipe" if "recipe" in columns else f"'{RECIPE}'"
+    if "startup_window" in columns:
+        recipe = f"CASE WHEN startup_window = 1 THEN '{STARTUP_RECIPE}' ELSE {recipe} END"
+    repeats = "repeats" if "repeats" in columns else "NULL"
+    work_order = "work_order" if "work_order" in columns else "NULL"
+    threshold = "threshold_c" if "threshold_c" in columns else "NULL"
+    recheck = "recheck" if "recheck" in columns else "0"
+    create_requests_table(db, "intake_requests_migrated")
+    db.execute(f"""INSERT INTO intake_requests_migrated (
+        number, id, scope, issuer, created_at, receipt, accepted_at, recipe, repeats, work_order, threshold_c, recheck)
+        SELECT number, id, scope, issuer, created_at, receipt, accepted_at,
+               {recipe}, {repeats}, {work_order}, {threshold}, {recheck}
+        FROM intake_requests""")
+    if db.execute("PRAGMA foreign_key_check(intake_requests_migrated)").fetchone() is not None:
+        raise sqlite3.IntegrityError("Saved request links could not be migrated.")
+    db.execute("DROP TABLE intake_requests")
+    db.execute("ALTER TABLE intake_requests_migrated RENAME TO intake_requests")
+
+
 class ShopRegister:
     def __init__(self, path: Path):
         self.path = path
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with closing(self.connect()) as db, db:
+            db.execute("PRAGMA foreign_keys = OFF")
             db.execute("BEGIN IMMEDIATE")
-            db.execute(f"""CREATE TABLE IF NOT EXISTS intake_requests (
-                number INTEGER PRIMARY KEY,
-                id TEXT NOT NULL UNIQUE,
-                scope TEXT NOT NULL CHECK(scope IN ('idle', 'moving', 'both')),
-                issuer BLOB NOT NULL CHECK(length(issuer) = 32),
-                created_at TEXT NOT NULL,
-                receipt TEXT,
-                accepted_at TEXT,
-                {RECIPE_COLUMN},
-                repeats TEXT REFERENCES intake_requests(id),
-                {WORK_ORDER_COLUMN},
-                {THRESHOLD_COLUMN},
-                {RECHECK_COLUMN},
-                {STARTUP_COLUMN},
-                CHECK ((receipt IS NULL) = (accepted_at IS NULL))
-            )""")
-            columns = {column["name"] for column in db.execute("PRAGMA table_info(intake_requests)")}
-            if "recipe" not in columns:
-                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {RECIPE_COLUMN}")
-            if "repeats" not in columns:
-                db.execute("ALTER TABLE intake_requests ADD COLUMN repeats TEXT REFERENCES intake_requests(id)")
-            if "work_order" not in columns:
-                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {WORK_ORDER_COLUMN}")
-            if "threshold_c" not in columns:
-                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {THRESHOLD_COLUMN}")
-            if "recheck" not in columns:
-                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {RECHECK_COLUMN}")
-            if "startup_window" not in columns:
-                db.execute(f"ALTER TABLE intake_requests ADD COLUMN {STARTUP_COLUMN}")
+            version = db.execute("PRAGMA user_version").fetchone()[0]
+            if version == 0:
+                table = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='intake_requests'").fetchone()
+                if table:
+                    migrate_requests(db)
+                else:
+                    create_requests_table(db, "intake_requests")
+                db.execute(f"PRAGMA user_version = {REGISTER_SCHEMA_VERSION}")
+            elif version != REGISTER_SCHEMA_VERSION:
+                raise ValueError("This backup uses an unsupported register schema.")
             db.execute("CREATE UNIQUE INDEX IF NOT EXISTS intake_one_follow_up ON intake_requests(repeats)")
             db.execute("""CREATE INDEX IF NOT EXISTS intake_work_order_lookup
                 ON intake_requests(work_order, number) WHERE work_order IS NOT NULL""")
@@ -197,8 +219,7 @@ class ShopRegister:
 
     @staticmethod
     def request(row):
-        recipe = STARTUP_RECIPE if row["startup_window"] else row["recipe"]
-        return request_document(row["scope"], row["id"], recipe, row["threshold_c"])
+        return request_document(row["scope"], row["id"], row["recipe"], row["threshold_c"])
 
     @classmethod
     def job(cls, row):
@@ -255,9 +276,9 @@ class ShopRegister:
             raise ValueError("The request ID is invalid.")
         with closing(self.connect()) as db, db:
             db.execute("""INSERT INTO intake_requests(
-                id, scope, issuer, created_at, recipe, work_order, threshold_c, startup_window)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING""",
-                       (request_id, scope, key, utc_time(), CURRENT_RECIPE, work_order, threshold, recipe == STARTUP_RECIPE))
+                id, scope, issuer, created_at, recipe, work_order, threshold_c)
+                VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING""",
+                       (request_id, scope, key, utc_time(), recipe, work_order, threshold))
             row = self.find(db, request_id)
             saved = self.request(row), row["issuer"], row["work_order"]
             expected = request_document(scope, request_id, recipe, threshold), key, work_order
@@ -289,9 +310,9 @@ class ShopRegister:
             scope = self._checked_work_order(db, request_id)[0][1]["scope"] if recheck else missing
             follow_up = secrets.token_hex(16)
             db.execute("""INSERT INTO intake_requests(
-                id, scope, issuer, created_at, recipe, repeats, work_order, threshold_c, recheck, startup_window)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (follow_up, scope, row["issuer"], utc_time(), row["recipe"],
-                    request_id, row["work_order"], row["threshold_c"], recheck, row["startup_window"]))
+                id, scope, issuer, created_at, recipe, repeats, work_order, threshold_c, recheck)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", (follow_up, scope, row["issuer"], utc_time(), row["recipe"],
+                    request_id, row["work_order"], row["threshold_c"], recheck))
             return self.job(self.find(db, follow_up))
 
     def list(self, before=None, work_order=None):
@@ -344,7 +365,7 @@ class ShopRegister:
         if not rows:
             raise KeyError("This request was not found in the shop register.")
         root = rows[0]
-        same_fields = ("issuer", "recipe", "threshold_c", "work_order", "startup_window")
+        same_fields = ("issuer", "recipe", "threshold_c", "work_order")
         checked = []
         for row in rows:
             request = self.request(row)

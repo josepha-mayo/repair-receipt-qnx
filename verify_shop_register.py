@@ -15,11 +15,12 @@ from zipfile import ZipFile
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from shop_register import (
-    INVALID_SAVED_RECEIPT, PAGE_SIZE, ReceiptConflict, RequestConflict, ShopRegister, check_receipt, read_issuer, read_receipt,
+    INVALID_SAVED_RECEIPT, PAGE_SIZE, REGISTER_SCHEMA_VERSION, ReceiptConflict, RequestConflict, ShopRegister,
+    check_receipt, read_issuer, read_receipt,
 )
 from shop_request import (
     CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, STARTUP_RECIPE, canonical, guest_bytes,
-    UPLOADED_SOURCE, parse_request, verification_packet,
+    UPLOADED_SOURCE, parse_request, request_document, verification_packet,
 )
 from verify_requests import BUNDLED_ROAD_PAIR, load_road_pair
 
@@ -160,6 +161,95 @@ def verify_create_retry():
         recheck = restored.repeat(follow_up["id"], recheck=True)["request"]
         assert recheck == {**window, "id": recheck["id"]}
     print("Verified concurrent creation retries, mismatched details, and original receipt preservation.")
+
+
+def verify_register_migration():
+    owner = Ed25519PrivateKey.generate()
+    pin_bytes = owner.public_key().public_bytes_raw()
+    first = request_document("both", "41" * 16, STARTUP_RECIPE, 95)
+    child = request_document("moving", "42" * 16, STARTUP_RECIPE, 95)
+    strict = request_document("idle", "43" * 16, CURRENT_RECIPE)
+    first_receipt = sign(first, {"idle": "observed", "moving": "insufficient_evidence"}, owner)
+    strict_receipt = sign(strict, "observed", owner)
+    timestamp = "2026-11-20T15:00:00+00:00"
+    with TemporaryDirectory(prefix="rr-schema-migration-") as scratch:
+        path = Path(scratch) / "register.sqlite3"
+        with closing(sqlite3.connect(path)) as db, db:
+            db.execute("""CREATE TABLE intake_requests (
+                number INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE, scope TEXT NOT NULL, issuer BLOB NOT NULL,
+                created_at TEXT NOT NULL, receipt TEXT, accepted_at TEXT, recipe TEXT NOT NULL,
+                repeats TEXT REFERENCES intake_requests(id), work_order TEXT, threshold_c INTEGER,
+                recheck INTEGER NOT NULL DEFAULT 0, startup_window INTEGER NOT NULL DEFAULT 0
+            )""")
+            db.executemany("INSERT INTO intake_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+                (11, first["id"], "both", pin_bytes, timestamp, first_receipt, timestamp, CURRENT_RECIPE,
+                 None, "Bay 2", 95, 0, 1),
+                (23, child["id"], "moving", pin_bytes, timestamp, None, None, CURRENT_RECIPE,
+                 first["id"], "Bay 2", 95, 0, 1),
+                (31, strict["id"], "idle", pin_bytes, timestamp, strict_receipt, timestamp, CURRENT_RECIPE,
+                 None, "Bay 4", None, 0, 0),
+            ])
+            before = db.execute("SELECT * FROM intake_requests ORDER BY number").fetchall()
+
+        class InterruptedConnection(sqlite3.Connection):
+            def execute(self, sql, parameters=()):
+                if sql.startswith("ALTER TABLE intake_requests_migrated"):
+                    raise sqlite3.OperationalError("Simulated interruption before rename.")
+                return super().execute(sql, parameters)
+
+        class InterruptedRegister(ShopRegister):
+            def connect(self):
+                db = sqlite3.connect(self.path, factory=InterruptedConnection)
+                db.row_factory = sqlite3.Row
+                return db
+
+        try:
+            InterruptedRegister(path)
+        except sqlite3.OperationalError as error:
+            assert "Simulated interruption" in str(error)
+        else:
+            raise AssertionError("The migration unexpectedly committed.")
+        with closing(sqlite3.connect(path)) as db:
+            assert db.execute("PRAGMA user_version").fetchone() == (0,)
+            assert db.execute("SELECT * FROM intake_requests ORDER BY number").fetchall() == before
+            assert db.execute("SELECT name FROM sqlite_master WHERE name='intake_requests_migrated'").fetchone() is None
+
+        start = Barrier(4)
+
+        def open_register(_):
+            start.wait()
+            return ShopRegister(path).list()
+
+        with ThreadPoolExecutor(max_workers=start.parties) as pool:
+            views = list(pool.map(open_register, range(start.parties)))
+        assert all(view == views[0] for view in views)
+        assert [job["request"] for job in views[0]["jobs"]] == [strict, child, first]
+        register = ShopRegister(path)
+        assert register.fetch(first["id"])["receipt"] == first_receipt
+        assert register.fetch(strict["id"])["receipt"] == strict_receipt
+        assert register.work_order_findings(child["id"])["pending"]["request"] == child["id"]
+        with closing(register.connect()) as db:
+            assert db.execute("PRAGMA user_version").fetchone()[0] == REGISTER_SCHEMA_VERSION
+            assert db.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+            assert db.execute("PRAGMA foreign_key_check").fetchone() is None
+            stored = db.execute("SELECT number, recipe, startup_window FROM intake_requests ORDER BY number")
+            assert [tuple(row) for row in stored] == [
+                (11, STARTUP_RECIPE, 0), (23, STARTUP_RECIPE, 0), (31, CURRENT_RECIPE, 0),
+            ]
+            try:
+                db.execute("UPDATE intake_requests SET startup_window = 1 WHERE id = ?", (child["id"],))
+            except sqlite3.IntegrityError:
+                pass
+            else:
+                raise AssertionError("A retired flag could change the stored request rule.")
+        backup = path.with_name("backup.sqlite3")
+        register.backup(backup)
+        restored = ShopRegister(backup)
+        restored.attach(child["id"], sign(child, {"moving": "not_observed"}, owner))
+        recheck = restored.repeat(child["id"], recheck=True)["request"]
+        assert recheck == {**first, "id": recheck["id"]}
+        assert ShopRegister(path).fetch(child["id"])["receipt"] is None
+    print("Verified migration of stored recipes, pending links, signed bytes, rollback, concurrent opens and backup restore.")
 
 
 with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
@@ -518,3 +608,4 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
 verify_archived_road_pair()
 verify_archived_startup_pair()
 verify_create_retry()
+verify_register_migration()

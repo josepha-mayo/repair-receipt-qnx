@@ -107,6 +107,8 @@ The shop register survives a restart. It stores job IDs, public keys, scoped rec
 
 Open **Register backup** in shop intake and choose **Download register backup** to save a consistent SQLite snapshot while the app is running. The snapshot contains private work order references, the shop's original requests, enrolled public keys and filed receipts. Driver signing keys are managed separately.
 
+Opening an earlier Repair Receipt register upgrades its stored rule bindings in one transaction. A restored startup request carries its original rule and ID, and filed receipts retain their original signed bytes.
+
 To continue from a backup, put a copy in the shop's chosen records folder, then pass its path at startup. For example, run `python live.py --shop-only --shop-register "C:\Shop\repair-receipt-shop-backup.sqlite3"` and open the printed Shop link. The app reads and writes the specified copy. The original register and the saved backup can stay in place.
 
 When the shop reads a saved receipt, it checks the signature and request binding against the enrolled issuer key. A failed verification flags that row and hides its finding and receipt export. Other valid rows remain available individually. A work-order report or evidence archive requires every receipt in that linked record to verify. [Backup verification exercise](CODELAB.md#check-a-saved-register)
