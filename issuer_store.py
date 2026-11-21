@@ -23,13 +23,13 @@ class DataBlob(ctypes.Structure):
     _fields_ = [("size", wintypes.DWORD), ("data", ctypes.POINTER(ctypes.c_ubyte))]
 
 
-def dpapi(value, protect):
+def dpapi(value, protect, *, description="Repair Receipt issuer"):
     crypt32 = ctypes.WinDLL("crypt32", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     call = crypt32.CryptProtectData if protect else crypt32.CryptUnprotectData
-    description = wintypes.LPCWSTR if protect else ctypes.POINTER(wintypes.LPWSTR)
+    description_type = wintypes.LPCWSTR if protect else ctypes.POINTER(wintypes.LPWSTR)
     call.argtypes = (
-        ctypes.POINTER(DataBlob), description, ctypes.POINTER(DataBlob),
+        ctypes.POINTER(DataBlob), description_type, ctypes.POINTER(DataBlob),
         ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(DataBlob),
     )
     call.restype = wintypes.BOOL
@@ -39,7 +39,7 @@ def dpapi(value, protect):
     incoming = DataBlob(len(value), source)
     outgoing = DataBlob()
     try:
-        ok = call(ctypes.byref(incoming), "Repair Receipt issuer" if protect else None,
+        ok = call(ctypes.byref(incoming), description if protect else None,
                   None, None, None, UI_FORBIDDEN, ctypes.byref(outgoing))
         if not ok:
             raise ctypes.WinError(ctypes.get_last_error())

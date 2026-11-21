@@ -1,0 +1,32 @@
+{
+  "runtime": "QNX 8.0 x86-64 under QEMU on Windows 11",
+  "cache_bytes": 80307223,
+  "cache_members": [
+    "ifs.bin",
+    "disk-qemu.vmdk",
+    "disk-qemu",
+    "manifest.dpapi"
+  ],
+  "cold_ms": {
+    "template": 21596,
+    "preview": 23781
+  },
+  "warm_ms": {
+    "template": 988,
+    "preview": 3183
+  },
+  "warm_different_input_ms": {
+    "template": 1256,
+    "preview": 3658
+  },
+  "recover_ms": {
+    "template": 18599,
+    "preview": 20771
+  },
+  "cold_warm_and_rebuilt_receipts_byte_identical": true,
+  "different_warm_recording_changed_the_signed_finding": true,
+  "native_issuer_signatures_verified": true,
+  "cache_unchanged_by_reviews": true,
+  "fresh_manifest_rejected_old_identity": true,
+  "changed_ifs_with_a_valid_zip_crc_refused": true
+}

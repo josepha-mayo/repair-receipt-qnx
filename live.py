@@ -55,8 +55,11 @@ DRIVER_ASSETS = {"/driver.js": ("driver.js", "text/javascript"), "/obd-csv.js": 
 REGISTER_ASSETS = {"/register.js": ("register.js", "text/javascript"), "/register.css": ("register.css", "text/css")}
 
 
-def prepare_live_template(path):
+def prepare_live_template(path, cache=None):
     try:
+        if cache is not None:
+            from template_cache import build_or_reuse
+            return build_or_reuse(path, cache, build_template)
         return build_template(path)
     except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
         print(f"QNX image preparation failed: {error}. Build log: {path / 'image-build.log'}", flush=True)
@@ -558,9 +561,14 @@ def serve(args, qemu, issuer, register):
             server.assets[server.driver] = ("driver.html", "text/html")
             workspace = resources.enter_context(TemporaryDirectory(prefix="repair-receipt-template-"))
             builds = resources.enter_context(ThreadPoolExecutor(max_workers=1))
+            cache = None
+            if issuer.durable:
+                from template_cache import template_cache_path
+                issuer_path = (args.issuer_store or default_store()).resolve()
+                cache = template_cache_path(issuer_path, register.path if register is not None else None)
 
             def prepare():
-                return builds.submit(prepare_live_template, Path(workspace) / secrets.token_hex(8))
+                return builds.submit(prepare_live_template, Path(workspace) / secrets.token_hex(8), cache)
 
             server.review = Review(qemu, issuer, prepare)
             resources.callback(server.review.close)

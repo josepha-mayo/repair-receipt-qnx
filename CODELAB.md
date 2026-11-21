@@ -264,6 +264,8 @@ The prepared-guest check also scans the job files for the exact preview, signed 
 
 On Windows, run `python verify_interrupted_review.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe` from the SDK prompt. It starts a temporary driver app, uploads a synthetic recording and waits for the QNX approval screen. It force-stops the test app alone and checks the QEMU process handle for exit. It scans the remaining workspace to verify that the staging files hold ciphertext and the unapproved preview stays private. [Recorded parent-exit result](replay/qnx-parent-exit-proof.json)
 
+To see reuse across process restarts, start the driver twice with the same durable issuer and SDK build environment. The second launch reports that it restored the verified template. Review the same example recording in each session to compare the signed outputs. On Windows, `python verify_template_cache.py` exercises the protected manifest, invalidation and fresh-build recovery using synthetic image files. [Measured QNX restart test](replay/qnx-template-cache-proof.json)
+
 Run `python verify_parser_perf.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe` to compare the time spent evaluating a 4 MiB recording inside QNX with the time from the host request to preview. The harness collects the numeric evaluation time directly from the review callback. Saved diagnostic logs retain a redacted timing marker. The harness reports a receipt hash and checks a normal file with CRLF line endings and an unterminated last row. It also checks that QNX refuses embedded NUL bytes and overlong rows before approval. [Recorded comparison](replay/qnx-parser-performance-proof.json)
 
 Use the bundled normalized drives to reproduce the latency distribution.
