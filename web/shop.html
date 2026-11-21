@@ -90,6 +90,12 @@
         <p id="result" class="status" role="status">Waiting for a receipt and key.</p>
         <p id="issuer-match" class="help" hidden>Issuer key matches the fingerprint you entered.</p>
         <p id="batch-warning" class="status bad" role="status" hidden></p>
+        <details class="issuer-enrollment" id="filed-receipt-search" hidden>
+          <summary>Find the filed receipt</summary>
+          <label for="filed-receipt-digest">Receipt SHA-256 from the work order</label>
+          <input id="filed-receipt-digest" type="text" maxlength="160" autocomplete="off" spellcheck="false">
+          <p id="filed-receipt-status" class="help" role="status"></p>
+        </details>
         <ul id="batch-results" aria-label="Verification results by file" hidden></ul>
         <dl id="findings" hidden>
           <div id="idle-row"><dt>At idle</dt><dd id="idle"></dd></div>
@@ -119,7 +125,8 @@
     <template id="batch-result">
       <li>
         <p class="batch-file"></p>
-        <p class="batch-conflict help" hidden></p>
+        <p class="batch-attachment help" hidden></p>
+        <p class="batch-match help" hidden>Matches work-order digest</p>
         <p class="batch-summary help"></p>
         <p class="batch-rule help" hidden></p>
         <p class="batch-source help" hidden></p>

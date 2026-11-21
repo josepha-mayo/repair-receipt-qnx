@@ -81,6 +81,10 @@ dd { text-align: right; margin: 0; font-weight: 750; }
 #batch-results li { border-bottom: 1px solid var(--line); padding: 10px 0; overflow-wrap: anywhere; }
 #batch-results .batch-file { font-weight: 650; }
 #batch-results .help { margin-top: 4px; }
+#batch-results .batch-match { color: var(--green); font-weight: 700; }
+#filed-receipt-search { margin-bottom: 14px; }
+#filed-receipt-status { overflow-wrap: anywhere; }
+#filed-receipt-status:empty { margin: 0; }
 .print-only { display: none; }
 .intake-workspace { align-items: start; }
 .search-fields { display: flex; gap: 8px; }

@@ -31,7 +31,7 @@ Open the printed shop and driver URLs. In the driver, save the public key under 
 
 In the driver page, load that request, run **Trip A** and review the preview. Approve and choose **Download verification packet**. In the shop register, open the packet under **Find a request from a receipt or packet**. The register opens the matching job and verifies it against the request and key on file. Choose **File verified receipt** and load the packet again to observe repeat handling. In the standalone verifier, try a freshly generated idle-only request against the same valid packet to see the request mismatch.
 
-Run **Missing samples** under the same request, approve it and open the returned packet in the shop. **Two verified receipts** compares the filed threshold observation with the returned insufficient-evidence finding. Open the first packet again to verify the work order still holds the original answer. Load both packets in the offline verifier with the enrolled key. Both signatures verify, and the verifier flags the shared request ID. Use the filed work order's receipt digest to identify the filed answer.
+Run **Missing samples** under the same request, approve it and open the returned packet in the shop. **Two verified receipts** compares the filed threshold observation with the returned insufficient-evidence finding. Open the first packet again to verify the work order still holds the original answer. Load both packets in the offline verifier with the enrolled key. Both signatures verify, and the verifier flags the shared request ID. Open **Find the filed receipt** and paste the **Receipt SHA-256** line from the shop's printed work order. The verifier marks the original attachment.
 
 Choose **View work-order findings** to open a print view directly from the filed request. The idle-only printout gives the finding, test rule, input source, filing time and full receipt request ID.
 
@@ -43,7 +43,7 @@ Create a new idle-only request and run **Missing samples** in the driver view. T
 
 Download a **verification packet** from a filed request. Open the standalone verifier offline and load the packet with the issuer key you enrolled separately. The verifier checks the original request and signature, and the work-order printout includes the issuer fingerprint. Repeat with a different issuer key to see verification fail.
 
-In the work-order view, choose **Download verification files**. Extract the ZIP, select both packet files together and choose **Verify packets** in the offline verifier. The earlier packet still shows insufficient evidence and the follow-up carries the later finding. Match their full request IDs and receipt digests to the printed work order.
+In the work-order view, choose **Download verification files**. Extract the ZIP, select both packet files together and choose **Verify packets** in the offline verifier. The earlier packet still shows insufficient evidence and the follow-up carries the later finding. Paste each digest from the printed work order into **Find the filed receipt** and compare the matching request IDs.
 
 Download a **Register backup** from the shop intake page. Start a separate session with `start-live.cmd --ephemeral-issuer --shop-register "C:\path\practice-backup-copy.sqlite3"` pointing at a copy of that file. Reopen the work order and follow its source receipt links. The register verifies prior receipts using the public keys saved with those requests, even with a different local driver key.
 

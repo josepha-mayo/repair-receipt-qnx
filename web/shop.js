@@ -7,6 +7,10 @@ const expectedIssuer = byId("expected-issuer");
 const requestFile = byId("expected-request");
 const verifyButton = byId("verify");
 const result = byId("result");
+const receiptDigestInput = byId("filed-receipt-digest");
+const batchResults = byId("batch-results");
+const digestSearch = byId("filed-receipt-search");
+const sha256Hex = /^[a-f0-9]{64}$/;
 const labels = new Map([
   ["observed", "Observed"],
   ["not_observed", "Not observed"],
@@ -26,7 +30,9 @@ let keySelection = 0;
 function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   result.textContent = text;
   result.className = "status " + outcome;
-  byId("batch-results").hidden = true;
+  batchResults.hidden = true;
+  digestSearch.hidden = true;
+  byId("filed-receipt-status").textContent = "";
   byId("batch-warning").hidden = true;
   byId("findings").hidden = !verifiedReceipt;
   byId("evidence-details").hidden = !verifiedReceipt;
@@ -42,7 +48,7 @@ function update(text, outcome = "", verifiedReceipt = outcome === "good") {
 
 async function publicVerifier(issuer, expectedFingerprint = "") {
   const expected = expectedFingerprint.replace(/\s+/g, "").toLowerCase();
-  if (expected && !/^[a-f0-9]{64}$/.test(expected)) {
+  if (expected && !sha256Hex.test(expected)) {
     throw new Error("Enter a full 64-character SHA-256 fingerprint.");
   }
   const {key: rawKey} = await ShopRequest.readIssuer(issuer);
@@ -209,6 +215,32 @@ byId("create-request").addEventListener("click", () => {
 
 byId("print-finding").addEventListener("click", () => window.print());
 
+function findFiledReceipt() {
+  const input = receiptDigestInput.value.trim();
+  const digest = input.replace(/^receipt\s+sha-256\s+/i, "").replace(/\s+/g, "").toLowerCase();
+  const valid = sha256Hex.test(digest);
+  let matches = 0;
+  let filename = "";
+  for (const row of batchResults.querySelectorAll("[data-receipt-digest]")) {
+    const match = valid && row.dataset.receiptDigest === digest;
+    row.querySelector(".batch-match").hidden = !match;
+    if (match) {
+      matches++;
+      filename = row.dataset.attachmentName;
+    }
+  }
+  const status = byId("filed-receipt-status");
+  let message = "";
+  if (input) {
+    if (!valid) message = "Enter the full 64-character receipt digest.";
+    else if (!matches) message = "No verified attachment matches that digest.";
+    else message = matches === 1 ? `Matching attachment · ${filename}` : `${matches} verified attachments match.`;
+  }
+  if (status.textContent !== message) status.textContent = message;
+}
+
+receiptDigestInput.addEventListener("input", findFiledReceipt);
+
 async function verifyBatch(files, verifier, attempt) {
   const rows = document.createDocumentFragment();
   const requests = new Map();
@@ -222,6 +254,12 @@ async function verifyBatch(files, verifier, attempt) {
       const evidence = await ShopRequest.readEvidence(file);
       if (!evidence.packetRequest) throw new Error("This file needs a verification packet with the original request.");
       const {claim, receiptSha256} = await verifyEvidence(evidence, verifier, null);
+      const item = row.querySelector("li");
+      item.dataset.receiptDigest = receiptSha256;
+      item.dataset.attachmentName = file.name;
+      const attachment = row.querySelector(".batch-attachment");
+      attachment.textContent = `Attachment · ${file.name}`;
+      attachment.hidden = false;
       heading.textContent = `Request ${claim.request}`;
       summary.textContent = [claim.idle && `At idle · ${labels.get(claim.idle)}`,
         claim.moving && `While moving · ${labels.get(claim.moving)}`].filter(Boolean).join(" · ");
@@ -237,7 +275,7 @@ async function verifyBatch(files, verifier, attempt) {
       if (!requests.has(claim.request)) requests.set(claim.request, {digests: new Set(), notices: []});
       const group = requests.get(claim.request);
       group.digests.add(receiptSha256);
-      group.notices.push({field: row.querySelector(".batch-conflict"), filename: file.name});
+      group.notices.push({field: attachment, filename: file.name});
       verified++;
     } catch (error) {
       heading.textContent = file.name;
@@ -253,7 +291,6 @@ async function verifyBatch(files, verifier, attempt) {
     conflicts++;
     for (const {field, filename} of notices) {
       field.textContent = `Compare attachment · ${filename}`;
-      field.hidden = false;
     }
   }
   const outcome = verified !== files.length ? "bad" : conflicts ? "" : "good";
@@ -265,9 +302,10 @@ async function verifyBatch(files, verifier, attempt) {
     warning.textContent = `${subject} different signed receipts. Match the receipt SHA-256 to the filed work order.`;
     warning.hidden = false;
   }
-  const list = byId("batch-results");
-  list.replaceChildren(rows);
-  list.hidden = false;
+  batchResults.replaceChildren(rows);
+  batchResults.hidden = false;
+  digestSearch.hidden = !verified;
+  findFiledReceipt();
 }
 
 verifyButton.addEventListener("click", async () => {

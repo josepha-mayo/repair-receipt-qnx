@@ -91,7 +91,7 @@ After filing, choose **View work-order findings** from the request. Each conditi
 
 Choose **Download verification files** in the work-order view to save a ZIP with one packet per filed receipt, including the original and any filed follow-ups. Extract the ZIP, select its packet files together in the offline verifier and open a separately trusted copy of the enrolled public key. The verifier checks each packet independently and shows the full request ID and receipt digest alongside each finding. Match the digest to the printed work order to identify the exact filed answer. The ZIP leaves out the local work-order reference.
 
-When different signed receipts share a request ID, the offline verifier flags those attachments and shows both digests. Repeated copies of the same signed receipt appear as ordinary verified files.
+When different signed receipts share a request ID, the offline verifier flags both attachments. After batch verification, open **Find the filed receipt** and paste the full receipt SHA-256 from the shop's copy of the work order. You can paste the printed line with its label. The verifier marks every verified attachment with that exact digest and keeps the rest visible for review.
 
 After filing, **Download verification packet** saves the original signed receipt, the original request and the enrolled issuer fingerprint as one JSON attachment for the work order. Open it in the standalone verifier with a separately trusted issuer public key. The individual files also remain downloadable.
 
