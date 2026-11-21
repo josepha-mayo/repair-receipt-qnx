@@ -234,9 +234,23 @@ def run(workspace, qemu):
             stop_guest(guest)
 
 
+def decode_coverage_detail(fields, coverage):
+    first_gap, idle_span, moving_span = (int(field) for field in fields)
+    if not -1 <= first_gap <= 86400000 or (first_gap >= 0 and not any(value & 1 for value in coverage.values())):
+        raise RuntimeError("Invalid private gap location from QNX.")
+    detail = {"firstGapMs": first_gap} if first_gap >= 0 else {}
+    for context, span in (("idle", idle_span), ("moving", moving_span)):
+        if span == -2:
+            continue
+        if not -1 <= span < 2000 or not (coverage.get(context, 0) & 2):
+            raise RuntimeError("Invalid private coverage span from QNX.")
+        detail[context + "SpanMs"] = span
+    return detail
+
+
 def collect_review(guest, transport, serial, decide, seed=None, boot_token=None, request=None,
                    bench=False, job_disk=False, recording_key=None, on_disconnect=None, *, source=None,
-                   on_coverage=None, on_evaluation=None, on_startup_window=None):
+                   on_coverage=None, on_evaluation=None, on_startup_window=None, on_coverage_detail=None):
     expected_source = BENCH_SOURCE if bench else source
     lines = Queue()
     signed = seed is not None
@@ -263,6 +277,7 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
     reader.start()
     preview = receipt = issuer = None
     coverage = None
+    coverage_detail = {}
     startup_excluded_ms = None
     startup_request = request is not None and request["recipe"] == STARTUP_RECIPE
     share = denied = boundary = key_denied = done = False
@@ -306,11 +321,13 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
                     raise RuntimeError("QNX reported an invalid evaluation time.")
                 on_evaluation(int(measurement[1]))
             elif line.startswith(b"RR_COVERAGE "):
-                limits = re.fullmatch(rb"RR_COVERAGE ([0-3]) ([0-3])", line)
+                limits = re.fullmatch(rb"RR_COVERAGE ([0-3]) ([0-3])(?: (-?[0-9]{1,8}) (-?[0-9]{1,4}) (-?[0-9]{1,4}))?", line)
                 if issuer is None or preview is not None or coverage is not None or not limits:
                     raise RuntimeError("Invalid driver guidance from QNX.")
-                coverage = {context: int(value) for context, value in zip(("idle", "moving"), limits.groups())
+                coverage = {context: int(value) for context, value in zip(("idle", "moving"), limits.groups()[:2])
                             if value != b"0"}
+                if limits[3] is not None:
+                    coverage_detail = decode_coverage_detail(limits.groups()[2:], coverage)
             elif line.startswith(b"RR_STARTUP_WINDOW "):
                 window = re.fullmatch(rb"RR_STARTUP_WINDOW ([0-9]{1,4})", line)
                 if (issuer is None or preview is not None or not startup_request or startup_excluded_ms is not None
@@ -337,6 +354,8 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
                         raise RuntimeError("The driver guidance does not match the QNX findings.")
                     if on_coverage is not None:
                         on_coverage(coverage)
+                    if on_coverage_detail is not None and coverage_detail:
+                        on_coverage_detail(coverage_detail)
                 if startup_request:
                     if startup_excluded_ms is None:
                         raise RuntimeError("QNX did not report the startup window. Rebuild the guest and retry.")
@@ -425,7 +444,8 @@ def seal_recording(recording, source=None):
 
 
 def review_native(workspace, qemu, recording, decide, seed=None, request=None, bench=None, image=None,
-                  on_disconnect=None, *, source=None, on_coverage=None, on_evaluation=None, on_startup_window=None):
+                  on_disconnect=None, *, source=None, on_coverage=None, on_evaluation=None, on_startup_window=None,
+                  on_coverage_detail=None):
     if request is not None and seed is None:
         raise ValueError("A shop request needs a signing key.")
     if seed is not None and len(seed) != 32:
@@ -471,7 +491,8 @@ def review_native(workspace, qemu, recording, decide, seed=None, request=None, b
                                             seed=seed, boot_token=token, request=request, bench=bench is not None,
                                             job_disk=image is not None, recording_key=recording_key,
                                             on_disconnect=on_disconnect, source=source, on_coverage=on_coverage,
-                                            on_evaluation=on_evaluation, on_startup_window=on_startup_window)
+                                            on_evaluation=on_evaluation, on_startup_window=on_startup_window,
+                                            on_coverage_detail=on_coverage_detail)
                     if adapter is not None:
                         adapter.check_commands()
                     return result

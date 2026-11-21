@@ -8,11 +8,12 @@ from unittest.mock import patch
 
 from issuer_store import Issuer
 import live
+from run_qnx import decode_coverage_detail
 
 
 class ConsentDeadline(unittest.TestCase):
     def review_at(self, instant, action, *, prior_owner="driver", request_id="follow-up", startup_excluded_ms=None,
-                  prior_rule=None, previous_rule=None):
+                  prior_rule=None, previous_rule=None, coverage_detail=None):
         review = live.Review(None, Issuer(bytes(32)), Future)
         review.owner = "driver"
         review.state = {"stage": "booting", "job": "test-job"}
@@ -29,6 +30,8 @@ class ConsentDeadline(unittest.TestCase):
             self.assertEqual(review.snapshot("driver").get("startupExcludedMs"), startup_excluded_ms)
             self.assertEqual(review.snapshot("driver").get("previousRecordingRule"), previous_rule)
             self.assertNotIn("previousRecordingRule", review.snapshot("different-driver"))
+            self.assertEqual(review.snapshot("driver").get("coverageDetail"), coverage_detail)
+            self.assertNotIn("coverageDetail", review.snapshot("different-driver"))
             self.assertNotIn("startupExcludedMs", review.snapshot("different-driver"))
             now = instant
             result = action(review)
@@ -38,7 +41,8 @@ class ConsentDeadline(unittest.TestCase):
             preview = b'{"recipe":"coolant-duration-demo/v2","idle":"insufficient_evidence"}'
             shared = review.wait_for_decision(preview,
                                               review.issuer.public_hex.encode("ascii"), Event(), {"idle": 1},
-                                              (digest, request_id), startup_excluded_ms=startup_excluded_ms)
+                                              (digest, request_id), startup_excluded_ms=startup_excluded_ms,
+                                              coverage_detail=coverage_detail)
             return shared, result, review.snapshot("driver"), notice
 
     def test_approval_before_the_deadline(self):
@@ -104,6 +108,22 @@ class ConsentDeadline(unittest.TestCase):
                 self.assertIs(notice, True)
                 self.assertEqual(result, expected)
                 self.assertEqual(owner, retained)
+
+    def test_coverage_details_are_private_and_end_with_consent(self):
+        for offset, choice in ((-1, "share"), (-1, "decline"), (0, "share")):
+            with self.subTest(offset=offset, choice=choice):
+                _, _, owner, _ = self.review_at(live.CONSENT_SECONDS + offset,
+                    lambda review: review.decide("driver", "test-job", choice), coverage_detail={"firstGapMs": 0})
+                self.assertNotIn("coverageDetail", owner)
+
+    def test_coverage_detail_must_match_the_reason_and_requested_condition(self):
+        self.assertEqual(decode_coverage_detail((513995, 1500, -2), {"idle": 3}),
+                         {"firstGapMs": 513995, "idleSpanMs": 1500})
+        for fields, coverage in (((0, -2, -2), {"idle": 2}),
+                                 ((-1, -2, 1500), {"idle": 2}),
+                                 ((-1, 2000, -2), {"idle": 2})):
+            with self.subTest(fields=fields, coverage=coverage), self.assertRaises(RuntimeError):
+                decode_coverage_detail(fields, coverage)
 
     def test_failed_preparation_does_not_replay_a_queued_recording(self):
         original, retry = Future(), Future()

@@ -121,6 +121,10 @@ For the same July 27 CSV, create a separate request for both conditions at 95 °
 
 The allowance covers incomplete rows only before the first complete sample, and only when that sample arrives within 1 second. Any later gap still affects coverage. Follow-ups and rechecks inherit the selected rule.
 
+For a recorded gap beyond the allowance, import `2017-07-11_Seat_Leon_KA_KA_Stau.csv` from the [KIT archive](https://publikationen.bibliothek.kit.edu/1000085073) with a 105 °C request for both conditions and the startup allowance enabled. Under **Recording guidance**, the first break is near 00:08:34 into the recording. Approve the review and verify that the shop packet carries both insufficient-evidence findings and the test rule. The relative gap location appears only in the driver's preview. [Coverage detail check](replay/qnx-coverage-detail-proof.json)
+
+The [native duration controls](replay/qnx-duration-proof.json) also compare two recordings under one idle request and issuer. Their private gap locations are 1 s and 1.5 s. QNX issues byte-identical insufficient-evidence receipts.
+
 Open the offline verifier and choose **Compare startup rules** to verify both signatures and see their moving findings. Open **Download proof files** to save the two packets and example public key. The release also bundles those files in `qnx-startup-window-packets.zip` for batch verification. [Release downloads](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest)
 
 ```bat

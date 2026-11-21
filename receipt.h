@@ -28,6 +28,9 @@ struct receipt_coverage {
     unsigned idle;
     unsigned moving;
     int startup_excluded_ms;
+    int first_gap_ms;
+    int idle_span_ms;
+    int moving_span_ms;
 };
 
 /* Decode a local recording and emit only the findings requested by the shop. */

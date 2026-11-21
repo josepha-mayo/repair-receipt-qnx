@@ -21,7 +21,7 @@ struct findings {
     unsigned context_run;
     long hot_since;
     long context_since;
-    bool adequate;
+    int eligible_span_ms;
     bool observed;
 };
 
@@ -63,7 +63,7 @@ static unsigned coverage_limits(const struct findings *summary, bool complete, b
     if (summary->observed) {
         return 0;
     }
-    const bool adequate = sustained ? summary->adequate : summary->samples >= MIN_SAMPLES;
+    const bool adequate = sustained ? summary->eligible_span_ms >= SUSTAINED_MS : summary->samples >= MIN_SAMPLES;
     return (complete ? 0 : COVERAGE_GAP) | (adequate ? 0 : COVERAGE_SHORT_RUN);
 }
 
@@ -84,8 +84,9 @@ static void observe(struct findings *summary, long timestamp, long temperature, 
         summary->context_run = 0;
         summary->hot_run = 0;
     }
-    if (++summary->context_run >= MIN_SAMPLES && timestamp - summary->context_since >= SUSTAINED_MS) {
-        summary->adequate = true;
+    const int span_ms = (int)(timestamp - summary->context_since);
+    if (++summary->context_run >= MIN_SAMPLES && span_ms > summary->eligible_span_ms) {
+        summary->eligible_span_ms = span_ms;
     }
     if (temperature < threshold) {
         summary->hot_run = 0;
@@ -199,13 +200,16 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
         !parse_columns(line, &duration, 1) || duration < 1 || duration > MAX_DURATION_MS) {
         return -1;
     }
-    struct findings summaries[CONTEXTS] = {0};
+    struct findings summaries[CONTEXTS] = {
+        [IDLE] = {.eligible_span_ms = -1}, [MOVING] = {.eligible_span_ms = -1},
+    };
     long previous = -1;
     int previous_context = -1;
     bool complete = missing == 0;
     const bool sustained = recipe != RECIPE_SAMPLE_COUNT;
     bool opening = recipe == RECIPE_STARTUP_WINDOW;
     int startup_excluded_ms = 0;
+    int first_gap_ms = -1;
     const int threshold = request ? request->threshold_c : DEFAULT_THRESHOLD_C;
     const enum receipt_scope scope = request ? request->scope : SCOPE_BOTH;
     const bool requested[CONTEXTS] = {scope & SCOPE_IDLE, scope & SCOPE_MOVING};
@@ -233,11 +237,15 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
                     startup_excluded_ms = (int)time_ms;
                 } else {
                     complete = false;
+                    first_gap_ms = 0;
                 }
             }
             opening = false;
         }
         const bool gap = previous < 0 ? time_ms > MAX_GAP_MS : time_ms - previous > MAX_GAP_MS;
+        if (first_gap_ms < 0 && (gap || missing_sample)) {
+            first_gap_ms = gap ? (int)(previous < 0 ? 0 : previous) : (int)time_ms;
+        }
         complete = complete && !gap && !missing_sample;
         int context = speed_kmh > 0 ? MOVING : IDLE;
         if (rpm == 0) {
@@ -251,12 +259,20 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
     if (line_status < 0) {
         return -1;
     }
-    complete = complete && !opening && previous >= 0 && duration - previous <= MAX_GAP_MS;
-    const struct receipt_coverage limits = {
+    const bool trailing_gap = previous >= 0 && duration - previous > MAX_GAP_MS;
+    if (first_gap_ms < 0 && (opening || trailing_gap)) {
+        first_gap_ms = opening ? 0 : (int)previous;
+    }
+    complete = complete && !opening && previous >= 0 && !trailing_gap;
+    struct receipt_coverage limits = {
         .idle = requested[IDLE] ? coverage_limits(&summaries[IDLE], complete, sustained) : 0,
         .moving = requested[MOVING] ? coverage_limits(&summaries[MOVING], complete, sustained) : 0,
         .startup_excluded_ms = recipe == RECIPE_STARTUP_WINDOW ? startup_excluded_ms : -1,
     };
+    limits.first_gap_ms = (limits.idle | limits.moving) & COVERAGE_GAP ? first_gap_ms : -1;
+    /* -2 omits the span. -1 means no run qualified for a measured span. */
+    limits.idle_span_ms = sustained && (limits.idle & COVERAGE_SHORT_RUN) ? summaries[IDLE].eligible_span_ms : -2;
+    limits.moving_span_ms = sustained && (limits.moving & COVERAGE_SHORT_RUN) ? summaries[MOVING].eligible_span_ms : -2;
     if (coverage) {
         *coverage = limits;
     }

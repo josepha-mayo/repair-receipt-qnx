@@ -1,0 +1,40 @@
+{
+  "environment": "Windows, Brave, and QNX SDP 8.0 x86-64 on QEMU",
+  "dataset": {
+    "author": "Marc Weber",
+    "name": "Automotive OBD-II Dataset",
+    "source": "https://publikationen.bibliothek.kit.edu/1000085073",
+    "license": "CC BY 4.0"
+  },
+  "road_recording": {
+    "name": "2017-07-11_Seat_Leon_KA_KA_Stau.csv",
+    "normalized_sha256": "7175349f0409a137ffc6cd1bcc654610fa646a204dcf548042bc14cd81721fa1",
+    "test_threshold_c": 105,
+    "signed_recipe": "coolant-startup-window/v3",
+    "private_startup_exclusion_ms": 241,
+    "first_coverage_break_ms": 513995,
+    "next_sample_ms": 518465,
+    "displayed_elapsed_location": "00:08:34",
+    "signed_findings": {
+      "idle": "insufficient_evidence",
+      "moving": "insufficient_evidence"
+    }
+  },
+  "synthetic_control": {
+    "name": "measured_short_idle_span",
+    "tested_scope": "idle",
+    "continuous_idle_span_ms": 1500,
+    "signed_finding": "insufficient_evidence"
+  },
+  "checks": {
+    "browser_projection_matches_archived_sha256": true,
+    "private_location_matches_independent_projection_analysis": true,
+    "working_at_320_px": true,
+    "other_driver_session_cannot_read_private_detail": true,
+    "driver_detail_cleared_after_approval": true,
+    "no_coverage_measurement_in_either_verification_packet": true,
+    "shop_verified_filed_and_reexported_both_packets_unchanged": true,
+    "native_diagnostic_logs_redact_coverage_details": true,
+    "two_gap_locations_produced_byte_identical_signed_idle_receipts": true
+  }
+}

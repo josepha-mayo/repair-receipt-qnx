@@ -27,19 +27,37 @@
     "control": "short_idle_segments",
     "recipe": "coolant-duration-demo/v2",
     "finding": "insufficient_evidence",
-    "signed_format": "repair-receipt/v2"
+    "signed_format": "repair-receipt/v2",
+    "private_guidance_on_control": {
+      "idleSpanMs": -1
+    }
+  },
+  {
+    "control": "measured_short_idle_span",
+    "recipe": "coolant-duration-demo/v2",
+    "finding": "insufficient_evidence",
+    "signed_format": "repair-receipt/v2",
+    "private_guidance_on_control": {
+      "idleSpanMs": 1500
+    }
   },
   {
     "control": "interrupted_hot_samples",
     "recipe": "coolant-duration-demo/v2",
     "finding": "insufficient_evidence",
-    "signed_format": "repair-receipt/v2"
+    "signed_format": "repair-receipt/v2",
+    "private_guidance_on_control": {
+      "firstGapMs": 1000
+    }
   },
   {
     "control": "explicit_missing_reading",
     "recipe": "coolant-duration-demo/v2",
     "finding": "insufficient_evidence",
-    "signed_format": "repair-receipt/v2"
+    "signed_format": "repair-receipt/v2",
+    "private_guidance_on_control": {
+      "firstGapMs": 1500
+    }
   },
   {
     "control": "leading_gap_two_seconds",
@@ -51,7 +69,10 @@
     "control": "leading_gap_over_two_seconds",
     "recipe": "coolant-duration-demo/v2",
     "finding": "insufficient_evidence",
-    "signed_format": "repair-receipt/v2"
+    "signed_format": "repair-receipt/v2",
+    "private_guidance_on_control": {
+      "firstGapMs": 0
+    }
   },
   {
     "control": "trailing_gap_two_seconds",
@@ -63,7 +84,10 @@
     "control": "trailing_gap_over_two_seconds",
     "recipe": "coolant-duration-demo/v2",
     "finding": "insufficient_evidence",
-    "signed_format": "repair-receipt/v2"
+    "signed_format": "repair-receipt/v2",
+    "private_guidance_on_control": {
+      "firstGapMs": 3999
+    }
   },
   {
     "control": "observed_run_before_gap",
@@ -81,13 +105,19 @@
     "control": "driver_started_burst",
     "recipe": "coolant-duration-demo/v2",
     "finding": "not_observed",
-    "signed_format": "repair-receipt/v4"
+    "signed_format": "repair-receipt/v4",
+    "private_guidance_on_control": {
+      "movingSpanMs": -1
+    }
   },
   {
     "control": "driver_started_sustained",
     "recipe": "coolant-duration-demo/v2",
     "finding": "observed",
-    "signed_format": "repair-receipt/v4"
+    "signed_format": "repair-receipt/v4",
+    "private_guidance_on_control": {
+      "movingSpanMs": -1
+    }
   },
   {
     "control": "shop_threshold_106",

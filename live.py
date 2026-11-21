@@ -165,7 +165,7 @@ class Review:
         self.response.set()
 
     def _clear_private_notes(self):
-        for field in ("reusedRecording", "previousRecordingRule", "startupExcludedMs"):
+        for field in ("reusedRecording", "previousRecordingRule", "startupExcludedMs", "coverageDetail"):
             self.state.pop(field, None)
 
     def _note_upload(self, import_review, claim):
@@ -180,7 +180,8 @@ class Review:
         if prior_rule and prior_rule != receipt_rule(claim):
             self.state["previousRecordingRule"] = prior_rule
 
-    def wait_for_decision(self, preview, issuer, guest_closed, coverage=None, import_review=None, *, startup_excluded_ms=None):
+    def wait_for_decision(self, preview, issuer, guest_closed, coverage=None, import_review=None, *,
+                          startup_excluded_ms=None, coverage_detail=None):
         if not secrets.compare_digest(self.issuer.public_hex.encode("ascii"), issuer):
             raise RuntimeError("The guest presented a key different from the enrolled issuer.")
         with self.lock:
@@ -189,6 +190,8 @@ class Review:
             self.state.update(stage="review", claim=claim, issuer=issuer.decode("ascii"))
             if coverage:
                 self.state["coverage"] = coverage
+            if coverage_detail:
+                self.state["coverageDetail"] = coverage_detail
             if startup_excluded_ms is not None:
                 self.state["startupExcludedMs"] = startup_excluded_ms
             if import_review is not None:
@@ -204,6 +207,7 @@ class Review:
         guest_closed = Event()
         response = self.response
         coverage = {}
+        coverage_detail = {}
         startup_excluded_ms = None
 
         def record_startup_window(duration):
@@ -225,9 +229,10 @@ class Review:
                 receipt = review_native(Path(directory) / "guest", self.qemu, recording,
                                         lambda preview, issuer: self.wait_for_decision(
                                             preview, issuer, guest_closed, coverage, import_review,
-                                            startup_excluded_ms=startup_excluded_ms),
+                                            startup_excluded_ms=startup_excluded_ms, coverage_detail=coverage_detail),
                                         self.issuer.seed, request, bench, image=image, on_disconnect=disconnect,
-                                        source=source, on_coverage=coverage.update, on_startup_window=record_startup_window)
+                                        source=source, on_coverage=coverage.update, on_startup_window=record_startup_window,
+                                        on_coverage_detail=coverage_detail.update)
                 result = {"stage": "expired" if self.decision == "expired" else "declined"}
                 if receipt is not None:
                     self.issuer.verify_receipt(receipt)

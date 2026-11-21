@@ -26,6 +26,8 @@ BELOW_DURATION = recording([
 ])
 AT_DURATION = BELOW_DURATION.replace("2999,800", "3000,800")
 INTERLEAVED = recording([(tick * 1000, 20 * (tick % 2), 101) for tick in range(6)])
+SHORT_SPAN = recording([(0, 0, 101), (750, 0, 101), (1500, 0, 101), (2500, 20, 101),
+                        (3500, 20, 101), (4500, 20, 101), (5500, 20, 101)])
 GAP = recording([(0, 0, 105), (1000, 0, 106), (3500, 0, 108), (4500, 0, 102), (5500, 0, 101)])
 MISSING_ROW = recording([(0, 0, 105), (1000, 0, 106), (2000, 0, 107), (3000, 0, 101),
                          (4000, 0, 101), (5000, 0, 101)]).replace("2000,800", "1500,,,\n2000,800")
@@ -38,12 +40,15 @@ ENGINE_STOP = recording([(0, 0, 105), (1000, 0, 106), (2000, 0, 107), (3000, 0, 
 
 def verify(qemu):
     issuer = Issuer(secrets.token_bytes(32))
+    paired_controls = ("interrupted_hot_samples", "explicit_missing_reading")
+    paired_request = request_document("idle", secrets.token_hex(16), CURRENT_RECIPE)
     cases = (
         ("legacy_burst", RECIPE, BURST, "observed"),
         ("sustained_burst", CURRENT_RECIPE, BURST, "not_observed"),
         ("before_two_seconds", CURRENT_RECIPE, BELOW_DURATION, "not_observed"),
         ("exactly_two_seconds", CURRENT_RECIPE, AT_DURATION, "observed"),
         ("short_idle_segments", CURRENT_RECIPE, INTERLEAVED, "insufficient_evidence"),
+        ("measured_short_idle_span", CURRENT_RECIPE, SHORT_SPAN, "insufficient_evidence"),
         ("interrupted_hot_samples", CURRENT_RECIPE, GAP, "insufficient_evidence"),
         ("explicit_missing_reading", CURRENT_RECIPE, MISSING_ROW, "insufficient_evidence"),
         ("leading_gap_two_seconds", CURRENT_RECIPE, LEADING_COVERAGE, "not_observed"),
@@ -59,6 +64,16 @@ def verify(qemu):
         ("shop_threshold_106", CURRENT_RECIPE, (ROOT / "fixtures/trip-a.csv").read_text(), "observed", 106),
         ("shop_threshold_108", CURRENT_RECIPE, (ROOT / "fixtures/trip-a.csv").read_text(), "not_observed", 108),
     )
+    expected_details = {
+        "short_idle_segments": {"idleSpanMs": -1},
+        "measured_short_idle_span": {"idleSpanMs": 1500},
+        "interrupted_hot_samples": {"firstGapMs": 1000},
+        "explicit_missing_reading": {"firstGapMs": 1500},
+        "leading_gap_over_two_seconds": {"firstGapMs": 0},
+        "trailing_gap_over_two_seconds": {"firstGapMs": 3999},
+        "driver_started_burst": {"movingSpanMs": -1},
+        "driver_started_sustained": {"movingSpanMs": -1},
+    }
 
     def control(case):
         name, recipe, content, finding, *settings = case
@@ -68,7 +83,8 @@ def verify(qemu):
             recipe = CURRENT_RECIPE
             expected = {"recipe": recipe, "idle": finding, "moving": "insufficient_evidence"}
         else:
-            ticket = request_document("idle", secrets.token_hex(16), recipe, threshold)
+            ticket = paired_request if name in paired_controls else request_document(
+                "idle", secrets.token_hex(16), recipe, threshold)
             expected = {"recipe": recipe, "request": ticket["id"], "scope": "idle", "idle": finding}
             if threshold is not None:
                 expected["thresholdC"] = threshold
@@ -82,21 +98,37 @@ def verify(qemu):
         workspace.mkdir()
         path = workspace / "recording.csv"
         path.write_text(content, encoding="ascii")
-        receipt = review_native(workspace / "guest", qemu, path, approve, issuer.seed, ticket, image=template)
+        detail = {}
+        receipt = review_native(workspace / "guest", qemu, path, approve, issuer.seed, ticket, image=template,
+                                on_coverage_detail=detail.update)
         issuer.verify_receipt(receipt)
         record = json.loads(receipt)
         if record["claim"] != expected or record["format"] != ("repair-receipt/v2" if ticket else "repair-receipt/v4"):
             raise RuntimeError("Unexpected signed claim for " + name)
+        if detail != expected_details.get(name, {}):
+            raise RuntimeError("Unexpected private coverage detail for " + name)
+        if detail:
+            log = (workspace / "guest" / "serial.log").read_bytes().splitlines()
+            coverage_events = [line for line in log if b"RR_COVERAGE " in line]
+            if coverage_events != [b"RR_COVERAGE [driver-only guidance]"]:
+                raise RuntimeError("Coverage detail leaked into the diagnostic log for " + name)
         print(f"{name} yielded {finding}", flush=True)
         result = {"control": name, "recipe": recipe, "finding": finding, "signed_format": record["format"]}
         if threshold is not None:
             result["thresholdC"] = threshold
-        return result
+        if detail:
+            result["private_guidance_on_control"] = detail
+        return result, receipt
 
     with TemporaryDirectory(prefix="rr-duration-proofs-") as temporary:
         template = build_template(Path(temporary) / "template")
         with ThreadPoolExecutor(max_workers=2) as pool:
-            return list(pool.map(control, cases))
+            runs = list(pool.map(control, cases))
+    paired_receipts = [receipt for result, receipt in runs if result["control"] in paired_controls]
+    if len(paired_receipts) != 2 or paired_receipts[0] != paired_receipts[1]:
+        raise RuntimeError("Different private gap locations changed the signed receipt.")
+    print("Two different gap locations produced byte-identical signed idle receipts.", flush=True)
+    return [result for result, _ in runs]
 
 
 if __name__ == "__main__":
@@ -106,4 +138,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     results = verify(args.qemu.resolve(strict=True))
     if args.proof:
-        args.proof.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+        args.proof.write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8", newline="\r\n")

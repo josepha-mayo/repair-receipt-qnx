@@ -441,7 +441,8 @@ static int consent(const char *receipt, const char *issuer, const struct receipt
         printf("RR_ISSUER %s\n", issuer);
     }
     if (coverage && (coverage->idle || coverage->moving)) {
-        printf("RR_COVERAGE %u %u\n", coverage->idle, coverage->moving);
+        printf("RR_COVERAGE %u %u %d %d %d\n", coverage->idle, coverage->moving,
+               coverage->first_gap_ms, coverage->idle_span_ms, coverage->moving_span_ms);
     }
     if (coverage && coverage->startup_excluded_ms >= 0) {
         printf("RR_STARTUP_WINDOW %d\n", coverage->startup_excluded_ms);

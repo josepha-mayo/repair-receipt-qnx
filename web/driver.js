@@ -51,16 +51,31 @@ function keepPolling() {
   return busyStages.has(state.stage) || state.stage === "occupied" || state.template === "building";
 }
 
-function showCoverage(claim, coverage) {
+function elapsedLocation(milliseconds) {
+  if (milliseconds < 60000) return `${milliseconds / 1000} s`;
+  const seconds = Math.round(milliseconds / 1000);
+  return [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
+    .map(part => String(part).padStart(2, "0")).join(":");
+}
+
+function showCoverage(claim, coverage, coverageDetail) {
   const details = byId("coverage-help");
   const hasClockWarning = !!claim && !!clockBreaks;
   byId("recording-coverage").hidden = !hasClockWarning;
+  const gap = byId("coverage-gap-location");
+  const firstGap = claim && coverageDetail?.firstGapMs;
+  gap.hidden = !Number.isInteger(firstGap);
+  gap.textContent = gap.hidden ? "" : firstGap === 0 ? "Coverage breaks near the start of the recording."
+    : `The first recorded coverage break is around ${elapsedLocation(firstGap)} into this recording.`;
   let visible = hasClockWarning;
   for (const [context, label] of [["idle", "At idle"], ["moving", "While moving"]]) {
     const field = byId(context + "-guidance");
     const guidance = claim?.[context] === "insufficient_evidence" && coverageGuidance[coverage?.[context]];
+    const span = coverageDetail?.[context + "SpanMs"];
+    const spanText = !Number.isInteger(span) ? "" : span < 0 ? " No uninterrupted stretch had three readings."
+      : ` The longest uninterrupted stretch with three or more readings was ${span / 1000} s.`;
     field.hidden = !guidance;
-    field.textContent = guidance ? `${label} · ${guidance}` : "";
+    field.textContent = guidance ? `${label} · ${guidance}${spanText}` : "";
     if (guidance) visible = true;
   }
   details.hidden = !visible;
@@ -116,7 +131,7 @@ function render() {
   byId("share").disabled = changing;
   byId("decline").disabled = changing;
   byId("findings").hidden = !claim;
-  showCoverage(claim, state.coverage);
+  showCoverage(claim, state.coverage, state.coverageDetail);
   const startupNote = byId("startup-window-note");
   const startupMs = state.startupExcludedMs;
   startupNote.hidden = stage !== "review" || claim?.recipe !== ShopRequest.startupRecipe || !Number.isInteger(startupMs);
