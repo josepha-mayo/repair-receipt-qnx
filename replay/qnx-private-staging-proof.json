@@ -1,11 +1,13 @@
 {
   "interrupted_at_qnx_preview": true,
   "native_authenticated_input": true,
-  "encrypted_staging_bytes": 89,
+  "encrypted_staging_bytes": 90,
   "encrypted_job_disk_bytes": 8225280,
   "files_inspected": 150,
   "plaintext_samples_found": false,
   "private_preview_found": false,
   "issuer_public_key_found": false,
+  "numeric_evaluation_time_found_in_diagnostic_log": false,
+  "private_coverage_values_found_in_diagnostic_log": false,
   "receipt_issued": false
 }

@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 
 from issuer_store import Issuer
 from run_qnx import ROOT, build_template, review_native
-from shop_request import CURRENT_RECIPE, DEMO_SOURCE, PUBLISHED_SOURCE, request_document
+from shop_request import CURRENT_RECIPE, DEMO_SOURCE, PUBLISHED_SOURCE, canonical, request_document, verification_packet
 from verify_policy import compile_template, verify_export_denial, without_export_grant
 
 
@@ -96,37 +96,99 @@ def scoped_recording(scope, finding, hot_outside_scope):
     return ("6000\n" + "".join(rows)).encode("ascii")
 
 
+def extended_outside_scope(scope, recording):
+    selected_speed = 0 if scope == "idle" else 40
+    rows = [tuple(map(int, line.split(b","))) for line in recording.splitlines()[1:]]
+    selected = [(tick + 4000, rpm, speed, temperature)
+                for tick, rpm, speed, temperature in rows if speed == selected_speed]
+    last_selected = selected[-1][0]
+
+    def other_sample(tick):
+        index = tick // 500
+        speed = 5 + index * 7 % 100 if scope == "idle" else 0
+        return tick, 700 + index * 61 % 2500, speed, 20 + index * 19 % 115
+
+    before = [other_sample(tick) for tick in range(0, 4000, 500)]
+    after = [other_sample(tick) for tick in range(last_selected + 500, last_selected + 26500, 500)]
+    extended = [*before, *selected, *after]
+    duration = extended[-1][0] + 250
+    body = "".join(f"{tick},{rpm},{speed},{temperature}\r\n" for tick, rpm, speed, temperature in extended)
+    return (f"{duration}\r\n" + body).encode("ascii")
+
+
+def missing_sample(recording, time_ms):
+    prefix = f"{time_ms},".encode("ascii")
+    return b"".join(prefix + b",,\n" if row.startswith(prefix) else row for row in recording.splitlines(keepends=True))
+
+
 def verify_scope_matrix(qemu):
     seed = secrets.token_bytes(32)
     issuer = Issuer(seed)
+    fingerprint = issuer.public_profile()["fingerprint"]
+    signed_count = 0
     with TemporaryDirectory(prefix="rr-scope-matrix-") as temporary:
         root = Path(temporary)
         template = build_template(root / "template")
 
-        def review(name, recording, ticket, findings):
+        def review(name, recording, ticket, findings, expected_guidance=None):
+            nonlocal signed_count
             expected = {"recipe": CURRENT_RECIPE, "request": ticket["id"], "scope": ticket["scope"], **findings}
+            guidance = {}
 
             def approve(preview, key):
                 if json.loads(preview) != expected or key != issuer.public_hex.encode("ascii"):
                     raise ValueError(f"Unexpected preview or issuer in {name}.")
                 return True
 
-            signed = review_native(root / name, qemu, recording, approve, seed, ticket, image=template)
+            guest = root / name
+            signed = review_native(guest, qemu, recording, approve, seed, ticket, image=template,
+                                   on_coverage=guidance.update)
             issuer.verify_receipt(signed)
             if json.loads(signed)["claim"] != expected:
                 raise RuntimeError(f"An unexpected finding entered the signed receipt in {name}.")
+            if expected_guidance is not None and guidance != expected_guidance:
+                raise RuntimeError(f"Unexpected driver coverage guidance in {name}.")
+            log = (guest / "serial.log").read_bytes().splitlines()
+            timing = [line for line in log if b"RR_EVALUATION_US " in line]
+            if timing != [b"RR_EVALUATION_US [private timing]"]:
+                raise RuntimeError(f"The diagnostic log recorded private evaluation timing in {name}.")
+            coverage = [line for line in log if b"RR_COVERAGE " in line]
+            if coverage != ([b"RR_COVERAGE [driver-only guidance]"] if guidance else []):
+                raise RuntimeError(f"The diagnostic log recorded private coverage guidance in {name}.")
+            signed_count += 1
             return signed
 
         pairs = []
+        private_reasons = []
         for scope in ("idle", "moving"):
             ticket = request_document(scope, secrets.token_hex(16), CURRENT_RECIPE)
+            answers = {}
             for finding in ("observed", "not_observed", "insufficient_evidence"):
                 name = f"{scope}-{finding}"
-                a = review(f"{name}-a", scoped_recording(scope, finding, False), ticket, {scope: finding})
-                b = review(f"{name}-b", scoped_recording(scope, finding, True), ticket, {scope: finding})
-                if a != b:
+                cool = scoped_recording(scope, finding, False)
+                hot = scoped_recording(scope, finding, True)
+                inputs = (cool, hot, extended_outside_scope(scope, cool))
+                guidance = {scope: 2} if finding == "insufficient_evidence" else {}
+                receipts = [review(f"{name}-{index}", recording, ticket, {scope: finding}, guidance)
+                            for index, recording in enumerate(inputs)]
+                if len(set(receipts)) != 1:
                     raise RuntimeError(f"Out-of-scope changes altered the signed receipt in {name}.")
-                pairs.append({"scope": scope, "finding": finding, "byte_identical_receipts": True})
+                packets = [canonical(verification_packet(ticket, receipt.decode("ascii"), fingerprint))
+                           for receipt in receipts]
+                if len(set(packets)) != 1:
+                    raise RuntimeError(f"Out-of-scope changes altered the verification packet in {name}.")
+                answers[finding] = receipts[0]
+                pairs.append({"scope": scope, "finding": finding, "recordings": len(inputs),
+                              "byte_identical_receipts": True, "byte_identical_verification_packets": True})
+                print(f"Verified three variants for {scope}: {finding}.", file=sys.stderr, flush=True)
+
+            for underlying, code in (("not_observed", 1), ("insufficient_evidence", 3)):
+                data = missing_sample(scoped_recording(scope, underlying, True), 4000)
+                changed = review(f"{scope}-guidance-{code}", data, ticket, {scope: "insufficient_evidence"}, {scope: code})
+                if changed != answers["insufficient_evidence"]:
+                    raise RuntimeError(f"Driver-only coverage details altered the {scope} receipt.")
+            private_reasons.append({"scope": scope, "driver_coverage_codes_checked": [1, 2, 3],
+                                    "byte_identical_insufficient_evidence_receipts": True})
 
         both = request_document("both", secrets.token_hex(16), CURRENT_RECIPE)
         for hot, moving in ((False, "not_observed"), (True, "observed")):
@@ -134,9 +196,8 @@ def verify_scope_matrix(qemu):
                    {"idle": "observed", "moving": moving})
 
         idle = request_document("idle", secrets.token_hex(16), CURRENT_RECIPE)
-        for original, after_gap in (("not_observed", "insufficient_evidence"), ("observed", "observed")):
-            data = scoped_recording("idle", original, True).replace(b"4000,1600,40,112", b"4000,,,")
-            review(f"gap-{original}", data, idle, {"idle": after_gap})
+        positive_gap = missing_sample(scoped_recording("idle", "observed", True), 4000)
+        review("gap-observed", positive_gap, idle, {"idle": "observed"}, {})
 
         def unexpected_preview(*_args):
             raise RuntimeError("An invalid out-of-scope row reached approval.")
@@ -153,7 +214,11 @@ def verify_scope_matrix(qemu):
     return {
         "platform": "QNX SDP 8.0 x86-64 guest on QEMU",
         "recipe": CURRENT_RECIPE,
+        "signed_receipts_verified": signed_count,
         "paired_checks": pairs,
+        "unrequested_variations_checked": ["RPM and temperature", "speed, cadence, duration and line endings"],
+        "driver_only_guidance_checks": private_reasons,
+        "numeric_evaluation_timing_redacted_from_review_logs": True,
         "both_conditions_control": {"idle": "observed", "moving": ["not_observed", "observed"]},
         "idle_with_unknown_coverage": {"before_gap_not_observed": "insufficient_evidence",
                                        "observed_run_before_gap": "observed"},

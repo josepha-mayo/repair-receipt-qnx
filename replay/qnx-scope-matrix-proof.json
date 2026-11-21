@@ -1,38 +1,76 @@
 {
   "platform": "QNX SDP 8.0 x86-64 guest on QEMU",
   "recipe": "coolant-duration-demo/v2",
+  "signed_receipts_verified": 25,
   "paired_checks": [
     {
       "scope": "idle",
       "finding": "observed",
-      "byte_identical_receipts": true
+      "recordings": 3,
+      "byte_identical_receipts": true,
+      "byte_identical_verification_packets": true
     },
     {
       "scope": "idle",
       "finding": "not_observed",
-      "byte_identical_receipts": true
+      "recordings": 3,
+      "byte_identical_receipts": true,
+      "byte_identical_verification_packets": true
     },
     {
       "scope": "idle",
       "finding": "insufficient_evidence",
-      "byte_identical_receipts": true
+      "recordings": 3,
+      "byte_identical_receipts": true,
+      "byte_identical_verification_packets": true
     },
     {
       "scope": "moving",
       "finding": "observed",
-      "byte_identical_receipts": true
+      "recordings": 3,
+      "byte_identical_receipts": true,
+      "byte_identical_verification_packets": true
     },
     {
       "scope": "moving",
       "finding": "not_observed",
-      "byte_identical_receipts": true
+      "recordings": 3,
+      "byte_identical_receipts": true,
+      "byte_identical_verification_packets": true
     },
     {
       "scope": "moving",
       "finding": "insufficient_evidence",
-      "byte_identical_receipts": true
+      "recordings": 3,
+      "byte_identical_receipts": true,
+      "byte_identical_verification_packets": true
     }
   ],
+  "unrequested_variations_checked": [
+    "RPM and temperature",
+    "speed, cadence, duration and line endings"
+  ],
+  "driver_only_guidance_checks": [
+    {
+      "scope": "idle",
+      "driver_coverage_codes_checked": [
+        1,
+        2,
+        3
+      ],
+      "byte_identical_insufficient_evidence_receipts": true
+    },
+    {
+      "scope": "moving",
+      "driver_coverage_codes_checked": [
+        1,
+        2,
+        3
+      ],
+      "byte_identical_insufficient_evidence_receipts": true
+    }
+  ],
+  "numeric_evaluation_timing_redacted_from_review_logs": true,
   "both_conditions_control": {
     "idle": "observed",
     "moving": [

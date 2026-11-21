@@ -26,6 +26,7 @@ PRIVATE_REVIEW_EVENTS = {
     b"RR_ISSUER_SETUP": b"RR_ISSUER_SETUP [private boot token]\n",
     b"RR_ISSUER ": b"RR_ISSUER [issuer key]\n",
     b"RR_COVERAGE ": b"RR_COVERAGE [driver-only guidance]\n",
+    b"RR_EVALUATION_US ": b"RR_EVALUATION_US [private timing]\n",
     b"RR_PREVIEW ": b"RR_PREVIEW [private preview]\n",
     b"RR_RECEIPT ": b"RR_RECEIPT import [signed receipt]\n",
 }
@@ -218,7 +219,7 @@ def run(workspace, qemu):
 
 def collect_review(guest, transport, serial, decide, seed=None, boot_token=None, request=None,
                    bench=False, job_disk=False, recording_key=None, on_disconnect=None, *, source=None,
-                   on_coverage=None):
+                   on_coverage=None, on_evaluation=None):
     expected_source = BENCH_SOURCE if bench else source
     lines = Queue()
     signed = seed is not None
@@ -280,6 +281,11 @@ def collect_review(guest, transport, serial, decide, seed=None, boot_token=None,
                 recorded = True
             elif line == b"RR_RECORDING_AUTHENTICATED":
                 authenticated_recording = True
+            elif on_evaluation is not None and line.startswith(b"RR_EVALUATION_US "):
+                measurement = re.fullmatch(rb"RR_EVALUATION_US ([0-9]{1,12})", line)
+                if measurement is None:
+                    raise RuntimeError("QNX reported an invalid evaluation time.")
+                on_evaluation(int(measurement[1]))
             elif line.startswith(b"RR_COVERAGE "):
                 limits = re.fullmatch(rb"RR_COVERAGE ([0-3]) ([0-3])", line)
                 if issuer is None or preview is not None or coverage is not None or not limits:
@@ -389,7 +395,7 @@ def seal_recording(recording, source=None):
 
 
 def review_native(workspace, qemu, recording, decide, seed=None, request=None, bench=None, image=None,
-                  on_disconnect=None, *, source=None, on_coverage=None):
+                  on_disconnect=None, *, source=None, on_coverage=None, on_evaluation=None):
     if request is not None and seed is None:
         raise ValueError("A shop request needs a signing key.")
     if seed is not None and len(seed) != 32:
@@ -432,7 +438,8 @@ def review_native(workspace, qemu, recording, decide, seed=None, request=None, b
                     result = collect_review(guest, connection, serial, decide,
                                             seed=seed, boot_token=token, request=request, bench=bench is not None,
                                             job_disk=image is not None, recording_key=recording_key,
-                                            on_disconnect=on_disconnect, source=source, on_coverage=on_coverage)
+                                            on_disconnect=on_disconnect, source=source, on_coverage=on_coverage,
+                                            on_evaluation=on_evaluation)
                     if adapter is not None:
                         adapter.check_commands()
                     return result

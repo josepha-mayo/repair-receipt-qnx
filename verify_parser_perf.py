@@ -6,7 +6,6 @@ import json
 from math import ceil
 from pathlib import Path
 import platform
-import re
 from statistics import median
 import subprocess
 from tempfile import TemporaryDirectory
@@ -30,6 +29,7 @@ def maximum_recording():
 def measure_review(qemu, guest, image, recording, issuer, request, finding, source=None):
     started = time.monotonic()
     preview_seconds = None
+    timings = []
 
     def approve(preview, public_key):
         nonlocal preview_seconds
@@ -39,12 +39,12 @@ def measure_review(qemu, guest, image, recording, issuer, request, finding, sour
             raise RuntimeError("The timing control returned an unexpected preview.")
         return True
 
-    receipt = review_native(guest, qemu, recording, approve, issuer.seed, request, image=image, source=source)
+    receipt = review_native(guest, qemu, recording, approve, issuer.seed, request, image=image, source=source,
+                            on_evaluation=timings.append)
     issuer.verify_receipt(receipt)
-    timings = re.findall(rb"^RR_EVALUATION_US ([0-9]+)\r?$", (guest / "serial.log").read_bytes(), re.MULTILINE)
     if len(timings) != 1 or preview_seconds is None:
         raise RuntimeError("The QNX guest did not report one measurement and preview.")
-    return int(timings[0]), preview_seconds, sha256(receipt).hexdigest()
+    return timings[0], preview_seconds, sha256(receipt).hexdigest()
 
 
 def verify(qemu, repetitions):
