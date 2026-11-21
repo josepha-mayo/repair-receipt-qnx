@@ -1,5 +1,6 @@
-"""Check consent at the exact expiry boundary without waiting five minutes."""
+"""Check consent expiry and recovery from a failed QNX image build."""
 
+from concurrent.futures import Future
 from threading import Event
 from types import SimpleNamespace
 import unittest
@@ -11,7 +12,7 @@ import live
 
 class ConsentDeadline(unittest.TestCase):
     def review_at(self, instant, action, *, prior_owner="driver", request_id="follow-up"):
-        review = live.Review(None, Issuer(bytes(32)), None)
+        review = live.Review(None, Issuer(bytes(32)), Future)
         review.owner = "driver"
         review.state = {"stage": "booting", "job": "test-job"}
         digest = bytes(32)
@@ -65,6 +66,25 @@ class ConsentDeadline(unittest.TestCase):
                 self.assertIs(notice, True)
                 self.assertEqual(result, expected)
                 self.assertEqual(owner, retained)
+
+    def test_failed_preparation_does_not_replay_a_queued_recording(self):
+        original, retry = Future(), Future()
+        builds = iter((original, retry))
+        review = live.Review(None, Issuer(bytes(32)), lambda: next(builds))
+        self.assertTrue(review.start("driver", b"queued recording", None))
+        original.set_exception(ValueError("simulated image builder failure"))
+        review.worker.join(timeout=2)
+        self.assertFalse(review.worker.is_alive())
+        self.assertIn("QNX preparation failed", review.snapshot("driver")["message"])
+        self.assertFalse(review.start("driver", b"another recording", None))
+        self.assertTrue(review.retry_preparation())
+        self.assertEqual(review.snapshot("driver"), {"stage": "ready"})
+        self.assertEqual(review.template_status(), "building")
+        self.assertFalse(review.retry_preparation())
+        retry.set_result("prepared guest")
+        self.assertEqual(review.template_status(), "ready")
+        self.assertFalse(review.retry_preparation())
+        review.close()
 
 
 if __name__ == "__main__":

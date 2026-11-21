@@ -21,7 +21,8 @@
     <div class="workspace" id="driver-workspace">
       <section class="card" id="recording-panel" aria-labelledby="recording-heading">
         <h2 id="recording-heading" tabindex="-1">Recording</h2>
-        <p id="guest-preparation" class="help" hidden>Preparing QNX for this app session.</p>
+        <p id="guest-preparation" class="help" role="status" hidden>Preparing QNX for this app session.</p>
+        <button class="secondary" id="retry-preparation" type="button" hidden>Retry QNX preparation</button>
         <label for="shop-request">Shop request file (optional)</label>
         <input id="shop-request" type="file" accept=".json,application/json" aria-describedby="request-status">
         <p id="request-status" class="help input-note" role="status">Without a shop request, the review covers both conditions.</p>

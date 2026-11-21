@@ -83,11 +83,13 @@ def startup_check(qemu_path):
 
 
 class Review:
-    def __init__(self, qemu, issuer, template):
+    def __init__(self, qemu, issuer, prepare):
         self.qemu = qemu
         self.issuer = issuer
-        self.template = template
+        self.prepare = prepare
+        self.template = prepare()
         self.lock = Lock()
+        self.closed = False
         self.state = {"stage": "ready"}
         self.owner = None
         self.response = Event()
@@ -107,9 +109,24 @@ class Review:
                 return dict(self.state)
             return {"stage": "occupied" if self.state["stage"] in ACTIVE_STAGES else "ready"}
 
+    def template_status(self):
+        template = self.template
+        if not template.done():
+            return "building"
+        return "failed" if template.exception() else "ready"
+
+    def retry_preparation(self):
+        with self.lock:
+            if self.closed or self.state["stage"] in ACTIVE_STAGES or self.template_status() != "failed":
+                return False
+            self.template = self.prepare()
+            self.owner = None
+            self.state = {"stage": "ready"}
+            return True
+
     def start(self, session, recording, request, *, bench=None, source=None):
         with self.lock:
-            if self.state["stage"] in ACTIVE_STAGES:
+            if self.closed or self.state["stage"] in ACTIVE_STAGES or self.template_status() == "failed":
                 return False
             job = secrets.token_urlsafe(12)
             self.owner = session
@@ -117,7 +134,7 @@ class Review:
             self.response = Event()
             self.decision = None
             self.deadline = None
-            self.worker = Thread(target=self.run, args=(recording, request, bench, source))
+            self.worker = Thread(target=self.run, args=(self.template, recording, request, bench, source))
             self.worker.start()
         return True
 
@@ -161,7 +178,7 @@ class Review:
             self._finish_decision(self.decision or "expired")
             return self.decision == "share"
 
-    def run(self, recording, request, bench, source):
+    def run(self, template, recording, request, bench, source):
         guest_closed = Event()
         response = self.response
         coverage = {}
@@ -170,8 +187,9 @@ class Review:
             guest_closed.set()
             response.set()
 
+        image = None
         try:
-            image = self.template.result()
+            image = template.result()
             import_review = None
             if source == UPLOADED_SOURCE:
                 import_review = (sha256(recording).digest(), request["id"] if request is not None else None)
@@ -194,11 +212,14 @@ class Review:
         except (OSError, RuntimeError, subprocess.SubprocessError) as error:
             print(f"Repair Receipt guest error: {error}", flush=True)
             result = {"stage": "error", "message": "QNX could not complete this review. Start a fresh review and check the local console."}
+        if image is None:
+            result = {"stage": "error", "message": "QNX preparation failed. Retry preparation from the recording panel."}
         with self.lock:
             self.state.update(result)
 
     def close(self):
         with self.lock:
+            self.closed = True
             if self.decision is None:
                 self.decision = "decline"
             self.response.set()
@@ -258,9 +279,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send(200, body, mime + "; charset=utf-8")
         elif driver and self.path == driver + "state":
             body = self.server.review.snapshot(self.driver_session())
-            template = self.server.review.template
-            body["template"] = ("building" if not template.done() else
-                                "failed" if template.exception() else "ready")
+            body["template"] = self.server.review.template_status()
             self.json(200, body)
         elif driver and self.path == driver + "issuer":
             self.json(200, self.server.review.issuer.public_profile())
@@ -393,7 +412,7 @@ class Handler(BaseHTTPRequestHandler):
             self.shop_post(body)
             return
         session = self.driver_session()
-        if path in {"import", "sample", "decision"} and session is None:
+        if path in {"import", "sample", "decision", "prepare"} and session is None:
             self.json(403, {"message": "Open the driver page to start a private review."})
             return
         request = None
@@ -436,6 +455,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.json(400, {"message": "Invalid decision."})
                 return
             ok = self.server.review.decide(session, job, choice)
+        elif path == "prepare" and body == b"{}" and self.headers.get_content_type() == "application/json":
+            ok = self.server.review.retry_preparation()
         else:
             self.json(404, {"message": "Action unavailable."})
             return
@@ -455,8 +476,11 @@ def serve(args, qemu, issuer, register):
             server.assets[server.driver] = ("driver.html", "text/html")
             workspace = resources.enter_context(TemporaryDirectory(prefix="repair-receipt-template-"))
             builds = resources.enter_context(ThreadPoolExecutor(max_workers=1))
-            template = builds.submit(prepare_live_template, Path(workspace) / "reference")
-            server.review = Review(qemu, issuer, template)
+
+            def prepare():
+                return builds.submit(prepare_live_template, Path(workspace) / secrets.token_hex(8))
+
+            server.review = Review(qemu, issuer, prepare)
             resources.callback(server.review.close)
             driver_url = f"http://{server.host}{server.driver}"
         server.register = register

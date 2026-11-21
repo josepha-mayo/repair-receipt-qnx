@@ -69,6 +69,8 @@ After verification, the shop can print the requested finding, test rule, input t
 
 If the browser loses contact with the local app, it hides the finding and pauses approval and download while it checks the current review. A decision is sent once per explicit activation. If QNX is still waiting and the interruption leaves no focused control, the page returns focus to the receipt so the driver can review it and choose again. If QEMU exits during the preview, the app ends that review so the driver can start another. If the app itself restarts, open the new Driver link printed in the console.
 
+If the initial QNX image build fails, check the local console for the SDK error and choose **Retry QNX preparation**. The app builds into a fresh temporary directory and keeps the selected recording and request in the driver tab. Start the review again when the image is ready. Approval still takes place in a new QNX review.
+
 ### File a receipt against a shop request
 
 In the local shop intake, choose a file under **Find a request from a receipt or packet**. The register uses the full request ID to look up the original job, including older requests outside the visible list. It verifies the scope and Ed25519 signature against the key pinned to that request, and checks the request and fingerprint carried by any packet against its own record. The matching work order, signed findings, test rule and source appear above the search and request history. Choose **File verified receipt** to store the answer. The full request ID and issuer fingerprint are available under **Request details**. Selecting a file alone leaves the register unchanged. The first accepted answer stays on file, and selecting the same file again confirms it is already filed.

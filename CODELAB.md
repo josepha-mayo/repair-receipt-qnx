@@ -27,6 +27,8 @@ start-live.cmd --practice
 
 Practice mode gives the walkthrough an empty shop register and a temporary driver key. Download any files you want to keep before closing the app. See [setup in the README](README.md#live-driver-and-shop-workflow) for loading the SDK and selecting a custom QEMU path.
 
+If the Driver page reports a QNX image preparation failure, check the launch console and choose **Retry QNX preparation** after resolving the error. Once the new image is ready, start the review with the files already selected.
+
 Open the printed shop and driver URLs. In the driver, save the public key under **Enroll your issuer key at the shop**. In the shop, load the public key, choose **At idle only**, create the request and download it. The request carries a random ID, a fixed recipe version and one operating condition. The shop register retains the request and its enrolled public key.
 
 In the driver page, load that request, run **Trip A** and review the preview. Approve and choose **Download verification packet**. In the shop register, open the packet under **Find a request from a receipt or packet**. The register opens the matching job and verifies it against the request and key on file. Choose **File verified receipt** and load the packet again to observe repeat handling. In the standalone verifier, try a freshly generated idle-only request against the same valid packet to see the request mismatch.

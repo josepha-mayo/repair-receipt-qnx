@@ -75,12 +75,17 @@ function render() {
   const busy = reviewing || stage === "occupied" || changing || reconnecting;
   byId("driver-workspace").classList.toggle("is-reviewing", reviewing);
   byId("recording-panel").hidden = reviewing;
-  const blocked = busy || loadingRequest || !!requestError;
+  const preparationFailed = state.template === "failed";
+  const blocked = busy || loadingRequest || !!requestError || preparationFailed;
   const preparation = byId("guest-preparation");
-  preparation.hidden = state.template !== "building" && state.template !== "failed";
-  preparation.textContent = state.template === "failed"
-    ? "QNX image preparation failed. Check the local console before restarting."
+  preparation.hidden = state.template !== "building" && !preparationFailed;
+  const preparationText = preparationFailed
+    ? "QNX image preparation failed. Check the local console, then retry here."
     : "Preparing QNX for this app session.";
+  if (preparation.textContent !== preparationText) preparation.textContent = preparationText;
+  const retry = byId("retry-preparation");
+  retry.hidden = !preparationFailed;
+  retry.disabled = busy;
   const benchWithoutRequest = byId("sample").value === "obd-bench" && !ticket;
   file.disabled = busy;
   requestFile.disabled = busy;
@@ -161,7 +166,8 @@ async function refresh() {
   const resumeReview = reconnecting && updated.stage === "review" && document.activeElement === document.body;
   if (jobChanged || stageChanged) actionError = "";
   if (jobChanged) newSelection = false;
-  if (unconfirmedAction && updated.job === unconfirmedAction.job && updated.stage === unconfirmedAction.stage) {
+  if (unconfirmedAction && updated.job === unconfirmedAction.job && updated.stage === unconfirmedAction.stage &&
+      (!unconfirmedAction.template || updated.template === unconfirmedAction.template)) {
     actionError = unconfirmedAction.message;
   }
   unconfirmedAction = null;
@@ -179,6 +185,7 @@ async function send(path, body, type) {
   changing = true;
   actionError = "";
   const starting = path === "import" || path === "sample";
+  const preparing = path === "prepare";
   if (starting) {
     clockBreaks = 0;
     newSelection = state.stage !== "ready";
@@ -203,7 +210,9 @@ async function send(path, body, type) {
       unconfirmedAction = {
         job: state.job,
         stage: state.stage,
+        template: preparing ? state.template : null,
         message: starting ? "A new review could not be confirmed. Try starting it again."
+          : preparing ? "The retry could not be confirmed. Check preparation and try again."
           : "Your decision could not be confirmed. Review the finding and choose again.",
       };
     }
@@ -214,6 +223,9 @@ async function send(path, body, type) {
   } finally {
     changing = false;
     render();
+    if (preparing && !reconnecting && document.activeElement === document.body) {
+      byId(state.template === "failed" ? "retry-preparation" : "recording-heading").focus({preventScroll: true});
+    }
     if (!starting && !reconnecting && state.stage === "review" && document.activeElement === document.body) {
       focusReceipt();
     }
@@ -273,6 +285,7 @@ byId("import").addEventListener("click", () => {
   if (file.files.length) send("import", file.files[0], "application/octet-stream");
 });
 byId("sample-run").addEventListener("click", () => send("sample", byId("sample").value, "text/plain"));
+byId("retry-preparation").addEventListener("click", () => send("prepare", "{}", "application/json"));
 for (const choice of ["share", "decline"]) {
   byId(choice).addEventListener("click", () => send("decision", JSON.stringify({job: state.job, choice}), "application/json"));
 }
