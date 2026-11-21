@@ -486,10 +486,12 @@ if (roadEvidence) {
   const roadSource = byId("road-source");
   const roadDisclosure = byId("road-disclosure");
   const downloads = byId("road-downloads");
+  const roadFollowUp = byId("road-follow-up");
   const idleControl = byId("check-idle");
   const controls = [[idleControl, "idle"], [byId("check-moving"), "moving"], [byId("check-startup"), "startup"]];
   const saveButtons = [byId("save-road-first"), byId("save-road-second")];
   let verifiedPair = null;
+  let roadFollowUpRule = null;
   let checking = false;
   document.body.classList.add("offline-verifier");
   byId("shop-heading").textContent = "Verify a receipt.";
@@ -506,6 +508,12 @@ if (roadEvidence) {
   }
   byId("save-road-key").addEventListener("click", () => {
     if (verifiedPair) ShopRequest.save("kit-example-issuer.json", JSON.stringify(verifiedPair.keyFile));
+  });
+  byId("save-road-follow-up").addEventListener("click", () => {
+    if (!roadFollowUpRule) return;
+    const {thresholdC, recipe} = roadFollowUpRule;
+    const request = ShopRequest.create("moving", thresholdC, recipe);
+    ShopRequest.save("kit-july-27-moving-follow-up.json", JSON.stringify(request));
   });
 
   async function verifyRoadPair(mode) {
@@ -531,6 +539,7 @@ if (roadEvidence) {
         throw new Error("The startup comparison needs both road requests at 95 °C.");
       }
     } else if ([a, b].some(claim => claim.source !== ShopRequest.publishedSource || claim.scope !== mode ||
+                                   claim.recipe !== ShopRequest.recipe ||
                                    claim.thresholdC !== 95)) {
       throw new Error("The example receipts must match the selected scope and published recording source.");
     }
@@ -560,6 +569,9 @@ if (roadEvidence) {
         control.classList.toggle("secondary", control !== selected);
       }
       verifiedPair = null;
+      roadFollowUpRule = null;
+      roadFollowUp.hidden = true;
+      roadFollowUp.open = false;
       roadFindings.hidden = true;
       roadComparison.hidden = true;
       roadSource.hidden = true;
@@ -584,6 +596,11 @@ if (roadEvidence) {
         const combined = !!idle && !!moving;
         if (combined) {
           showRoadComparison(idle, moving);
+          const july27 = moving.claims[1];
+          if (idle.claims[1].idle === "observed" && july27.moving === "insufficient_evidence") {
+            roadFollowUpRule = july27;
+            roadFollowUp.hidden = false;
+          }
         } else {
           byId("road-first-label").textContent = startup ? "Entire recording" : "KIT drive · 26 July 2017";
           byId("road-second-label").textContent = startup ? "Startup allowance" : "KIT drive · 27 July 2017";

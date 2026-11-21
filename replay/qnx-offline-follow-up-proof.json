@@ -1,0 +1,22 @@
+{
+  "runtime": "QNX 8.0 x86-64, Brave on Windows",
+  "offline": true,
+  "mobile_width_px": 320,
+  "accessibility_violations": [],
+  "original_example_signatures_verified": 4,
+  "invalid_moving_signature_withheld_follow_up": true,
+  "startup_comparison_withheld_follow_up": true,
+  "practice_request": {
+    "scope": "moving",
+    "threshold_celsius": 95,
+    "recipe": "coolant-duration-demo/v2",
+    "fresh_request_ids": true
+  },
+  "new_qnx_receipt": {
+    "moving": "observed",
+    "idle_disclosed": false,
+    "packet_bytes": 673,
+    "original_request_matched": true,
+    "different_request_rejected": true
+  }
+}

@@ -14,6 +14,10 @@ Open the downloaded HTML in a current Chromium browser. It contains four receipt
 
 Open **Check a separate issuer fingerprint** and paste `issuer.fingerprint` from the [published example evidence](replay/qnx-road-scope-receipts.json). Verify again and confirm that the supplied key matches it. Change any hexadecimal digit and verify to see the key comparison fail before the verifier displays a finding. For a real work order, confirm the full fingerprint with the issuer through a trusted channel and load the shop's independently saved request. The printout identifies which request was checked.
 
+### Carry the missing condition into QNX
+
+Open **Follow up on July 27** and save the moving-only practice request. It keeps the 95 °C rule and asks for a new answer only where the example lacked coverage. To answer it, load the request file on the live Driver page after [building and launching practice mode](#1-compile-and-run). Choose **July 26 · Full drive** from the sample list and run it on QNX. That recording supplies a moving observation for this exercise. Approve the finding and save the verification packet and the practice issuer's public key. Verify the packet with that key and the saved practice request. For a real case, use a later recording from the same vehicle and create the follow-up in the shop register so the original evidence stays on the work order.
+
 ## 1. Compile and run
 
 Install QNX SDP 8.0, QEMU for x86-64 and 64-bit Python 3.10 or later. Extract the source to a short path such as `%USERPROFILE%\rr` to avoid errors while Python creates the virtual environment. Open **Command Prompt** in the folder that contains `build-qnx.cmd`. The scripts load the default Windows SDK at `%USERPROFILE%\qnx800`. For an SDK installed elsewhere, run `call "C:\path\to\qnxsdp-env.bat"` with your SDK path in this prompt before building. [QNX SDP installation guide](https://www.qnx.com/developers/docs/8.0/com.qnx.doc.qnxsdp.quickstart/topic/install_host.html)

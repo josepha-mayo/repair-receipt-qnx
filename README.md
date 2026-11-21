@@ -4,6 +4,8 @@ Give a repair shop the answer to a specific question without handing over a reco
 
 **Try the signed QNX examples.** Open the downloaded HTML in a current Chromium browser. It verifies four receipts and shows the idle and moving findings side by side. The two drives share a 342-byte signed idle receipt and return different answers while moving. Select **Check idle receipts** or **Check moving receipts** to choose the packets to download. **Compare startup rules** verifies the one-second allowance on the July 27 drive. **Download proof files** saves the selected packets and their example key. [Download the offline verifier](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest/download/verify-receipt.html) · [Scoped receipts](replay/qnx-road-scope-receipts.json) · [Startup receipts](replay/qnx-road-startup-receipts.json)
 
+**Follow up on July 27** saves a moving-only practice request under the same 95 °C rule. Answer it in the live QNX guest and verify the new signature against that request. [Follow-up walkthrough](CODELAB.md#carry-the-missing-condition-into-qnx)
+
 The offline walkthrough also lets you try a mismatched request and return to checking the same signed packet. [Offline codelab steps](CODELAB.md#verify-two-real-drives-offline)
 
 The first recipe reports whether a sustained coolant test threshold was observed with the vehicle stationary or moving. The app labels these contexts **At idle** and **While moving**. QNX uses engine-running samples and separates recorded speeds of 0 km/h and above 0 km/h. Each context is reported independently as observed, not observed, or insufficient evidence. The signed claim carries the recipe version and requested findings, with an opaque request ID for shop-initiated checks.
