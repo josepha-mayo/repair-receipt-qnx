@@ -11,6 +11,7 @@ enum {
     MIN_SAMPLES = 3,
     MAX_GAP_MS = 2000,
     SUSTAINED_MS = 2000,
+    STARTUP_WINDOW_MS = 1000,
     MAX_DURATION_MS = 86400000,
 };
 
@@ -142,12 +143,14 @@ static int read_line(struct recording_reader *reader, char *line, size_t capacit
 
 static int format_receipt(char receipt[RECEIPT_CAPACITY], const struct shop_request *request,
                           const struct findings summaries[CONTEXTS], struct receipt_coverage coverage,
-                          enum recording_source source, bool sustained)
+                          enum recording_source source, enum receipt_recipe recipe)
 {
     const enum receipt_scope scope = request ? request->scope : SCOPE_BOTH;
     const char *idle = scope & SCOPE_IDLE ? finding(&summaries[IDLE], coverage.idle) : NULL;
     const char *moving = scope & SCOPE_MOVING ? finding(&summaries[MOVING], coverage.moving) : NULL;
-    const char *recipe = sustained ? "coolant-duration-demo/v2" : "coolant-context-demo/v1";
+    const char *recipe_name = recipe == RECIPE_SAMPLE_COUNT ? "coolant-context-demo/v1" :
+                              recipe == RECIPE_STARTUP_WINDOW ? "coolant-startup-window/v3" :
+                              "coolant-duration-demo/v2";
     static const char *const sources[] = {
         [SOURCE_UNSPECIFIED] = "",
         [SOURCE_IMPORTED] = ",\"source\":\"uploaded-csv/v1\"",
@@ -160,7 +163,8 @@ static int format_receipt(char receipt[RECEIPT_CAPACITY], const struct shop_requ
         snprintf(threshold, sizeof(threshold), ",\"thresholdC\":%d", request->threshold_c);
     }
     char prefix[96];
-    const int base_size = snprintf(prefix, sizeof(prefix), "{\"recipe\":\"%s\"%s%s", recipe, threshold, sources[source]);
+    const int base_size = snprintf(prefix, sizeof(prefix), "{\"recipe\":\"%s\"%s%s",
+                                   recipe_name, threshold, sources[source]);
     if (base_size < 0 || (size_t)base_size >= sizeof(prefix)) {
         return -1;
     }
@@ -199,7 +203,8 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
     long previous = -1;
     int previous_context = -1;
     bool complete = missing == 0;
-    const bool sustained = recipe == RECIPE_SUSTAINED;
+    const bool sustained = recipe != RECIPE_SAMPLE_COUNT;
+    bool opening = recipe == RECIPE_STARTUP_WINDOW;
     const int threshold = request ? request->threshold_c : DEFAULT_THRESHOLD_C;
     const enum receipt_scope scope = request ? request->scope : SCOPE_BOTH;
     const bool requested[CONTEXTS] = {scope & SCOPE_IDLE, scope & SCOPE_MOVING};
@@ -216,6 +221,17 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
             speed_kmh < 0 || speed_kmh > 400 || temperature_c < MIN_TEMPERATURE_C || temperature_c > MAX_TEMPERATURE_C) {
             return -1;
         }
+        if (opening) {
+            if (missing_sample && time_ms <= STARTUP_WINDOW_MS) {
+                previous = time_ms;
+                continue;
+            }
+            // Initial missing rows still affect coverage if the first complete sample arrives after the limit.
+            if (previous >= 0 && time_ms > STARTUP_WINDOW_MS) {
+                complete = false;
+            }
+            opening = false;
+        }
         const bool gap = previous < 0 ? time_ms > MAX_GAP_MS : time_ms - previous > MAX_GAP_MS;
         complete = complete && !gap && !missing_sample;
         int context = speed_kmh > 0 ? MOVING : IDLE;
@@ -230,7 +246,7 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
     if (line_status < 0) {
         return -1;
     }
-    complete = complete && previous >= 0 && duration - previous <= MAX_GAP_MS;
+    complete = complete && !opening && previous >= 0 && duration - previous <= MAX_GAP_MS;
     const struct receipt_coverage limits = {
         .idle = requested[IDLE] ? coverage_limits(&summaries[IDLE], complete, sustained) : 0,
         .moving = requested[MOVING] ? coverage_limits(&summaries[MOVING], complete, sustained) : 0,
@@ -238,7 +254,7 @@ static int evaluate(FILE *input, const struct shop_request *request, enum receip
     if (coverage) {
         *coverage = limits;
     }
-    return format_receipt(receipt, request, summaries, limits, source, sustained);
+    return format_receipt(receipt, request, summaries, limits, source, recipe);
 }
 
 int evaluate_recording(FILE *input, const struct shop_request *request, enum recording_source source,
@@ -256,5 +272,8 @@ int evaluate_driver_recording(FILE *input, enum recording_source source, char re
 int evaluate_bench_capture(FILE *input, const struct shop_request *request, unsigned missing,
                            char receipt[RECEIPT_CAPACITY], struct receipt_coverage *coverage)
 {
+    if (request->recipe == RECIPE_STARTUP_WINDOW) {
+        return -1;
+    }
     return evaluate(input, request, request->recipe, SOURCE_BENCH, missing, receipt, coverage);
 }

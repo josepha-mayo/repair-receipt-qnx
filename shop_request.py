@@ -5,7 +5,8 @@ import re
 
 RECIPE = "coolant-context-demo/v1"
 CURRENT_RECIPE = "coolant-duration-demo/v2"
-RECIPES = {RECIPE: 1, CURRENT_RECIPE: 2}
+STARTUP_RECIPE = "coolant-startup-window/v3"
+RECIPES = {RECIPE: 1, CURRENT_RECIPE: 2, STARTUP_RECIPE: 4}
 DEFAULT_THRESHOLD_C = 105
 MIN_TEMPERATURE_C, MAX_TEMPERATURE_C = -40, 200
 REQUEST_FORMAT = "repair-receipt-request/v1"
@@ -55,7 +56,7 @@ def parse_request(text):
     threshold = None
     if value["format"] == THRESHOLD_REQUEST_FORMAT:
         threshold = value.get("thresholdC")
-        if value["recipe"] != CURRENT_RECIPE or not valid_threshold(threshold):
+        if value["recipe"] not in (CURRENT_RECIPE, STARTUP_RECIPE) or not valid_threshold(threshold):
             raise ValueError("The shop request has an invalid temperature threshold.")
     expected = request_document(value["scope"], value["id"], value["recipe"], threshold)
     if canonical(expected) != text:
@@ -66,7 +67,8 @@ def parse_request(text):
 def guest_bytes(request):
     prefix = bytes((SCOPES[request["scope"]][0],)) + bytes.fromhex(request["id"])
     if "thresholdC" in request:
-        return prefix + bytes((3, request["thresholdC"] - MIN_TEMPERATURE_C))
+        encoding = 5 if request["recipe"] == STARTUP_RECIPE else 3
+        return prefix + bytes((encoding, request["thresholdC"] - MIN_TEMPERATURE_C))
     version = RECIPES[request["recipe"]]
     return prefix if version == 1 else prefix + bytes((version,))
 

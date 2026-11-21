@@ -113,17 +113,17 @@ static void read_shop_request(struct shop_request *request)
     unsigned char id[REQUEST_ID_BYTES];
     check(fread(id, 1, sizeof(id), file) == sizeof(id), "read request ID");
     const int version = fgetc(file);
-    const int configured_request = 3;
-    request->custom_threshold = version == configured_request;
+    const bool startup_window = version == RECIPE_STARTUP_WINDOW || version == REQUEST_STARTUP_CONFIGURED;
+    request->custom_threshold = version == REQUEST_CONFIGURED || version == REQUEST_STARTUP_CONFIGURED;
     request->threshold_c = DEFAULT_THRESHOLD_C;
     if (request->custom_threshold) {
         const int encoded = fgetc(file);
         check(encoded >= 0 && encoded <= MAX_TEMPERATURE_C - MIN_TEMPERATURE_C, "read configured threshold");
         request->threshold_c = MIN_TEMPERATURE_C + encoded;
     }
-    check((version == EOF || version == RECIPE_SUSTAINED || request->custom_threshold) &&
+    check((version == EOF || version == RECIPE_SUSTAINED || startup_window || request->custom_threshold) &&
           (version == EOF || fgetc(file) == EOF) && !ferror(file), "read allowlisted recipe");
-    request->recipe = version == EOF ? RECIPE_SAMPLE_COUNT : RECIPE_SUSTAINED;
+    request->recipe = version == EOF ? RECIPE_SAMPLE_COUNT : startup_window ? RECIPE_STARTUP_WINDOW : RECIPE_SUSTAINED;
     fclose(file);
     for (size_t i = 0; i < sizeof(id); ++i) {
         snprintf(request->id + i * 2, 3, "%02x", (unsigned)id[i]);
