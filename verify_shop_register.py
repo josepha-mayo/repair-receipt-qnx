@@ -268,6 +268,7 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     child_id = child["request"]["id"]
     order = reopened.work_order_findings(child_id)
     assert order["workOrder"] == local_reference and order["originalRequest"] == incomplete["id"]
+    assert order["earlierReceipts"] == []
     assert order["pending"] == {"request": child_id, "scope": "moving", "purpose": "follow-up"}
     idle, moving = order["contexts"]
     assert idle["evidence"]["request"] == incomplete["id"] and idle["evidence"]["finding"] == "observed"
@@ -425,17 +426,27 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     full = reopened.repeat(follow_after["id"], recheck=True)["request"]
     assert full == {**initial, "id": full["id"]}
     prior_ids = [after["id"], follow_after["id"]]
-    pending = reopened.work_order_findings(full["id"])["contexts"]
+    report = reopened.work_order_findings(full["id"])
+    pending = report["contexts"]
     assert [entry["baseline"]["request"] for entry in pending] == prior_ids
     assert all(entry["pendingRequest"] == full["id"] for entry in pending)
+    original_history = {"request": initial["id"], "filedAt": reopened.fetch(initial["id"])["accepted_at"],
+                        "findings": {"idle": "observed", "moving": "not_observed"}}
+    assert report["earlierReceipts"] == [original_history]
     reopened.attach(full["id"], sign(full, {"idle": "observed", "moving": "not_observed"}, owner))
-    comparison = ShopRegister(path).work_order_findings(initial["id"])["contexts"]
+    report = ShopRegister(path).work_order_findings(initial["id"])
+    comparison = report["contexts"]
     assert [entry["baseline"]["request"] for entry in comparison] == prior_ids
     assert all(entry["evidence"]["request"] == full["id"] for entry in comparison)
+    assert report["earlierReceipts"] == [original_history]
     _, history = reopened.work_order_archive(full["id"])
     with ZipFile(BytesIO(history)) as bundle:
         assert bundle.namelist() == [f"repair-verification-{ticket['id']}.json"
                                     for ticket in (initial, after, follow_after, full)]
+    later = reopened.repeat(full["id"], recheck=True)["request"]
+    earlier_receipts = reopened.work_order_findings(later["id"])["earlierReceipts"]
+    assert [entry["request"] for entry in earlier_receipts] == [follow_after["id"], after["id"], initial["id"]]
+    assert earlier_receipts[1]["findings"]["moving"] == "insufficient_evidence"
 
     old = reopened.create("both", pin(owner), "Saved narrower recheck", threshold)["request"]
     reopened.attach(old["id"], sign(old, {"idle": "observed", "moving": "insufficient_evidence"}, owner))

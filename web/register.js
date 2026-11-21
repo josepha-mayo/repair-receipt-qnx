@@ -33,6 +33,13 @@ let keyVersion = 0;
 let busy = false;
 let matchedReceipt = null;
 let pendingCreation = null;
+
+function filingLabel(value) {
+  const date = new Date(value);
+  return value && Number.isFinite(date.getTime())
+    ? `Receipt filed ${time.format(date)}` : "Receipt filing time unavailable";
+}
+
 function showRequestRule() {
   byId("condition-note").textContent = conditionNotes[conditionInput.value];
   const value = thresholdInput.valueAsNumber;
@@ -133,7 +140,7 @@ function renderSelection() {
     const selectedState = byId("selected-state");
     selectedState.textContent = job.receiptInvalid ? "Saved receipt failed verification. Check the original packet or a trusted backup."
       : job.acceptedAt
-      ? `Filed ${time.format(new Date(job.acceptedAt))}`
+      ? filingLabel(job.acceptedAt)
       : `${ShopRequest.scopes[job.request.scope]} · ${verified ? "Ready to file" : "Awaiting a receipt"}`;
     selectedState.classList.toggle("bad", job.receiptInvalid);
     byId("selected-request").textContent = `Request ${job.request.id}`;
@@ -411,7 +418,7 @@ function reportReading(evidence, label) {
   if (evidence) {
     for (const [selector, text] of [
       [".report-source", `Source · ${ShopRequest.sourceLabel(evidence.source)}`],
-      [".report-filing", `Receipt filed ${time.format(new Date(evidence.filedAt))}`],
+      [".report-filing", filingLabel(evidence.filedAt)],
       [".report-request", `Receipt request ID ${evidence.request}`],
       [".report-digest", `Receipt SHA-256 ${evidence.receiptSha256}`],
       [".report-receipt", `Open receipt ${evidence.request.slice(-8)}`],
@@ -457,6 +464,25 @@ function intakeSummary(contexts) {
   const other = filed.filter(({evidence}) => evidence.source !== "uploaded-csv/v1");
   if (other.length) summary.push(`Use a recording from this vehicle to assess the complaint ${conditionText(other)}.`);
   return summary.join(" ");
+}
+
+function showEarlierReceipts(receipts) {
+  const history = byId("report-history");
+  const list = byId("report-history-list");
+  history.open = false;
+  history.hidden = !receipts.length;
+  byId("report-history-summary").textContent = `Earlier receipts (${receipts.length})`;
+  list.replaceChildren();
+  for (const {request, filedAt, findings: signedFindings} of receipts) {
+    const row = byId("report-history-entry").content.cloneNode(true);
+    row.querySelector(".history-findings").textContent = Object.entries(signedFindings)
+      .map(([condition, outcome]) => `${conditions[condition]} · ${findings[outcome]}`).join(" / ");
+    row.querySelector(".history-filed").textContent = filingLabel(filedAt);
+    const button = row.querySelector("button");
+    button.textContent = `Open receipt ${request.slice(-8)}`;
+    button.dataset.request = request;
+    list.append(row);
+  }
 }
 
 function showWorkOrder(report) {
@@ -507,6 +533,7 @@ function showWorkOrder(report) {
     readings.append(reportReading(evidence, baseline ? "Recheck" : ""));
     entries.append(row);
   }
+  showEarlierReceipts(report.earlierReceipts);
   workOrderDialog.showModal();
 }
 

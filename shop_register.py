@@ -371,9 +371,19 @@ class ShopRegister:
         if latest_claim is None:
             purpose = "recheck" if latest["recheck"] else "follow-up" if latest["repeats"] else "original"
             pending = {"request": latest_request["id"], "scope": latest_request["scope"], "purpose": purpose}
+        visible_receipts = {
+            reading["request"] for context in contexts.values()
+            for reading in (context["evidence"], context.get("baseline")) if reading is not None
+        }
+        earlier_receipts = [
+            {"request": request["id"], "filedAt": row["accepted_at"],
+             "findings": {condition: claim[condition] for condition in SCOPES[request["scope"]][1]}}
+            for row, request, claim in reversed(chain)
+            if claim is not None and request["id"] not in visible_receipts
+        ]
         return {"workOrder": root["work_order"], "originalRequest": root["id"],
                 "fingerprint": sha256(root["issuer"]).hexdigest(), "contexts": list(contexts.values()),
-                "pending": pending}
+                "pending": pending, "earlierReceipts": earlier_receipts}
 
     def work_order_archive(self, request_id):
         chain = self.checked_work_order(request_id)
