@@ -7,7 +7,7 @@ const workOrderDialog = byId("work-order-dialog");
 const conditionInput = byId("condition");
 const thresholdInput = byId("threshold");
 const orderReference = byId("order-reference");
-const jobs = new Map();
+let jobs = new Map();
 const time = new Intl.DateTimeFormat(undefined, {dateStyle: "medium", timeStyle: "short"});
 const findings = {
   observed: "Threshold observed",
@@ -364,13 +364,19 @@ byId("save-packet").addEventListener("click", () => action("file-status", async 
 }));
 
 byId("new-follow-up").addEventListener("click", () => action("file-status", async () => {
-  const recheck = !current().missingScope;
-  const child = await api(recheck ? "recheck" : "follow-up", {request: active});
-  await loadJobs();
-  jobs.set(child.request.id, child);
-  choose(child.request.id);
-  status("file-status", `${recheck ? "Recheck" : "Follow-up"} ready. Download the new request and send it to the driver.`);
-  byId("save-request").focus();
+  const parent = current();
+  const recheck = !parent.missingScope;
+  const child = await api(recheck ? "recheck" : "follow-up", {request: parent.request.id});
+  const childId = child.request.id;
+  jobs.set(parent.request.id, {...parent, followUp: childId});
+  jobs.delete(childId);
+  jobs = new Map([[childId, child], ...jobs]);
+  renderJobs();
+  choose(childId);
+  const label = recheck ? "Recheck" : "Follow-up";
+  status("file-status", child.claim ? `This ${label.toLowerCase()} already has a filed receipt.`
+    : `${label} ready. Download the new request and send it to the driver.`);
+  byId(child.claim ? "selected-title" : "save-request").focus();
 }));
 
 async function openJob(id) {
