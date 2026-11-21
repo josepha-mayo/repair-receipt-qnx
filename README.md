@@ -18,7 +18,7 @@ Independent shops and vehicle manufacturers already face decisions about how to 
 
 ## Live driver and shop workflow
 
-From a Windows command prompt with 64-bit Python 3.10 or later, QNX SDP 8.0 and QEMU for x86-64 installed, open this folder and run:
+Install 64-bit Python 3.10 or later, QNX SDP 8.0 and QEMU for x86-64. Extract or clone into a short path such as `%USERPROFILE%\rr`. A deeply nested path can cause Windows to fail while Python's bundled pip creates the virtual environment. Open Command Prompt in the project folder and run these commands.
 
 ```bat
 python -m venv .venv
@@ -40,8 +40,6 @@ Run `start-live.cmd --self-test` to verify the QNX path with the included demo r
 Run `start-live.cmd --policy-lab` to reproduce three native trials with the same recording, request and issuer. The JSON report shows the QNX channel denial after approval, the result of declining under the standard policy, and the signed result after approving under the standard policy. [Native policy exercise](CODELAB.md#remove-one-channel-grant)
 
 [Host checks](.github/workflows/host-checks.yml) verify the shop register, the four archived QNX signatures, browser-script syntax and the generated offline verifier on Windows and Ubuntu. To reproduce the receipt and bundle checks locally, run `python verify_shop_register.py` and `python pack_shop.py --check`. The QNX self-test above exercises the live guest.
-
-If Windows reports a path-length error while creating the Python environment, use a short project path such as `C:\src\repair-receipt` and retry.
 
 Open the printed **Driver** URL to save its issuer public key. In the printed **Shop** URL, load the key after confirming its fingerprint and choose **At idle only**. Create and download the request. In the driver page load that file, run a sample or import a CSV, review the finding, then approve or decline. The browser exchanges consent with a private QNX VM over loopback. The VM has no network interface. Approval returns a signed receipt from QNX. The host removes the temporary staging files and job disk after review. Drivers can also initiate a broad review of both operating conditions from the driver page.
 

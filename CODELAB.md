@@ -14,7 +14,7 @@ Open **Check a separate issuer fingerprint** and paste `issuer.fingerprint` from
 
 ## 1. Compile and run
 
-Install QNX SDP 8.0, QEMU for x86-64 and 64-bit Python 3.10 or later. Open **Command Prompt** in the extracted source folder. The scripts load the default Windows SDK at `%USERPROFILE%\qnx800`. For an SDK installed elsewhere, run `call "C:\path\to\qnxsdp-env.bat"` with your SDK path in this prompt before building. [QNX SDP installation guide](https://www.qnx.com/developers/docs/8.0/com.qnx.doc.qnxsdp.quickstart/topic/install_host.html)
+Install QNX SDP 8.0, QEMU for x86-64 and 64-bit Python 3.10 or later. Extract the source to a short path such as `%USERPROFILE%\rr` to avoid errors while Python creates the virtual environment. Open **Command Prompt** in the folder that contains `build-qnx.cmd`. The scripts load the default Windows SDK at `%USERPROFILE%\qnx800`. For an SDK installed elsewhere, run `call "C:\path\to\qnxsdp-env.bat"` with your SDK path in this prompt before building. [QNX SDP installation guide](https://www.qnx.com/developers/docs/8.0/com.qnx.doc.qnxsdp.quickstart/topic/install_host.html)
 
 ```bat
 python -m venv .venv
