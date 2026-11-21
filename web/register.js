@@ -4,6 +4,7 @@ const byId = id => document.getElementById(id);
 const issuerFile = byId("trusted-key");
 const receiptFile = byId("returned-receipt");
 const workOrderDialog = byId("work-order-dialog");
+const conditionInput = byId("condition");
 const thresholdInput = byId("threshold");
 const orderReference = byId("order-reference");
 const jobs = new Map();
@@ -14,6 +15,11 @@ const findings = {
   insufficient_evidence: "Insufficient evidence",
 };
 const conditions = {idle: "At idle", moving: "While moving"};
+const conditionNotes = {
+  idle: "Uses engine-running samples at 0 km/h.",
+  moving: "Uses engine-running samples above 0 km/h.",
+  both: "Checks 0 km/h and above 0 km/h separately with the engine running.",
+};
 const repeatInstructions = {
   idle: "Ask for a new recording at idle.",
   moving: "Ask for a new recording while moving.",
@@ -27,11 +33,13 @@ let keyVersion = 0;
 let busy = false;
 let matchedReceipt = null;
 function showRequestRule() {
+  byId("condition-note").textContent = conditionNotes[conditionInput.value];
   const value = thresholdInput.valueAsNumber;
   byId("new-rule").textContent = ShopRequest.rule({recipe: ShopRequest.recipe,
     thresholdC: ShopRequest.validThreshold(value) ? value : null});
 }
 
+conditionInput.addEventListener("change", showRequestRule);
 thresholdInput.addEventListener("input", showRequestRule);
 showRequestRule();
 
@@ -306,7 +314,7 @@ byId("new-request").addEventListener("click", () => {
   if (!thresholdInput.reportValidity()) return;
   action("new-status", async () => {
     const workOrder = byId("work-order");
-    const created = await api("jobs", {scope: byId("condition").value, issuer: issuer.text,
+    const created = await api("jobs", {scope: conditionInput.value, issuer: issuer.text,
       workOrder: workOrder.value.trim(), thresholdC: thresholdInput.value === "" ? null : thresholdInput.valueAsNumber});
     workOrder.value = "";
     thresholdInput.value = "";

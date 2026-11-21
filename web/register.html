@@ -89,11 +89,12 @@
         <input id="trusted-key" type="file" accept=".json,application/json" aria-describedby="issuer-note">
         <p id="issuer-note" class="help input-note" role="status">Use a key whose fingerprint you have confirmed with the issuer.</p>
         <label for="condition">Coolant test condition</label>
-        <select id="condition">
+        <select id="condition" aria-describedby="condition-note">
           <option value="idle">At idle only</option>
           <option value="moving">While moving only</option>
           <option value="both">At idle and while moving</option>
         </select>
+        <p id="condition-note" class="help"></p>
         <label for="threshold">Test threshold in °C (optional)</label>
         <input id="threshold" type="number" min="-40" max="200" step="1" placeholder="105" aria-describedby="new-rule">
         <p id="new-rule" class="help"></p>
