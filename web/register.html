@@ -144,9 +144,13 @@
     <p id="report-withdrawn" class="report-outcome" hidden>Withdrawn from this work order. These findings are kept for the record.</p>
     <button id="report-open-replacement" type="button" class="link-button" hidden>Open replacement review</button>
     <button id="report-open-withdrawn" type="button" class="link-button" hidden>Open the withdrawn review</button>
-    <section id="report-intake" aria-labelledby="report-intake-heading" hidden>
+    <section id="report-intake" class="report-guidance" aria-labelledby="report-intake-heading" hidden>
       <h3 id="report-intake-heading">Where to start</h3>
       <p id="report-intake-summary"></p>
+    </section>
+    <section id="report-recheck-note" class="report-guidance" aria-labelledby="report-recheck-heading" hidden>
+      <h3 id="report-recheck-heading">Before assessing the repair</h3>
+      <p>Confirm the vehicle, capture dates and comparable test conditions. The times shown are when the shop filed the receipts.</p>
     </section>
     <div id="report-pending" hidden>
       <p id="report-pending-summary" class="help"></p>
@@ -157,7 +161,6 @@
     <p id="report-receipt-summary" class="help" hidden></p>
     <p id="report-open-status" class="status" role="status"></p>
     <div id="report-findings" class="report-findings"></div>
-    <p id="report-recheck-note" class="help" hidden>Times shown are when the shop filed each receipt. Confirm the capture dates and test conditions before assessing the repair.</p>
     <details id="report-history" class="issuer-enrollment" hidden>
       <summary id="report-history-summary"></summary>
       <ul id="report-history-list"></ul>

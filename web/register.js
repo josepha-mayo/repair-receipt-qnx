@@ -547,16 +547,17 @@ function showWorkOrder(report) {
   status("report-open-status", "");
   byId("report-reference").textContent = report.workOrder
     ? `Work order ${report.workOrder}` : `Original request ${report.originalRequest.slice(-8)}`;
-  const summary = withdrawn ? "" : intakeSummary(report.contexts);
+  const isRecheck = report.contexts.some(context => context.baseline);
+  const summary = withdrawn || isRecheck ? "" : intakeSummary(report.contexts);
   byId("report-intake").hidden = !summary;
   byId("report-intake-summary").textContent = summary;
+  byId("report-recheck-note").hidden = withdrawn || !isRecheck;
   const latest = report.contexts.map(context => context.evidence?.request);
   const receiptSummary = byId("report-receipt-summary");
   receiptSummary.hidden = latest.length !== 2 || !latest.every(Boolean);
   receiptSummary.textContent = receiptSummary.hidden ? "" : latest[0] === latest[1]
     ? "The latest idle and moving findings share one signed receipt."
     : "The latest idle and moving findings come from separate signed receipts.";
-  byId("report-recheck-note").hidden = !report.contexts.some(context => context.baseline);
   const entries = byId("report-findings");
   entries.replaceChildren();
   const evidenceLink = byId("download-work-evidence");

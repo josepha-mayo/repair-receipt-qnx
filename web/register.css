@@ -8,9 +8,9 @@
 #selected-title, #new-heading { scroll-margin-block-start: 16px; }
 #selected-state, #selected-rule { margin-top: 5px; }
 #file-receipt { min-height: 44px; }
-#report-intake { margin: 14px 0; padding: 3px 0 3px 12px; border-inline-start: 3px solid var(--green); }
-#report-intake h3 { margin: 0 0 4px; font-size: .95rem; }
-#report-intake p { margin: 0; font-size: .94rem; }
+.report-guidance { margin: 14px 0; padding: 3px 0 3px 12px; border-inline-start: 3px solid var(--green); }
+.report-guidance h3 { margin: 0 0 4px; font-size: .95rem; }
+.report-guidance p { margin: 0; font-size: .94rem; }
 #report-pending { margin: 12px 0; }
 #report-open-pending, #report-create-follow-up { margin-top: 8px; }
 #report-open-status:empty, #report-correction-status:empty { display: none; }
@@ -39,5 +39,5 @@
 @media print {
   #report-open-pending, #report-create-follow-up, #report-open-status, #report-history,
   #report-open-replacement, #report-open-withdrawn, #report-correction { display: none; }
-  #report-intake { break-inside: avoid; }
+  .report-guidance { break-inside: avoid; }
 }
