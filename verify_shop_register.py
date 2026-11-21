@@ -241,6 +241,8 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     else:
         raise AssertionError("An independently signed receipt located the work order.")
     register.attach(incomplete["id"], original)
+    original_report = register.work_order_findings(incomplete["id"])
+    assert original_report["nextFollowUp"] == {"request": incomplete["id"], "scope": "moving"}
     assert register.match(original)["state"] == "alreadyFiled"
     altered = sign(incomplete, {"idle": "not_observed", "moving": "insufficient_evidence"}, owner)
     assert register.match(altered)["state"] == "conflict"
@@ -270,6 +272,7 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     assert order["workOrder"] == local_reference and order["originalRequest"] == incomplete["id"]
     assert order["earlierReceipts"] == []
     assert order["pending"] == {"request": child_id, "scope": "moving", "purpose": "follow-up"}
+    assert order["nextFollowUp"] is None
     idle, moving = order["contexts"]
     assert idle["evidence"]["request"] == incomplete["id"] and idle["evidence"]["finding"] == "observed"
     assert moving["evidence"]["finding"] == "insufficient_evidence" and moving["pendingRequest"] == child_id
@@ -286,6 +289,7 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     order = reopened.work_order_findings(incomplete["id"])
     assert reopened.work_order_findings(child_id) == order
     assert order["pending"] is None
+    assert order["nextFollowUp"] is None
     assert order["contexts"][0] == idle
     assert idle["evidence"]["receiptSha256"] == sha256(original.encode("ascii")).hexdigest()
     assert order["contexts"][1]["evidence"]["request"] == child_id
@@ -406,6 +410,7 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     assert all(entry["baseline"]["request"] == initial["id"] and entry["evidence"] is None for entry in pending)
     assert all(entry["pendingRequest"] == after["id"] for entry in pending)
     reopened.attach(after["id"], sign(after, {"idle": "not_observed", "moving": "insufficient_evidence"}, owner))
+    assert reopened.work_order_findings(initial["id"])["nextFollowUp"] == {"request": after["id"], "scope": "moving"}
     follow_after = reopened.follow_up(after["id"])["request"]
     assert follow_after["scope"] == "moving"
     assert reopened.work_order_findings(initial["id"])["pending"] == {

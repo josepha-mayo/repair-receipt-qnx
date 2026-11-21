@@ -12,7 +12,7 @@
 #report-intake h3 { margin: 0 0 4px; font-size: .95rem; }
 #report-intake p { margin: 0; font-size: .94rem; }
 #report-pending { margin: 12px 0; }
-#report-open-pending { margin-top: 8px; }
+#report-open-pending, #report-create-follow-up { margin-top: 8px; }
 #report-open-status:empty { display: none; }
 #report-history-list { margin: 0; padding: 0; list-style: none; }
 #report-history-list li { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
@@ -37,6 +37,6 @@
   .intake-new-link { display: inline; }
 }
 @media print {
-  #report-open-pending, #report-open-status, #report-history { display: none; }
+  #report-open-pending, #report-create-follow-up, #report-open-status, #report-history { display: none; }
   #report-intake { break-inside: avoid; }
 }

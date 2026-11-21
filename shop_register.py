@@ -368,6 +368,8 @@ class ShopRegister:
                                            "filedAt": row["accepted_at"], "receiptSha256": receipt_digest}
         latest, latest_request, latest_claim = chain[-1]
         pending = None
+        missing = missing_scope(latest_claim)
+        follow_up = {"request": latest_request["id"], "scope": missing} if missing else None
         if latest_claim is None:
             purpose = "recheck" if latest["recheck"] else "follow-up" if latest["repeats"] else "original"
             pending = {"request": latest_request["id"], "scope": latest_request["scope"], "purpose": purpose}
@@ -383,7 +385,7 @@ class ShopRegister:
         ]
         return {"workOrder": root["work_order"], "originalRequest": root["id"],
                 "fingerprint": sha256(root["issuer"]).hexdigest(), "contexts": list(contexts.values()),
-                "pending": pending, "earlierReceipts": earlier_receipts}
+                "pending": pending, "nextFollowUp": follow_up, "earlierReceipts": earlier_receipts}
 
     def work_order_archive(self, request_id):
         chain = self.checked_work_order(request_id)

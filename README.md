@@ -89,6 +89,8 @@ After filing, choose **View work-order findings** from the request. Each conditi
 
 Open **Earlier receipts** to see filed results that are no longer shown in the current or prior finding cards. Choose a receipt to open its exact request and download its verification packet.
 
+When a filed receipt has incomplete coverage, create the missing-coverage follow-up from the work-order report. The action opens the existing follow-up if another shop tab already created it.
+
 **Where to start** uses the current filed findings to identify the operating conditions in which an uploaded CSV met the test rule. It highlights incomplete uploaded coverage separately and asks the shop to confirm the data came from the vehicle. Built-in recordings, published examples, simulated captures and unspecified sources stay in the detailed findings for review.
 
 Choose **Download verification files** in the work-order view to save a ZIP with one packet per filed receipt, including the original and any filed follow-ups. Extract the ZIP, select its packet files together in the offline verifier and open a separately trusted copy of the enrolled public key. The verifier checks each packet independently and shows the full request ID and receipt digest alongside each finding. Match the digest to the printed work order to identify the exact filed answer. The ZIP leaves out the local work-order reference.

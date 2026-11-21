@@ -107,7 +107,7 @@ To exercise the uploaded-CSV path, choose `fixtures\kit-july-26.csv` and `fixtur
 
 When a different request reuses the most recent uploaded samples in the same driver session, the consent preview identifies the match. This exercise deliberately reuses the published recordings. In a follow-up that calls for a fresh capture, decline the reused preview and select the new recording.
 
-For a work-order trial, request both conditions at 95 °C. Upload July 27, approve, file and open **View work-order findings**. **Where to start** points to idle and flags incomplete moving coverage. Create the moving-only follow-up, upload July 26 and file it. Both conditions now have a threshold observation. The detailed findings show the two separate receipts. Use the recordings as example data for this exercise.
+For a work-order trial, request both conditions at 95 °C. Upload July 27, approve, file and open **View work-order findings**. **Where to start** points to idle and flags incomplete moving coverage. Choose **Request moving-only follow-up** in that report and download the new request. Load it on the driver side, upload July 26 and file the returned receipt. Both conditions now have a threshold observation. The detailed findings show the two separate receipts. Use the recordings as example data for this exercise.
 
 ### Measure what the shop receives
 

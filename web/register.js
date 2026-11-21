@@ -25,6 +25,11 @@ const repeatInstructions = {
   moving: "Ask for a new recording while moving.",
   both: "Ask for a new recording that covers idle and moving.",
 };
+const followUpLabels = {
+  idle: "Request idle-only follow-up",
+  moving: "Request moving-only follow-up",
+  both: "Request follow-up for both conditions",
+};
 let earlier = null;
 let search = null;
 let active = null;
@@ -79,6 +84,7 @@ function updateControls() {
   for (const button of ["new-follow-up", "open-follow-up", "open-original", "view-work-order"]) {
     byId(button).disabled = busy;
   }
+  byId("report-create-follow-up").setAttribute("aria-disabled", String(busy));
 }
 
 function renderJobs() {
@@ -376,12 +382,15 @@ byId("save-packet").addEventListener("click", () => action("file-status", async 
   ShopRequest.save(`repair-verification-${request.id.slice(-8)}.json`, JSON.stringify(packet));
 }));
 
-byId("new-follow-up").addEventListener("click", () => action("file-status", async () => {
-  const parent = current();
-  const recheck = !parent.missingScope;
-  const child = await api(recheck ? "recheck" : "follow-up", {request: parent.request.id});
+async function createRepeat(parentId, recheck, fromReport = false) {
+  const child = await api(recheck ? "recheck" : "follow-up", {request: parentId});
+  if (fromReport) {
+    if (!workOrderDialog.open) return;
+    workOrderDialog.close();
+  }
   const childId = child.request.id;
-  jobs.set(parent.request.id, {...parent, followUp: childId});
+  const parent = jobs.get(parentId);
+  if (parent) jobs.set(parentId, {...parent, followUp: childId});
   jobs.delete(childId);
   jobs = new Map([[childId, child], ...jobs]);
   renderJobs();
@@ -390,6 +399,11 @@ byId("new-follow-up").addEventListener("click", () => action("file-status", asyn
   status("file-status", child.claim ? `This ${label.toLowerCase()} already has a filed receipt.`
     : `${label} ready. Download the new request and send it to the driver.`);
   byId(child.claim ? "selected-title" : "save-request").focus();
+}
+
+byId("new-follow-up").addEventListener("click", () => action("file-status", () => {
+  const parent = current();
+  return createRepeat(parent.request.id, !parent.missingScope);
 }));
 
 async function openJob(id, fromReport = false) {
@@ -487,6 +501,11 @@ function showEarlierReceipts(receipts) {
 
 function showWorkOrder(report) {
   const pending = report.pending;
+  const followUp = report.nextFollowUp;
+  const createFollowUp = byId("report-create-follow-up");
+  createFollowUp.hidden = !followUp;
+  createFollowUp.textContent = followUp ? followUpLabels[followUp.scope] : "";
+  createFollowUp.dataset.parent = followUp?.request ?? "";
   byId("report-pending").hidden = !pending;
   if (pending) {
     const label = {original: "Request", "follow-up": "Follow-up", recheck: "Recheck"}[pending.purpose];
@@ -539,6 +558,15 @@ function showWorkOrder(report) {
 
 byId("view-work-order").addEventListener("click", () => action("file-status", async () => {
   showWorkOrder(await api(`work-order/${active}`));
+}));
+byId("report-create-follow-up").addEventListener("click", event => action("report-open-status", async () => {
+  status("report-open-status", "");
+  try {
+    await createRepeat(event.currentTarget.dataset.parent, false, true);
+  } catch (error) {
+    if (error.status) throw error;
+    throw new Error("Could not confirm the follow-up. Try again.");
+  }
 }));
 function dismissWorkOrder(event) {
   event.preventDefault();
