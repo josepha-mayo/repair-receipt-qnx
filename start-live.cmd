@@ -1,5 +1,6 @@
 @echo off
 setlocal
+if /i "%~1"=="--shop-only" goto run
 if not defined QNX_HOST if exist "%USERPROFILE%\qnx800\qnxsdp-env.bat" call "%USERPROFILE%\qnx800\qnxsdp-env.bat" >nul
 @echo off
 if not "%~1"=="" goto run

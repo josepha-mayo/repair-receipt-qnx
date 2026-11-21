@@ -33,6 +33,8 @@ The scripts use the active QNX SDK environment or load it from `%USERPROFILE%\qn
 
 Use `start-live.cmd --practice` for a hands-on trial. The driver gets a temporary signing key and the shop starts with an empty register for this session. The app discards the practice register on normal exit. Files you deliberately download remain on your PC.
 
+For a separate workshop installation, install the Python dependencies and run `python live.py --shop-only --open`. That instance serves the local register and verifier using Python and SQLite. On the driver’s Windows PC with QNX and QEMU set up, use `start-live.cmd --driver-only --open`. The driver’s signing key stays on that side, and the workshop keeps the SQLite work orders and enrolled public keys. Exchange the public key, request and verification packet as files. [Two-instance codelab](CODELAB.md#7-run-the-driver-and-shop-separately)
+
 Run `start-live.cmd --self-test` to verify the QNX path with the included demo recordings. It checks four signed receipts, confirms that declining produces no receipt, and repeats an approved review with the exporter channel grant removed. Both policy variants use the same guest executable. The command uses a temporary issuer and scratch directory and requires no browser interaction.
 
 [Host checks](.github/workflows/host-checks.yml) verify the shop register, the four archived QNX signatures, browser-script syntax and the generated offline verifier on Windows and Ubuntu. To reproduce the receipt and bundle checks locally, run `python verify_shop_register.py` and `python pack_shop.py --check`. The QNX self-test above exercises the live guest.

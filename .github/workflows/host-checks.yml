@@ -53,5 +53,7 @@ jobs:
         run: python pack_shop.py --check
       - name: Verify the shop register and archived QNX signatures
         run: python verify_shop_register.py
+      - name: Verify the shop-only server
+        run: python verify_shop_server.py
       - name: Verify the consent deadline
         run: python verify_consent.py

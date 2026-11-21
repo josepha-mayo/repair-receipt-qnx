@@ -38,15 +38,13 @@ ACTIVE_STAGES = {"booting", "review", "finishing"}
 SESSION_HEADER = "X-Repair-Session"
 SAMPLES = {"trip-a", "trip-b", "moving", "gap", "kit-obd", "scope-control"}
 ASSETS = {
-    "/driver.js": ("driver.js", "text/javascript"),
-    "/obd-csv.js": ("obd-csv.js", "text/javascript"),
     "/shop.js": ("shop.js", "text/javascript"),
     "/request.js": ("request.js", "text/javascript"),
-    "/register.js": ("register.js", "text/javascript"),
-    "/register.css": ("register.css", "text/css"),
     "/shared.css": ("shared.css", "text/css"),
     "/shop": ("shop.html", "text/html"),
 }
+DRIVER_ASSETS = {"/driver.js": ("driver.js", "text/javascript"), "/obd-csv.js": ("obd-csv.js", "text/javascript")}
+REGISTER_ASSETS = {"/register.js": ("register.js", "text/javascript"), "/register.css": ("register.css", "text/css")}
 
 
 def prepare_live_template(path):
@@ -234,26 +232,24 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/verify-receipt.html":
             self.send(200, standalone(), "application/octet-stream")
             return
-        asset = ASSETS.get(self.path)
-        if self.path == self.server.driver:
-            asset = ("driver.html", "text/html")
-        elif self.path == self.server.shop_path:
-            asset = ("register.html", "text/html")
+        asset = self.server.assets.get(self.path)
+        driver = self.server.driver
+        shop_path = self.server.shop_path
         if asset:
             name, mime = asset
             body = (ROOT / "web" / name).read_bytes()
             if self.server.practice and name in ("driver.html", "register.html"):
                 body = body.replace(b'id="practice-note" hidden', b'id="practice-note"', 1)
             self.send(200, body, mime + "; charset=utf-8")
-        elif self.path == self.server.driver + "state":
+        elif driver and self.path == driver + "state":
             body = self.server.review.snapshot(self.driver_session())
             template = self.server.review.template
             body["template"] = ("building" if not template.done() else
                                 "failed" if template.exception() else "ready")
             self.json(200, body)
-        elif self.path == self.server.driver + "issuer":
+        elif driver and self.path == driver + "issuer":
             self.json(200, self.server.review.issuer.public_profile())
-        elif self.path.startswith(self.server.shop_path):
+        elif shop_path and self.path.startswith(shop_path):
             self.shop_get()
         else:
             self.json(404, {"message": "Page unavailable."})
@@ -354,12 +350,17 @@ class Handler(BaseHTTPRequestHandler):
                 self.headers.get("Origin") != "http://" + self.server.host):
             self.json(403, {"message": "Open the local app to continue."})
             return
+        shop_path, driver = self.server.shop_path, self.server.driver
+        shop_action = shop_path and self.path.startswith(shop_path)
+        path = self.path.removeprefix(driver) if driver and self.path.startswith(driver) else None
+        if not shop_action and path is None:
+            self.json(404, {"message": "Action unavailable."})
+            return
         if self.headers.get("Transfer-Encoding") or len(self.headers.get_all("Content-Length") or []) != 1:
             self.json(400, {"message": "Invalid request length."})
             return
         try:
             size = int(self.headers["Content-Length"])
-            shop_action = self.path.startswith(self.server.shop_path)
             limit = 2048 if shop_action else MAX_RECORDING
             if not 0 < size <= limit:
                 message = "Choose a supported request or receipt file." if shop_action else "Choose a recording under 4 MiB."
@@ -374,7 +375,6 @@ class Handler(BaseHTTPRequestHandler):
         if shop_action:
             self.shop_post(body)
             return
-        path = self.path.removeprefix(self.server.driver) if self.path.startswith(self.server.driver) else None
         session = self.driver_session()
         if path in {"import", "sample", "decision"} and session is None:
             self.json(403, {"message": "Open the driver page to start a private review."})
@@ -422,30 +422,41 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def serve(args, qemu, issuer, register):
-    with ThreadingHTTPServer(("127.0.0.1", args.port), Handler) as server, \
-            TemporaryDirectory(prefix="repair-receipt-template-") as workspace, \
-            ThreadPoolExecutor(max_workers=1) as builds:
+    with ThreadingHTTPServer(("127.0.0.1", args.port), Handler) as server, ExitStack() as resources:
         server.host = f"127.0.0.1:{server.server_port}"
-        server.driver = f"/review/{secrets.token_urlsafe(24)}/"
-        server.shop_path = f"/intake/{secrets.token_urlsafe(24)}/"
         server.practice = args.practice
+        server.assets = ASSETS.copy()
+        server.driver = server.shop_path = None
+        driver_url = shop_url = None
+        if issuer is not None:
+            server.driver = f"/review/{secrets.token_urlsafe(24)}/"
+            server.assets.update(DRIVER_ASSETS)
+            server.assets[server.driver] = ("driver.html", "text/html")
+            workspace = resources.enter_context(TemporaryDirectory(prefix="repair-receipt-template-"))
+            builds = resources.enter_context(ThreadPoolExecutor(max_workers=1))
+            template = builds.submit(prepare_live_template, Path(workspace) / "reference")
+            server.review = Review(qemu, issuer, template)
+            resources.callback(server.review.close)
+            driver_url = f"http://{server.host}{server.driver}"
         server.register = register
-        template = builds.submit(prepare_live_template, Path(workspace) / "reference")
-        server.review = Review(qemu, issuer, template)
-        driver_url = f"http://{server.host}{server.driver}"
+        if register is not None:
+            server.shop_path = f"/intake/{secrets.token_urlsafe(24)}/"
+            server.assets.update(REGISTER_ASSETS)
+            server.assets[server.shop_path] = ("register.html", "text/html")
+            shop_url = f"http://{server.host}{server.shop_path}"
         if args.practice:
             print("Practice session. This session uses a temporary driver key and shop register.", flush=True)
-        print(f"Driver: {driver_url}", flush=True)
-        print(f"Shop:   http://{server.host}{server.shop_path}", flush=True)
+        if driver_url:
+            print(f"Driver: {driver_url}", flush=True)
+        if shop_url:
+            print(f"Shop:   {shop_url}", flush=True)
         print(f"Offline verifier: http://{server.host}/shop", flush=True)
         if args.open:
-            webbrowser.open(driver_url)
+            webbrowser.open(driver_url or shop_url)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             pass
-        finally:
-            server.review.close()
 
 
 def main():
@@ -457,8 +468,10 @@ def main():
     setup.add_argument("--self-test", action="store_true",
                        help="boot QNX and verify scoped signing, consent and the native export grant")
     setup.add_argument("--practice", action="store_true", help="run with a temporary driver key and shop register")
+    setup.add_argument("--shop-only", action="store_true", help="run the shop register without QNX or a driver key")
+    setup.add_argument("--driver-only", action="store_true", help="run the QNX review without a shop register")
     parser.add_argument("--port", type=int, default=0)
-    parser.add_argument("--open", action="store_true", help="open the driver page in your browser")
+    parser.add_argument("--open", action="store_true", help="open the active driver or shop page in your browser")
     parser.add_argument("--shop-register", type=Path, help="path for the local SQLite shop register")
     issuer_options = parser.add_mutually_exclusive_group()
     issuer_options.add_argument("--issuer-store", type=Path, help="path for the Windows-protected issuer")
@@ -468,35 +481,42 @@ def main():
         parser.error("Supply one QEMU executable path.")
     if args.practice and (args.issuer_store or args.ephemeral_issuer or args.shop_register):
         parser.error("--practice already uses a temporary issuer and shop register.")
+    if args.shop_only and (args.qemu or args.qemu_path or args.issuer_store or args.ephemeral_issuer):
+        parser.error("--shop-only does not use QEMU or an issuer store.")
+    if args.driver_only and args.shop_register:
+        parser.error("--driver-only does not use a shop register.")
     try:
-        qemu, version = startup_check(args.qemu or args.qemu_path)
-        if args.check:
-            print(f"Ready to start Repair Receipt. {version}\nQEMU: {qemu}")
-            return
-        if args.self_test:
-            from verify_requests import verify
-
-            print(f"Running Repair Receipt's QNX self-test. {version}", flush=True)
-            verify(qemu, check_export_grant=True)
-            print("Passed. Four signatures verified, the idle receipts matched, the moving receipts differed, "
-                  "and declining produced no receipt. Removing the QNX export grant blocked an approved receipt.")
-            return
         with ExitStack() as resources:
-            ephemeral = args.practice or args.ephemeral_issuer
-            seed = secrets.token_bytes(32) if ephemeral else load_or_create_seed(
-                (args.issuer_store or default_store()).resolve()
-            )
-            issuer = Issuer(seed, durable=not ephemeral)
-            if args.practice:
-                directory = resources.enter_context(TemporaryDirectory(prefix="repair-receipt-practice-"))
-                register_path = Path(directory) / "shop.sqlite3"
-            else:
-                app_data = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share"))
-                register_path = args.shop_register or (
-                    args.issuer_store.with_name("shop.sqlite3")
-                    if args.issuer_store else app_data / "RepairReceipt" / "shop.sqlite3"
+            qemu = issuer = register = None
+            if not args.shop_only:
+                qemu, version = startup_check(args.qemu or args.qemu_path)
+                if args.check:
+                    print(f"Ready to start Repair Receipt. {version}\nQEMU: {qemu}")
+                    return
+                if args.self_test:
+                    from verify_requests import verify
+
+                    print(f"Running Repair Receipt's QNX self-test. {version}", flush=True)
+                    verify(qemu, check_export_grant=True)
+                    print("Passed. Four signatures verified, the idle receipts matched, the moving receipts differed, "
+                          "and declining produced no receipt. Removing the QNX export grant blocked an approved receipt.")
+                    return
+                ephemeral = args.practice or args.ephemeral_issuer
+                seed = secrets.token_bytes(32) if ephemeral else load_or_create_seed(
+                    (args.issuer_store or default_store()).resolve()
                 )
-            register = ShopRegister(register_path.resolve())
+                issuer = Issuer(seed, durable=not ephemeral)
+            if not args.driver_only:
+                if args.practice:
+                    directory = resources.enter_context(TemporaryDirectory(prefix="repair-receipt-practice-"))
+                    register_path = Path(directory) / "shop.sqlite3"
+                else:
+                    app_data = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share"))
+                    register_path = args.shop_register or (
+                        args.issuer_store.with_name("shop.sqlite3")
+                        if args.issuer_store else app_data / "RepairReceipt" / "shop.sqlite3"
+                    )
+                register = ShopRegister(register_path.resolve())
             serve(args, qemu, issuer, register)
     except (OSError, ValueError, RuntimeError, KeyError, sqlite3.Error, subprocess.SubprocessError) as error:
         parser.exit(1, f"Repair Receipt could not start: {error}\n")

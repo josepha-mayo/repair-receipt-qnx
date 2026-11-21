@@ -186,6 +186,30 @@ python verify_parser_perf.py --qemu C:\QNX\qemu\qemu-system-x86_64.exe --road-pa
 
 The harness interleaves 20 runs per input, including a synthetic recording at the 4 MiB limit. It uses one prepared template and a fresh guest for each run, and verifies every receipt. Host timing includes encrypted staging and guest boot. Native timing starts after authentication. The report shows every timing, the median, the nearest-rank 95th percentile and the maximum. Browser import and UI polling are outside the measured interval. [Preview latency distributions](replay/qnx-preview-latency.json)
 
+## 7. Run the driver and shop separately
+
+The combined practice session is convenient for one browser. The two launch modes below also let you test the handoff in separate processes or on separate PCs. Both servers listen on their own loopback address. The files you exchange are the issuer public key, the shop request and the verification packet.
+
+On the workshop PC, use an environment with 64-bit Python 3.10 or later. Install the Python dependencies and start the shop with a fresh test register:
+
+```text
+python -m pip install -r requirements-live.txt
+python live.py --shop-only --shop-register work/separate-shop.sqlite3 --open
+```
+
+The workshop gets a shop URL and its register. The QNX SDK, QEMU and a signing key are required on the driver side. From the Windows QNX SDK prompt, build and start that side with a temporary key for this test:
+
+```bat
+build-qnx.cmd
+start-live.cmd --driver-only --ephemeral-issuer --open
+```
+
+1. Download the driver’s public key and enroll it at the shop after confirming its fingerprint. Create a request for both conditions at 95 °C and download it.
+2. Open the request in the driver page and load the July 27 KIT CSV from section 3. Approve the QNX finding and download the verification packet. The shop imports and files it for the same request.
+3. The idle receipt shows an observation and the moving finding shows insufficient evidence. Create a moving-only follow-up and take it back to the driver. Run **Hot while moving** as the control capture, approve it and file its signed packet. Restart the shop with the same register to check the original and follow-up receipts.
+
+Run `python verify_shop_server.py` to check the shop-only startup and verify an archived QNX receipt with an SDK-free executable search path. The live walkthrough was tested with two independent local processes on one Windows PC. [Recorded two-instance results](replay/qnx-split-role-proof.json)
+
 ## Trust model
 
 The shop supplies a previously trusted issuer key and retains its original request. The Windows host provides local issuer enrollment, with the persistent seed protected by DPAPI. The isolated QNX guest receives its signing key in vault memory for the review. The local register tracks filed requests and preserves the first accepted signed file. Production vehicle capture and hardware-backed issuer provisioning remain separate integration tasks.

@@ -1,0 +1,21 @@
+{
+  "environment": "Two isolated local processes on Windows with Brave and a QNX 8 guest on QEMU",
+  "separate_loopback_origins": true,
+  "opposite_role_endpoints_unavailable": true,
+  "driver_profile_files": [
+    "issuer.dpapi"
+  ],
+  "shop_profile_files": [
+    "shop.sqlite3"
+  ],
+  "shop_qnx_template_files": 0,
+  "published_drive": "2017-07-27_Seat_Leon_KA_KA_2_Normal.csv",
+  "original_findings": {
+    "idle": "observed",
+    "moving": "insufficient_evidence"
+  },
+  "follow_up_scope": "moving",
+  "follow_up_input": "built-in control recording",
+  "signed_packets_reexported_byte_identically": 2,
+  "stored_follow_up_verified_after_shop_restart": true
+}
