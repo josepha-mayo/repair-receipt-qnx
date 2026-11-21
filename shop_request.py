@@ -1,5 +1,6 @@
 """Validate the portable shop request and the corresponding QNX claim."""
 
+from hashlib import sha256
 import json
 import re
 
@@ -25,6 +26,10 @@ FINDINGS = {"observed", "not_observed", "insufficient_evidence"}
 
 def canonical(value):
     return json.dumps(value, ensure_ascii=True, separators=(",", ":"))
+
+
+def request_fingerprint(request):
+    return sha256(canonical(request).encode("ascii")).hexdigest()
 
 
 def verification_packet(request, receipt, fingerprint):

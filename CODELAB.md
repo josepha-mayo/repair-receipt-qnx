@@ -31,9 +31,13 @@ If the Driver page reports a QNX image preparation failure, check the launch con
 
 Open the printed shop and driver URLs. In the driver, save the public key under **Enroll your issuer key at the shop**. In the shop, load the public key, choose **At idle only**, create the request and download it. The request carries a random ID, a fixed recipe version and one operating condition. The shop register retains the request and its enrolled public key.
 
+Copy the full **Request SHA-256** line from **Request details**. Paste it under **Check the shop request fingerprint** on the driver page after choosing the request file. Change one hex digit to see the review stay disabled, then restore the original fingerprint. The consent view shows when the request matches.
+
 In the driver page, load that request, run **Trip A** and review the preview. Approve and choose **Download verification packet**. In the shop register, open the packet under **Find a request from a receipt or packet**. The register opens the matching job and verifies it against the request and key on file. Choose **File verified receipt** and load the packet again to observe repeat handling. In the standalone verifier, try a freshly generated idle-only request against the same valid packet to see the request mismatch.
 
 Run **Missing samples** under the same request, approve it and open the returned packet in the shop. **Two verified receipts** compares the filed threshold observation with the returned insufficient-evidence finding. Open the first packet again to verify the work order still holds the original answer. Load both packets in the offline verifier with the enrolled key. Both signatures verify, and the verifier flags the shared request ID. Open **Find the filed receipt** and paste the **Receipt SHA-256** line from the shop's printed work order. The verifier marks the original attachment.
+
+Clear the fingerprint on the driver page before trying the other practice requests.
 
 Choose **View work-order findings** to open a print view directly from the filed request. The idle-only printout gives the finding, test rule, input source, filing time and full receipt request ID.
 

@@ -207,17 +207,25 @@ byId("clear-expected").addEventListener("click", () => {
   requestFile.focus();
 });
 
-byId("create-request").addEventListener("click", () => {
+byId("create-request").addEventListener("click", async () => {
   const threshold = byId("offline-threshold");
   if (!threshold.reportValidity()) return;
-  ++pendingRequest;
+  const version = ++pendingRequest;
   requestFile.value = "";
   requestError = "";
   requestLoading = false;
-  expected = ShopRequest.create(byId("scope-select").value, threshold.value === "" ? null : threshold.valueAsNumber,
+  const created = ShopRequest.create(byId("scope-select").value, threshold.value === "" ? null : threshold.valueAsNumber,
     byId("offline-window").value);
-  ShopRequest.save("repair-request.json", JSON.stringify(expected));
+  expected = created;
+  const fingerprint = byId("created-request-fingerprint");
+  fingerprint.hidden = true;
+  ShopRequest.save("repair-request.json", JSON.stringify(created));
   resetVerification();
+  const digest = await ShopRequest.requestFingerprint(created);
+  if (version === pendingRequest) {
+    fingerprint.hidden = false;
+    fingerprint.textContent = `Request SHA-256 ${digest}`;
+  }
 });
 
 byId("print-finding").addEventListener("click", () => window.print());

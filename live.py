@@ -25,7 +25,7 @@ from pack_shop import standalone
 from run_qnx import MAX_RECORDING, ROOT, build_template, review_native
 from shop_request import (
     CURRENT_RECIPE, DEFAULT_THRESHOLD_C, DEMO_SOURCE, PUBLISHED_SOURCE, STARTUP_RECIPE, UPLOADED_SOURCE,
-    canonical, parse_request, verification_packet,
+    canonical, parse_request, request_fingerprint, verification_packet,
 )
 
 try:
@@ -139,7 +139,7 @@ class Review:
             self.state = {"stage": "ready"}
             return True
 
-    def start(self, session, recording, request, *, bench=None, source=None):
+    def start(self, session, recording, request, *, bench=None, source=None, request_checked=False):
         with self.lock:
             if self.closed or self.state["stage"] in ACTIVE_STAGES or self.template_status() == "failed":
                 return False
@@ -153,6 +153,8 @@ class Review:
             job = secrets.token_urlsafe(12)
             self.owner = session
             self.state = {"stage": "booting", "job": job, "bench": bench is not None}
+            if request_checked:
+                self.state["requestFingerprintMatched"] = True
             self.response = Event()
             self.decision = None
             self.deadline = None
@@ -477,6 +479,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         request = None
         request_headers = self.headers.get_all("X-Repair-Request")
+        fingerprints = self.headers.get_all("X-Repair-Request-SHA256", [])
         if path in {"import", "sample"} and request_headers:
             try:
                 if len(request_headers) != 1:
@@ -485,8 +488,14 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 self.json(400, {"message": "Choose a request file created by Repair Receipt."})
                 return
+        if path in {"import", "sample"} and fingerprints:
+            if (request is None or len(fingerprints) != 1 or not re.fullmatch(r"[a-f0-9]{64}", fingerprints[0]) or
+                    not secrets.compare_digest(fingerprints[0], request_fingerprint(request))):
+                self.json(400, {"message": "The request file differs from the fingerprint you entered."})
+                return
+        request_checked = bool(fingerprints)
         if path == "import" and self.headers.get_content_type() == "application/octet-stream":
-            ok = self.server.review.start(session, body, request, source=UPLOADED_SOURCE)
+            ok = self.server.review.start(session, body, request, source=UPLOADED_SOURCE, request_checked=request_checked)
         elif path == "sample" and size <= 32:
             name = body.decode("ascii", errors="replace")
             if name == "obd-bench":
@@ -496,7 +505,7 @@ class Handler(BaseHTTPRequestHandler):
                 if request["recipe"] == STARTUP_RECIPE:
                     self.json(400, {"message": "Choose a recording for this request’s startup allowance."})
                     return
-                ok = self.server.review.start(session, None, request, bench="normal")
+                ok = self.server.review.start(session, None, request, bench="normal", request_checked=request_checked)
             elif name not in SAMPLES and name not in PUBLISHED_SAMPLES:
                 self.json(400, {"message": "Unknown sample recording."})
                 return
@@ -507,7 +516,7 @@ class Handler(BaseHTTPRequestHandler):
                 except OSError:
                     self.json(503, {"message": "The sample recording is unavailable. Check the source download."})
                     return
-                ok = self.server.review.start(session, recording, request, source=source)
+                ok = self.server.review.start(session, recording, request, source=source, request_checked=request_checked)
         elif path == "decision" and size <= 256:
             try:
                 value = json.loads(body)

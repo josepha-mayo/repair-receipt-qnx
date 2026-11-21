@@ -155,6 +155,7 @@ function renderSelection() {
       : `${ShopRequest.scopes[job.request.scope]} · ${verified ? "Ready to file" : "Awaiting a receipt"}`;
     selectedState.classList.toggle("bad", job.receiptInvalid);
     byId("selected-request").textContent = `Request ${job.request.id}`;
+    byId("selected-request-fingerprint").textContent = `Request SHA-256 ${job.requestFingerprint}`;
     byId("selected-key").textContent = job.fingerprint ? `Enrolled issuer ${job.fingerprint.match(/.{8}/g).join(" ")}`
       : "The enrolled issuer public key is invalid.";
     byId("selected-rule").textContent = ShopRequest.rule(job.request);

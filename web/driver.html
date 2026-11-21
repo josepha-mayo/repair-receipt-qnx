@@ -27,6 +27,14 @@
         <input id="shop-request" type="file" accept=".json,application/json" aria-describedby="request-status">
         <p id="request-status" class="help input-note" role="status">Without a shop request, the review covers both conditions.</p>
         <button id="clear-request" class="link-button" type="button" hidden>Remove request</button>
+        <details class="issuer-enrollment">
+          <summary>Check the shop request fingerprint</summary>
+          <label for="expected-request-fingerprint">Request SHA-256 from your shop</label>
+          <input id="expected-request-fingerprint" type="text" maxlength="160" autocomplete="off" spellcheck="false"
+                 aria-describedby="request-fingerprint-help request-fingerprint-status">
+          <p id="request-fingerprint-help" class="help input-note">Ask your shop for the fingerprint through a channel you trust.</p>
+          <p id="request-fingerprint-status" class="help" role="status" hidden></p>
+        </details>
         <label for="file">Import an OBD-II recording</label>
         <input id="file" type="file" accept=".csv,text/csv" aria-describedby="recording-formats recording-reselection">
         <p id="recording-formats" class="help input-note">Use a normalized CSV or a metric OBD Auto Doctor or Torque Pro export with RPM, OBD speed and coolant temperature.</p>
@@ -64,6 +72,7 @@
         <p id="status" class="status" role="status">Choose a recording to start.</p>
         <a id="choose-recording" href="#recording-heading" hidden>Choose a recording</a>
         <p id="receipt-scope" class="help input-note" hidden></p>
+        <p id="consent-request-match" class="help input-note" hidden>The request matches your shop’s fingerprint.</p>
         <p id="recipe-rule" class="help input-note"></p>
         <p id="startup-window-note" class="help input-note" hidden></p>
         <p id="capture-source" class="help input-note" hidden></p>

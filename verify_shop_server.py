@@ -1,6 +1,7 @@
 """Verify and reopen an actual QNX receipt in the shop-only server."""
 
 from contextlib import closing, contextmanager
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -75,6 +76,7 @@ def main():
                 created = json.loads(request(shop + "jobs", {"scope": control["scope"], "issuer": issuer,
                     "requestId": control["id"], "thresholdC": control["thresholdC"], "workOrder": "Archived QNX control"}, 201))
                 assert created["request"] == control
+                assert created["requestFingerprint"] == sha256(canonical(control).encode("ascii")).hexdigest()
             matched = json.loads(request(shop + "match", {"receipt": receipt, "request": ticket,
                                                          "fingerprint": sample["issuer"]["fingerprint"]}))
             assert matched["state"] == "ready" and matched["claim"]["idle"] == "observed"

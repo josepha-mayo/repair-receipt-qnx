@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from shop_request import (
     BENCH_SOURCE, CURRENT_RECIPE, FILE_SOURCES, MAX_TEMPERATURE_C, MIN_TEMPERATURE_C, RECEIPT_VERSIONS, RECIPE, SCOPES,
-    STARTUP_RECIPE, canonical, matches_claim, request_document, valid_threshold, verification_packet,
+    STARTUP_RECIPE, canonical, matches_claim, request_document, request_fingerprint, valid_threshold, verification_packet,
 )
 
 PAGE_SIZE = 40
@@ -247,6 +247,7 @@ class ShopRegister:
             receipt_invalid = True
         return {
             "request": request,
+            "requestFingerprint": request_fingerprint(request),
             "createdAt": row["created_at"],
             "acceptedAt": None if receipt_invalid else row["accepted_at"],
             "fingerprint": fingerprint,

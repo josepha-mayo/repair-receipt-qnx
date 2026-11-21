@@ -3,6 +3,7 @@
 const byId = id => document.getElementById(id);
 const file = byId("file");
 const requestFile = byId("shop-request");
+const expectedRequestFingerprint = byId("expected-request-fingerprint");
 const status = byId("status");
 const receiptHeading = byId("receipt-heading");
 const busyStages = new Set(["booting", "review", "finishing"]);
@@ -28,6 +29,7 @@ let requestRead = 0;
 let ticket = null;
 let loadingRequest = false;
 let requestError = "";
+let requestFingerprint = null;
 let newSelection = false;
 let enrollment = null;
 let clockBreaks = 0;
@@ -83,6 +85,29 @@ function showCoverage(claim, coverage, coverageDetail) {
   if (!visible) details.open = false;
 }
 
+function enteredRequestFingerprint() {
+  return expectedRequestFingerprint.value.trim().replace(/^request\s+sha-256\s+/i, "").replace(/\s+/g, "").toLowerCase();
+}
+
+function showRequestCheck() {
+  const entered = expectedRequestFingerprint.value.trim();
+  const expected = enteredRequestFingerprint();
+  const matched = !!expected && !loadingRequest && !requestError && expected === requestFingerprint;
+  let message = "";
+  if (entered) {
+    if (!/^[a-f0-9]{64}$/.test(expected)) message = "Enter the full 64-character request fingerprint.";
+    else if (!loadingRequest && !requestError) {
+      message = !requestFingerprint ? "Choose the shop request file." : matched
+        ? "Request fingerprint matched." : "The request differs from the fingerprint you entered.";
+    }
+  }
+  const feedback = byId("request-fingerprint-status");
+  if (feedback.textContent !== message) feedback.textContent = message;
+  feedback.hidden = !message;
+  feedback.classList.toggle("bad", !!message && !matched);
+  return !!entered && !matched;
+}
+
 function render() {
   const {stage, message} = state;
   const claim = reconnecting || newSelection || stage === "error" || stage === "expired" ? null : state.claim;
@@ -92,7 +117,8 @@ function render() {
   byId("driver-workspace").classList.toggle("is-reviewing", reviewing);
   byId("recording-panel").hidden = reviewing;
   const preparationFailed = state.template === "failed";
-  const blocked = busy || loadingRequest || !!requestError || preparationFailed;
+  const requestUnconfirmed = showRequestCheck();
+  const blocked = busy || loadingRequest || !!requestError || preparationFailed || requestUnconfirmed;
   const preparation = byId("guest-preparation");
   preparation.hidden = state.template !== "building" && !preparationFailed;
   const preparationText = preparationFailed
@@ -107,6 +133,7 @@ function render() {
   const benchNeedsRecording = benchSelected && ticket?.recipe === ShopRequest.startupRecipe;
   file.disabled = busy;
   requestFile.disabled = busy;
+  expectedRequestFingerprint.disabled = busy;
   byId("clear-request").hidden = !requestFile.files.length;
   byId("clear-request").disabled = busy;
   byId("sample").disabled = busy;
@@ -152,6 +179,7 @@ function render() {
   const receiptScope = byId("receipt-scope");
   receiptScope.hidden = !claim?.request;
   receiptScope.textContent = claim?.request ? `${ShopRequest.scopes[claim.scope]} · Request ${claim.request.slice(-8)}` : "";
+  byId("consent-request-match").hidden = stage !== "review" || !claim || !state.requestFingerprintMatched;
   const captureSource = byId("capture-source");
   captureSource.hidden = !claim?.source;
   captureSource.textContent = captureSource.hidden ? "" : ShopRequest.sourceLabel(claim.source);
@@ -232,7 +260,11 @@ async function send(path, body, type) {
   render();
   try {
     const headers = {"Content-Type": type, "X-Repair-Session": driverSession};
-    if (ticket && starting) headers["X-Repair-Request"] = JSON.stringify(ticket);
+    if (ticket && starting) {
+      headers["X-Repair-Request"] = JSON.stringify(ticket);
+      const fingerprint = enteredRequestFingerprint();
+      if (fingerprint) headers["X-Repair-Request-SHA256"] = fingerprint;
+    }
     let payload = body;
     if (path === "import") {
       ({payload, clockBreaks} = await ObdCsv.reviewInput(body));
@@ -299,16 +331,22 @@ byId("sample").addEventListener("change", () => {
   clockBreaks = 0;
   selected();
 });
+expectedRequestFingerprint.addEventListener("input", render);
 requestFile.addEventListener("change", async () => {
   const version = ++requestRead;
   requestError = "";
+  requestFingerprint = null;
   loadingRequest = !!requestFile.files.length;
   if (!loadingRequest) selectRequest(null);
   selected();
   if (!loadingRequest) return;
   try {
     const parsed = await ShopRequest.load(requestFile.files[0]);
-    if (version === requestRead) selectRequest(parsed);
+    const digest = await ShopRequest.requestFingerprint(parsed);
+    if (version === requestRead) {
+      requestFingerprint = digest;
+      selectRequest(parsed);
+    }
   } catch (error) {
     if (version === requestRead) requestError = error.message;
   } finally {

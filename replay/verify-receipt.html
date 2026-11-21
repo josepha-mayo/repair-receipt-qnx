@@ -217,6 +217,7 @@ footer { margin-top: 18px; }
           </select>
           <button id="create-request" type="button">Save request file</button>
         </div>
+        <p id="created-request-fingerprint" class="fingerprint" role="status" hidden></p>
       </div>
     </section>
     <div class="workspace" id="verification-workspace">
@@ -427,6 +428,10 @@ const ShopRequest = (() => {
     return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
   }
 
+  function requestFingerprint(request) {
+    return fingerprint(new TextEncoder().encode(JSON.stringify(request)));
+  }
+
   function save(name, value) {
     const href = URL.createObjectURL(new Blob([value], {type: "application/json"}));
     const link = document.createElement("a");
@@ -439,7 +444,7 @@ const ShopRequest = (() => {
   return Object.freeze({recipe, startupRecipe, legacyRecipe, recipes, benchSource, publishedSource, fileSources, packetFormat, scopes,
     create, parse, load, rule, sourceLabel,
     save, validThreshold, supportsThreshold,
-    hexBytes, readIssuer, fingerprint, readEvidence});
+    hexBytes, readIssuer, fingerprint, requestFingerprint, readEvidence});
 })();
 </script>
 <script>"use strict";
@@ -771,17 +776,25 @@ byId("clear-expected").addEventListener("click", () => {
   requestFile.focus();
 });
 
-byId("create-request").addEventListener("click", () => {
+byId("create-request").addEventListener("click", async () => {
   const threshold = byId("offline-threshold");
   if (!threshold.reportValidity()) return;
-  ++pendingRequest;
+  const version = ++pendingRequest;
   requestFile.value = "";
   requestError = "";
   requestLoading = false;
-  expected = ShopRequest.create(byId("scope-select").value, threshold.value === "" ? null : threshold.valueAsNumber,
+  const created = ShopRequest.create(byId("scope-select").value, threshold.value === "" ? null : threshold.valueAsNumber,
     byId("offline-window").value);
-  ShopRequest.save("repair-request.json", JSON.stringify(expected));
+  expected = created;
+  const fingerprint = byId("created-request-fingerprint");
+  fingerprint.hidden = true;
+  ShopRequest.save("repair-request.json", JSON.stringify(created));
   resetVerification();
+  const digest = await ShopRequest.requestFingerprint(created);
+  if (version === pendingRequest) {
+    fingerprint.hidden = false;
+    fingerprint.textContent = `Request SHA-256 ${digest}`;
+  }
 });
 
 byId("print-finding").addEventListener("click", () => window.print());

@@ -129,6 +129,10 @@ const ShopRequest = (() => {
     return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
   }
 
+  function requestFingerprint(request) {
+    return fingerprint(new TextEncoder().encode(JSON.stringify(request)));
+  }
+
   function save(name, value) {
     const href = URL.createObjectURL(new Blob([value], {type: "application/json"}));
     const link = document.createElement("a");
@@ -141,5 +145,5 @@ const ShopRequest = (() => {
   return Object.freeze({recipe, startupRecipe, legacyRecipe, recipes, benchSource, publishedSource, fileSources, packetFormat, scopes,
     create, parse, load, rule, sourceLabel,
     save, validThreshold, supportsThreshold,
-    hexBytes, readIssuer, fingerprint, readEvidence});
+    hexBytes, readIssuer, fingerprint, requestFingerprint, readEvidence});
 })();
