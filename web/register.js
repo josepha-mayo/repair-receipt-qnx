@@ -85,7 +85,9 @@ function renderJobs() {
     row.querySelector(".job-name").textContent = [job.workOrder, job.recheck ? "Recheck" : "",
       ShopRequest.scopes[job.request.scope], id.slice(-8)]
       .filter(Boolean).join(" · ");
-    row.querySelector(".job-state").textContent = job.acceptedAt ? "Filed" : "Open";
+    const jobState = row.querySelector(".job-state");
+    jobState.textContent = job.receiptInvalid ? "Verification failed" : job.acceptedAt ? "Filed" : "Open";
+    jobState.classList.toggle("bad", job.receiptInvalid);
     button.dataset.request = id;
     button.setAttribute("aria-pressed", String(id === active));
     list.append(row);
@@ -128,18 +130,22 @@ function renderSelection() {
     byId("selected-title").textContent = job.workOrder
       ? `Work order ${job.workOrder}`
       : `Request ${job.request.id.slice(-8)}`;
-    byId("selected-state").textContent = job.acceptedAt
+    const selectedState = byId("selected-state");
+    selectedState.textContent = job.receiptInvalid ? "Saved receipt failed verification. Check the original packet or a trusted backup."
+      : job.acceptedAt
       ? `Filed ${time.format(new Date(job.acceptedAt))}`
       : `${ShopRequest.scopes[job.request.scope]} · ${verified ? "Ready to file" : "Awaiting a receipt"}`;
+    selectedState.classList.toggle("bad", job.receiptInvalid);
     byId("selected-request").textContent = `Request ${job.request.id}`;
-    byId("selected-key").textContent = `Enrolled issuer ${job.fingerprint.match(/.{8}/g).join(" ")}`;
+    byId("selected-key").textContent = job.fingerprint ? `Enrolled issuer ${job.fingerprint.match(/.{8}/g).join(" ")}`
+      : "The enrolled issuer public key is invalid.";
     byId("selected-rule").textContent = ShopRequest.rule(job.request);
     byId("filed-findings").hidden = !claim || conflict;
     byId("filed-source").hidden = !claim || (conflict && claim.source !== matchedReceipt.claim.source);
     if (claim) byId("filed-source").textContent = "Input · " + ShopRequest.sourceLabel(claim.source);
-    byId("save-request").hidden = !!job.claim;
+    byId("save-request").hidden = job.receiptInvalid || !!job.claim;
     byId("save-packet").hidden = !job.claim;
-    byId("view-work-order").hidden = !job.claim && !job.followUp && !job.repeats;
+    byId("view-work-order").hidden = job.receiptInvalid || !job.claim && !job.followUp && !job.repeats;
     byId("individual-files").hidden = !job.claim;
     const missing = job.missingScope;
     byId("follow-up").hidden = !job.claim;

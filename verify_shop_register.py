@@ -14,7 +14,7 @@ from zipfile import ZipFile
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from shop_register import PAGE_SIZE, ReceiptConflict, RequestConflict, ShopRegister, check_receipt, read_receipt
+from shop_register import INVALID_SAVED_RECEIPT, PAGE_SIZE, ReceiptConflict, RequestConflict, ShopRegister, check_receipt, read_receipt
 from shop_request import (
     CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, canonical, guest_bytes,
     parse_request, verification_packet,
@@ -363,13 +363,15 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     try:
         reopened.work_order_findings(incomplete["id"])
     except ValueError as error:
-        assert "does not match the issuer" in str(error)
+        assert str(error) == INVALID_SAVED_RECEIPT
+        assert "does not match the issuer" in str(error.__cause__)
     else:
         raise AssertionError("An altered filed receipt entered the work-order findings.")
     try:
         reopened.work_order_archive(original_id)
     except ValueError as error:
-        assert "does not match the issuer" in str(error)
+        assert str(error) == INVALID_SAVED_RECEIPT
+        assert "does not match the issuer" in str(error.__cause__)
     else:
         raise AssertionError("An altered filed receipt entered the work-order archive.")
     with closing(restored.connect()) as db, db:

@@ -210,6 +210,10 @@ start-live.cmd --driver-only --ephemeral-issuer --open
 
 Run `python verify_shop_server.py` to check the shop-only startup and verify an archived QNX receipt with an SDK-free executable search path. The live walkthrough was tested with two independent local processes on one Windows PC. [Recorded two-instance results](replay/qnx-split-role-proof.json)
 
+### Check a saved register
+
+The same `python verify_shop_server.py` command tests three kinds of damage on a backup copy. It alters a signed finding, supplies malformed receipt JSON, and substitutes an otherwise valid receipt issued for a different request. The shop flags the affected row, withholds its finding and export, and still opens other verified receipts. This check uses the enrolled issuer key from the register. [Browser recovery check](replay/qnx-backup-integrity-proof.json)
+
 ## Trust model
 
 The shop supplies a previously trusted issuer key and retains its original request. The Windows host provides local issuer enrollment, with the persistent seed protected by DPAPI. The isolated QNX guest receives its signing key in vault memory for the review. The local register tracks filed requests and preserves the first accepted signed file. Production vehicle capture and hardware-backed issuer provisioning remain separate integration tasks.

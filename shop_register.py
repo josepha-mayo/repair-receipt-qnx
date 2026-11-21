@@ -21,6 +21,7 @@ from shop_request import (
 )
 
 PAGE_SIZE = 40
+INVALID_SAVED_RECEIPT = "The saved receipt failed verification. Check the original packet or a trusted backup."
 RECIPE_COLUMN = (
     f"recipe TEXT NOT NULL DEFAULT '{RECIPE}' "
     f"CHECK(recipe IN ('{RECIPE}', '{CURRENT_RECIPE}'))"
@@ -74,6 +75,8 @@ def read_receipt(text):
 
 
 def check_receipt(text, record, request, key):
+    if not isinstance(key, bytes) or len(key) != 32:
+        raise ValueError("The enrolled issuer public key is invalid.")
     signature = record.get("signature")
     if not isinstance(signature, str) or not re.fullmatch(r"[a-f0-9]{128}", signature):
         raise ValueError("The receipt signature is invalid.")
@@ -96,6 +99,16 @@ def check_receipt(text, record, request, key):
     except InvalidSignature as error:
         raise ValueError("The receipt signature does not match the issuer enrolled for this request.") from error
     return claim
+
+
+def checked_saved_claim(row, ticket):
+    text = row["receipt"]
+    if text is None:
+        return None
+    try:
+        return check_receipt(text, read_receipt(text), ticket, row["issuer"])
+    except ValueError as error:
+        raise ValueError(INVALID_SAVED_RECEIPT) from error
 
 
 def missing_scope(claim):
@@ -179,19 +192,35 @@ class ShopRegister:
 
     @classmethod
     def job(cls, row):
-        claim = json.loads(row["receipt"])["claim"] if row["receipt"] else None
+        request = cls.request(row)
+        issuer = row["issuer"]
+        fingerprint = sha256(issuer).hexdigest() if isinstance(issuer, bytes) and len(issuer) == 32 else None
+        try:
+            claim = checked_saved_claim(row, request)
+            receipt_invalid = False
+        except ValueError:
+            claim = None
+            receipt_invalid = True
         return {
-            "request": cls.request(row),
+            "request": request,
             "createdAt": row["created_at"],
-            "acceptedAt": row["accepted_at"],
-            "fingerprint": sha256(row["issuer"]).hexdigest(),
+            "acceptedAt": None if receipt_invalid else row["accepted_at"],
+            "fingerprint": fingerprint,
             "claim": claim,
+            "receiptInvalid": receipt_invalid,
             "repeats": row["repeats"],
             "recheck": bool(row["recheck"]),
             "followUp": row["follow_up"],
             "missingScope": missing_scope(claim),
             "workOrder": row["work_order"],
         }
+
+    @classmethod
+    def checked_job(cls, row):
+        job = cls.job(row)
+        if job["receiptInvalid"]:
+            raise ValueError(INVALID_SAVED_RECEIPT)
+        return job
 
     @staticmethod
     def find(db, request_id):
@@ -220,7 +249,7 @@ class ShopRegister:
             saved = (row["scope"], row["issuer"], row["recipe"], row["work_order"], row["threshold_c"])
             if row["repeats"] is not None or saved != (scope, key, CURRENT_RECIPE, work_order, threshold):
                 raise RequestConflict("This request ID is already registered with different details.")
-            return self.job(row)
+            return self.checked_job(row)
 
     def follow_up(self, request_id):
         return self.repeat(request_id, recheck=False)
@@ -231,9 +260,8 @@ class ShopRegister:
         with closing(self.connect()) as db, db:
             db.execute("BEGIN IMMEDIATE")
             row = self.find(db, request_id)
-            text = row["receipt"]
             prior = self.request(row)
-            claim = check_receipt(text, read_receipt(text), prior, row["issuer"]) if text else None
+            claim = checked_saved_claim(row, prior)
             missing = missing_scope(claim)
             if recheck and (claim is None or missing):
                 raise ValueError("A recheck requires a filed receipt with a finding for every requested condition.")
@@ -243,7 +271,7 @@ class ShopRegister:
                 child = self.find(db, row["follow_up"])
                 if bool(child["recheck"]) != recheck:
                     raise ValueError("The saved repeat has a different purpose.")
-                return self.job(child)
+                return self.checked_job(child)
             scope = self._checked_work_order(db, request_id)[0][1]["scope"] if recheck else missing
             follow_up = secrets.token_hex(16)
             db.execute("""INSERT INTO intake_requests(
@@ -316,8 +344,7 @@ class ShopRegister:
                 if (row["repeats"] != previous["id"] or request["scope"] not in scopes or
                         any(row[field] != root[field] for field in same_fields)):
                     raise ValueError("A saved follow-up does not match its preceding receipt.")
-            text = row["receipt"]
-            claim = check_receipt(text, read_receipt(text), request, row["issuer"]) if text else None
+            claim = checked_saved_claim(row, request)
             checked.append((row, request, claim))
         return checked
 
@@ -367,15 +394,16 @@ class ShopRegister:
     def match(self, text, *, packet=None):
         record = read_receipt(text)
         row = self.fetch(record["claim"]["request"])
-        request = self.request(row)
+        job = self.checked_job(row)
+        request = job["request"]
         if packet is not None:
             if canonical(packet["request"]) != canonical(request):
                 raise ValueError("The packet request does not match the original shop request.")
-            if packet["fingerprint"] != sha256(row["issuer"]).hexdigest():
+            if packet["fingerprint"] != job["fingerprint"]:
                 raise ValueError("The packet fingerprint does not match the enrolled issuer for this request.")
         claim = check_receipt(text, record, request, row["issuer"])
         state = "ready" if row["receipt"] is None else "alreadyFiled" if row["receipt"] == text else "conflict"
-        return {"job": self.job(row), "claim": claim, "state": state}
+        return {"job": job, "claim": claim, "state": state}
 
     def attach(self, request_id, text):
         if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
@@ -387,6 +415,7 @@ class ShopRegister:
                 SET receipt = ?, accepted_at = ?
                 WHERE id = ? AND receipt IS NULL""", (text, utc_time(), request_id)).rowcount
             current = self.find(db, request_id)
+            saved = self.checked_job(current)
             if not written and current["receipt"] != text:
                 raise ReceiptConflict("A different signed receipt has already been filed for this request.")
-            return {"job": self.job(current), "alreadyFiled": not written}
+            return {"job": saved, "alreadyFiled": not written}

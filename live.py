@@ -270,10 +270,12 @@ class Handler(BaseHTTPRequestHandler):
                 self.json(200, self.server.register.list(before))
             elif not path.query and re.fullmatch(r"files/[a-f0-9]{32}", path.path):
                 row = self.server.register.fetch(path.path[6:])
+                job = self.server.register.job(row)
                 self.json(200, {
-                    "job": self.server.register.job(row),
-                    "receipt": row["receipt"],
-                    "issuer": canonical({"format": "repair-receipt-issuer/v1", "ed25519": row["issuer"].hex()}),
+                    "job": job,
+                    "receipt": None if job["receiptInvalid"] else row["receipt"],
+                    "issuer": canonical({"format": "repair-receipt-issuer/v1", "ed25519": row["issuer"].hex()})
+                              if job["fingerprint"] else None,
                 })
             elif not path.query and re.fullmatch(r"work-order/[a-f0-9]{32}", path.path):
                 self.json(200, self.server.register.work_order_findings(path.path.split("/")[1]))

@@ -1,0 +1,11 @@
+{
+  "environment": "Brave and QNX 8 on Windows using separate driver and shop processes",
+  "backup_copied_from_local_register": true,
+  "test_changes": "Changed a filed control finding on the backup copy",
+  "altered_finding_hidden": true,
+  "altered_receipt_export_unavailable": true,
+  "corrupted_chain_report_withheld": true,
+  "genuine_packet_does_not_overwrite_saved_corruption": true,
+  "valid_original_packet_in_same_work_order_reexported_byte_identically": true,
+  "tested_layout_width_px": 320
+}
