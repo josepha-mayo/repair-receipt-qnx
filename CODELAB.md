@@ -103,7 +103,7 @@ Open the downloaded HTML in a current Chromium browser. **Check idle receipts** 
 
 ### Try an upload and follow-up
 
-To exercise the uploaded-CSV path, choose `fixtures\kit-july-26.csv` and `fixtures\kit-july-27.csv` with **Import an OBD-II recording**. The importer also accepts the original `2017-07-26_Seat_Leon_RT_S_Stau.csv` and `2017-07-27_Seat_Leon_KA_KA_2_Normal.csv` from KIT. Both forms reproduce the findings with an uploaded-CSV label. Run `node --test verify_obd_import.cjs` to check that the import preserves gaps at either end of a recording.
+To exercise the uploaded-CSV path, choose `fixtures\kit-july-26.csv` and `fixtures\kit-july-27.csv` with **Import an OBD-II recording**. The importer also accepts the original `2017-07-26_Seat_Leon_RT_S_Stau.csv` and `2017-07-27_Seat_Leon_KA_KA_2_Normal.csv` from KIT. Both forms reproduce the findings with an uploaded-CSV label. Run `node --test verify_obd_import.cjs` to check opening and closing gaps, a clean midnight rollover and a short clock reversal across midnight.
 
 When a different request reuses the most recent uploaded samples in the same driver session, the consent preview identifies the match. This exercise deliberately reuses the published recordings. In a follow-up that calls for a fresh capture, decline the reused preview and select the new recording.
 

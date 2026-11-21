@@ -66,6 +66,9 @@ const ObdCsv = (() => {
       if (!offset && last >= 64800000 && timeOfDay <= 21600000) {
         offset = dayMs;
         current += offset;
+      } else if (offset && last - timeOfDay <= maxClockRollback) {
+        // A late pre-midnight sample can belong to the previous day.
+        current = timeOfDay;
       }
       if (last !== undefined && current <= last) {
         if (last - current > maxClockRollback || current < first) {
