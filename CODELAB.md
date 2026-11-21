@@ -111,7 +111,7 @@ Open the downloaded HTML in a current Chromium browser. **Check idle receipts** 
 
 To exercise the uploaded-CSV path, choose `fixtures\kit-july-26.csv` and `fixtures\kit-july-27.csv` with **Import an OBD-II recording**. The importer also accepts the original `2017-07-26_Seat_Leon_RT_S_Stau.csv` and `2017-07-27_Seat_Leon_KA_KA_2_Normal.csv` from KIT. Both forms reproduce the findings with an uploaded-CSV label. Run `node --test verify_obd_import.cjs` to check opening and closing gaps, a clean midnight rollover and a short clock reversal across midnight.
 
-You can also select an original metric Torque Pro CSV with English dated **Device Time**, engine RPM, OBD speed and coolant temperature. The browser projects just those four columns and uses elapsed milliseconds. Before importing, keep the original export so the date and full clock are available.
+You can also select an original metric Torque Pro CSV with English dated **Device Time**, engine RPM, OBD speed and coolant temperature. The browser projects just those four columns and uses elapsed milliseconds. Before importing, keep the original export so the date and full clock are available. The two supported scan-tool formats preserve zero versus nonzero RPM and speed, and preserve which side of a whole-degree threshold a fractional temperature falls on.
 
 When a different request reuses an earlier upload in the same driver session, the consent preview identifies the match. This exercise deliberately reuses the published recordings. In a follow-up that calls for a fresh capture, decline the reused preview and select the new recording.
 

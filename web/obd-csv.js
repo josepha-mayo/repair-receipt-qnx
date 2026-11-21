@@ -33,12 +33,29 @@ const ObdCsv = (() => {
     return ((+parts[1] * 60 + +parts[2]) * 60 + +parts[3]) * 1000 + +(parts[4] || "").padEnd(3, "0");
   }
 
-  function sensor(value, minimum, maximum) {
-    const number = Number(value);
-    if (!/^-?\d+(?:\.0+)?$/.test(value) || number < minimum || number > maximum) {
-      throw new Error("Use whole-number RPM, km/h and °C readings within the supported ranges.");
+  function sensor(value, minimum, maximum, roundUp = false) {
+    const invalid = "Use RPM, km/h and °C readings within the supported ranges.";
+    if (/^-?\d+(?:\.0+)?$/.test(value)) {
+      const whole = Number(value);
+      if (whole >= minimum && whole <= maximum) return whole;
+      throw new Error(invalid);
     }
-    return number;
+    const parts = /^(-?)(\d+)\.(\d+)$/.exec(value);
+    if (!parts) throw new Error(invalid);
+    const negative = parts[1] === "-";
+    const whole = Number(parts[2]) * (negative ? -1 : 1);
+    const fraction = parts[3];
+    let end = fraction.length;
+    while (end && fraction.charCodeAt(end - 1) === 48) end--;
+    if (whole < minimum || whole > maximum || (negative ? whole === minimum : whole === maximum)) {
+      throw new Error(invalid);
+    }
+    // Quantize the decimal text without rounding a near-integer value to the wrong side.
+    const signAndWhole = negative && whole === 0 ? "-0" : String(whole);
+    return {
+      exact: `${signAndWhole}.${fraction.slice(0, end)}`,
+      projected: roundUp ? whole + 1 : whole - (negative ? 1 : 0),
+    };
   }
 
   function torqueClock(value) {
@@ -54,13 +71,9 @@ const ObdCsv = (() => {
     return date.getTime() + clock(parts[4]);
   }
 
-  function torqueRpm(value) {
-    const number = Number(value);
-    if (!/^\d+(?:\.\d+)?$/.test(value) || number > 14000) {
-      throw new Error("Use Torque Pro engine RPM readings between 0 and 14000.");
-    }
-    // QNX uses RPM only to distinguish a stopped engine from a running one.
-    return Math.ceil(number);
+  function sameReadings(previous, current) {
+    if (previous === null || current === null) return previous === current;
+    return previous.every((value, index) => (value.exact ?? value) === (current[index].exact ?? current[index]));
   }
 
   function project(text) {
@@ -77,6 +90,7 @@ const ObdCsv = (() => {
     const rows = [];
     let first;
     let last;
+    let lastReadings = null;
     let offset = 0;
     let completeRows = 0;
     let clockBreaks = 0;
@@ -87,10 +101,9 @@ const ObdCsv = (() => {
       if (row.length !== header.length) throw new Error("The export row does not match its header.");
       const [time, rpm, speed, temperature] = indices.map(index => row[index].trim());
       const timestamp = torque ? torqueClock(time) : clock(time);
-      const sample = [rpm, speed, temperature].every(value => value && (!torque || value !== "-"))
-        ? [torque ? torqueRpm(rpm) : sensor(rpm, 0, 14000),
-          sensor(speed, 0, 400), sensor(temperature, -40, 200)].join(",")
-        : null;
+      const readings = [rpm, speed, temperature].every(value => value && (!torque || value !== "-"))
+        ? [sensor(rpm, 0, 14000, true), sensor(speed, 0, 400, true), sensor(temperature, -40, 200)] : null;
+      const sample = readings?.map(reading => reading.projected ?? reading).join(",") ?? null;
       let current = timestamp + offset;
       if (!torque && !offset && last >= 64800000 && timestamp <= 21600000) {
         offset = dayMs;
@@ -105,7 +118,7 @@ const ObdCsv = (() => {
         }
         const uncertainFrom = current - first;
         const previous = rows.at(-1);
-        if (!inClockBreak && current === last && previous?.elapsed === uncertainFrom && previous.sample === sample) {
+        if (!inClockBreak && current === last && previous?.elapsed === uncertainFrom && sameReadings(lastReadings, readings)) {
           continue;
         }
         // Remove the whole overlap before marking the last trusted clock position as a break.
@@ -120,6 +133,7 @@ const ObdCsv = (() => {
       inClockBreak = false;
       first ??= current;
       last = current;
+      lastReadings = readings;
       const elapsed = current - first;
       if (elapsed > dayMs) throw new Error("Use a recording no longer than 24 hours.");
       if (sample === null) {

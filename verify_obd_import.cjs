@@ -93,3 +93,38 @@ test("Torque Pro requires vehicle speed from the OBD adapter", async () => {
   await assert.rejects(importTorque(["-,14-Aug-2021 09:10:00.000,1,2,800,0,95"],
     torqueHeader.replace("Speed (OBD)(km/h)", "Speed (GPS)(km/h)")), /OBD speed in km\/h/);
 });
+
+test("fractional readings preserve engine state, movement and whole-degree thresholds", async () => {
+  const readings = [
+    "0.0000000000000000001,0,105.00",
+    "800.25,0.025,104.9999999999999999999",
+    "4000,0.0000000000000000001,-10.0000000000000000001",
+    "0.00,-0.00,-40.00",
+  ];
+  const expected = {payload: "3000\n0,1,0,105\n1000,801,1,104\n2000,4000,1,-11\n3000,0,0,-40\n", clockBreaks: 0};
+  assert.deepEqual(await importReadings(readings), expected);
+  assert.deepEqual(await importTorque(readings.map((sample, second) => `-,14-Aug-2021 09:10:0${second}.000,1,2,${sample}`)),
+    expected);
+});
+
+test("fractional readings outside the supported ranges are rejected before projection", async () => {
+  for (const reading of [
+    "14000.0000000000000000001,0,105",
+    "800,400.0000000000000000001,105",
+    "800,-0.0000000000000000001,105",
+    "800,0,200.0000000000000000001",
+    "800,0,-40.0000000000000000001",
+  ]) await assert.rejects(importReadings([reading]), /readings within the supported ranges/);
+});
+
+test("conflicting decimals still break coverage when their integer projections match", async () => {
+  const first = "09:00:00.000,800,0,105";
+  const sample = "09:00:01.000,800.25,0.040,104.2";
+  const end = "09:00:02.000,800,0,105";
+  const identical = await importRows([first, sample, "09:00:01.000,0800.250,00.04,0104.200", end]);
+  assert.equal(identical.clockBreaks, 0);
+  assert.equal(identical.payload, "2000\n0,800,0,105\n1000,801,1,104\n2000,800,0,105\n");
+  const conflict = await importRows([first, sample, "09:00:01.000,800.25,0.04,104.7", end]);
+  assert.equal(conflict.clockBreaks, 1);
+  assert.equal(conflict.payload, "2000\n0,800,0,105\n1000,,,\n2000,800,0,105\n");
+});
