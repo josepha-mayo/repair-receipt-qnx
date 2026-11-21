@@ -48,7 +48,8 @@ function openDriverSession() {
 }
 
 function keepPolling() {
-  return busyStages.has(state.stage) || state.stage === "occupied" || state.template === "building";
+  return busyStages.has(state.stage) || state.stage === "occupied" || state.otherReviewActive ||
+    state.template === "building";
 }
 
 function elapsedLocation(milliseconds) {
@@ -87,7 +88,7 @@ function render() {
   const claim = reconnecting || newSelection || stage === "error" || stage === "expired" ? null : state.claim;
   byId("recipe-rule").textContent = ShopRequest.rule(claim || ticket || undefined);
   const reviewing = busyStages.has(stage);
-  const busy = reviewing || stage === "occupied" || changing || reconnecting;
+  const busy = reviewing || stage === "occupied" || state.otherReviewActive || changing || reconnecting;
   byId("driver-workspace").classList.toggle("is-reviewing", reviewing);
   byId("recording-panel").hidden = reviewing;
   const preparationFailed = state.template === "failed";
@@ -165,7 +166,8 @@ function render() {
       "Starting QNX and checking the recording.",
     review: "Review the exact findings before sharing.",
     finishing: "QNX is applying your decision.",
-    shared: "QNX signed the approved receipt.",
+    shared: state.otherReviewActive ? "Your receipt is ready to download. Another driver session is reviewing a recording."
+      : "QNX signed the approved receipt.",
     declined: "Sharing declined. No receipt was issued.",
     expired: "This review expired. Start a new review to share a receipt.",
     error: message,
@@ -204,7 +206,8 @@ async function refresh() {
   if (jobChanged) newSelection = false;
   if (unconfirmedAction && updated.job === unconfirmedAction.job && updated.stage === unconfirmedAction.stage &&
       (!unconfirmedAction.template || updated.template === unconfirmedAction.template)) {
-    actionError = unconfirmedAction.message;
+    if (unconfirmedAction.starting && updated.stage === "shared") newSelection = false;
+    if (!unconfirmedAction.starting || !updated.otherReviewActive) actionError = unconfirmedAction.message;
   }
   unconfirmedAction = null;
   reconnecting = false;
@@ -242,10 +245,12 @@ async function send(path, body, type) {
         const failure = await response.json();
         actionError = failure.message || "The local app rejected this action.";
       }
+      if (starting && response.status === 409) newSelection = false;
     } catch {
       unconfirmedAction = {
         job: state.job,
         stage: state.stage,
+        starting,
         template: preparing ? state.template : null,
         message: starting ? "A new review could not be confirmed. Try starting it again."
           : preparing ? "The retry could not be confirmed. Check preparation and try again."

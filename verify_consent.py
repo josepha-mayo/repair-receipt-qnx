@@ -2,13 +2,17 @@
 
 from concurrent.futures import Future
 from threading import Event
+from time import monotonic, sleep
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
 from issuer_store import Issuer
 import live
 from run_qnx import decode_coverage_detail
+from shop_request import canonical, request_document, verification_packet
 
 
 class ConsentDeadline(unittest.TestCase):
@@ -143,6 +147,59 @@ class ConsentDeadline(unittest.TestCase):
         self.assertEqual(review.template_status(), "ready")
         self.assertFalse(review.retry_preparation())
         review.close()
+
+    def test_displaced_approval_is_only_recoverable_by_its_driver(self):
+        template = Future()
+        template.set_result("prepared guest")
+        issuer = Issuer(bytes(32))
+        review = live.Review(None, issuer, lambda: template)
+        request = request_document("idle", "0" * 32, live.CURRENT_RECIPE)
+        claim = {"recipe": live.CURRENT_RECIPE, "source": live.DEMO_SOURCE, "request": request["id"],
+                 "scope": "idle", "idle": "observed"}
+        payload = canonical(claim).encode("ascii")
+        signature = Ed25519PrivateKey.from_private_bytes(issuer.seed).sign(b"Repair Receipt v5\n" + payload).hex()
+        receipt = canonical({"format": "repair-receipt/v5", "claim": claim, "signature": signature})
+        packet = verification_packet(request, receipt, issuer.fingerprint)
+
+        def evaluate(_workspace, _qemu, _recording, decide, *_args, **kwargs):
+            kwargs["on_coverage"]({"idle": 1})
+            kwargs["on_coverage_detail"]({"firstGapMs": 811})
+            return receipt.encode("ascii") if decide(payload, issuer.public_hex.encode("ascii")) else None
+
+        def waiting(driver):
+            deadline = monotonic() + 3
+            while monotonic() < deadline:
+                state = review.snapshot(driver)
+                if state["stage"] == "review":
+                    return state["job"]
+                sleep(0.01)
+            self.fail("The driver did not reach consent.")
+
+        with patch.object(live, "review_native", evaluate):
+            try:
+                self.assertTrue(review.start("first", b"first sample", request, source=live.DEMO_SOURCE))
+                job = waiting("first")
+                self.assertTrue(review.decide("first", job, "share"))
+                review.worker.join(timeout=3)
+                self.assertFalse(review.worker.is_alive())
+                self.assertEqual(review.snapshot("first")["packet"], packet)
+                self.assertTrue(review.start("second", b"second sample", request, source=live.DEMO_SOURCE))
+                next_job = waiting("second")
+                saved = {"stage": "shared", "job": job, "claim": claim, "issuer": issuer.public_hex,
+                         "receipt": receipt, "packet": packet}
+                self.assertEqual(review.snapshot("first"), {**saved, "otherReviewActive": True})
+                self.assertEqual(review.snapshot("third"), {"stage": "occupied"})
+                self.assertFalse(review.decide("first", next_job, "share"))
+                self.assertFalse(review.start("first", b"blocked", request))
+                self.assertTrue(review.decide("second", next_job, "decline"))
+                review.worker.join(timeout=3)
+                self.assertFalse(review.worker.is_alive())
+                self.assertEqual(review.snapshot("first"), {**saved, "otherReviewActive": False})
+                self.assertNotIn("receipt", review.snapshot("second"))
+                self.assertTrue(review.start("first", b"new", request))
+                self.assertNotIn("receipt", review.snapshot("first"))
+            finally:
+                review.close()
 
 
 if __name__ == "__main__":

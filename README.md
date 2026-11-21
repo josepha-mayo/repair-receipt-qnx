@@ -47,7 +47,7 @@ Open the printed **Driver** URL to save its issuer public key. In the printed **
 
 After approving a shop-requested review, choose **Download verification packet** and send that file to the shop. It carries the original request, signed receipt and issuer fingerprint. The shop uses its enrolled public key to verify it. Individual receipt and key downloads are also available.
 
-The driver session that starts a review can see the preview, decide and download the issued receipt. Refreshing that tab keeps the session when browser session storage is available. A separate driver session sees only that a review is active until it finishes or expires.
+The driver session that starts a review can see the preview, decide and download the issued receipt. Refreshing that tab keeps the session when browser session storage is available. If another session starts a review first, the original tab can still download its approved packet. The app keeps the last 16 displaced receipts in memory, available only to the issuing sessions until they start their own next review or the app exits. Other sessions see only whether a QNX review is active.
 
 When a new request uses the same normalized upload bytes as an earlier recording, the consent preview identifies the match. If the new scope, threshold or recording rule differs from the last receipt issued for those samples, the driver sees that earlier rule before making a new decision. The app keeps up to 16 recent upload fingerprints and their receipt rules in memory. The notice belongs to the same driver session and the signed packet carries only the new findings and rule. [Reused-recording checks](replay/qnx-recording-reuse-proof.json)
 

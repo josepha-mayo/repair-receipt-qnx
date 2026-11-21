@@ -37,6 +37,7 @@ except ModuleNotFoundError as error:
     raise SystemExit("Install the local app dependencies with: python -m pip install -r requirements-live.txt") from None
 
 CONSENT_SECONDS = 300
+RECENT_RECEIPT_LIMIT = 16
 RECENT_UPLOAD_LIMIT = 16
 ACTIVE_STAGES = {"booting", "review", "finishing"}
 SESSION_HEADER = "X-Repair-Session"
@@ -104,6 +105,7 @@ class Review:
         self.decision = None
         self.deadline = None
         self.worker = None
+        self.recent_receipts = OrderedDict()
         self.recent_uploads = OrderedDict()
 
     def owns_session(self, session):
@@ -115,7 +117,11 @@ class Review:
                 self._finish_decision("expired")
             if self.owns_session(session):
                 return dict(self.state)
-            return {"stage": "occupied" if self.state["stage"] in ACTIVE_STAGES else "ready"}
+            occupied = self.state["stage"] in ACTIVE_STAGES
+            saved = self.recent_receipts.get(session)
+            if saved is not None:
+                return {**saved, "otherReviewActive": occupied}
+            return {"stage": "occupied" if occupied else "ready"}
 
     def template_status(self):
         template = self.template
@@ -136,6 +142,13 @@ class Review:
         with self.lock:
             if self.closed or self.state["stage"] in ACTIVE_STAGES or self.template_status() == "failed":
                 return False
+            self.recent_receipts.pop(session, None)
+            if self.state["stage"] == "shared" and not self.owns_session(session):
+                # Recovery only needs the approved export and its display fields.
+                fields = ("stage", "job", "claim", "issuer", "receipt", "packet")
+                self.recent_receipts[self.owner] = {key: self.state[key] for key in fields if key in self.state}
+                if len(self.recent_receipts) > RECENT_RECEIPT_LIMIT:
+                    self.recent_receipts.popitem(last=False)
             job = secrets.token_urlsafe(12)
             self.owner = session
             self.state = {"stage": "booting", "job": job, "bench": bench is not None}
