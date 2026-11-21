@@ -251,6 +251,27 @@ async function refresh() {
   if (keepPolling()) nextRefresh = setTimeout(refresh, 800);
 }
 
+async function readRecording(file) {
+  const worker = new Worker("/obd-csv.js");
+  try {
+    return await new Promise((resolve, reject) => {
+      const fail = () => reject(new Error("The background recording reader could not finish. Try again."));
+      worker.onmessage = ({data}) => {
+        if (data.error) reject(new Error(data.error));
+        else resolve(data);
+      };
+      worker.onerror = event => {
+        event.preventDefault();
+        fail();
+      };
+      worker.onmessageerror = fail;
+      worker.postMessage(file);
+    });
+  } finally {
+    worker.terminate();
+  }
+}
+
 async function send(path, body, type) {
   if (changing || reconnecting) return;
   clearTimeout(nextRefresh);
@@ -273,7 +294,8 @@ async function send(path, body, type) {
     }
     let payload = body;
     if (path === "import") {
-      ({payload, clockBreaks} = await ObdCsv.reviewInput(body));
+      status.textContent = "Reading the recording on this device.";
+      ({payload, clockBreaks} = await readRecording(body));
       submittedRequest = JSON.stringify(ticket);
       render();
     }

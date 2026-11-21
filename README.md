@@ -208,6 +208,8 @@ The same upload field accepts original metric Torque Pro logs with English dated
 
 For both export formats, positive fractional RPM and speed round up so QNX can distinguish zero from a running engine or moving vehicle. Coolant rounds down so a reading below a whole-degree threshold stays below it. Conflicts at the same timestamp are checked against the original decimal values before projection.
 
+The driver page projects scan-tool recordings in a dedicated browser worker and releases the worker after each import. In four runs per build on one Windows PC, a 7.36 MB export produced the same 2,928,897 normalized bytes. The median longest gap between browser frames fell from 333.7 ms to 17.1 ms. Time from clicking Review to handing the data to the local upload changed from 350.4 ms to 403.5 ms. These timings cover browser import. [Import measurements and native checks](replay/qnx-browser-import-worker-proof.json)
+
 ```bat
 python import_kit.py path\to\OBD-II-Dataset.zip fixtures\kit-obd.csv
 ```

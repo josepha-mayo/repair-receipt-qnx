@@ -1,0 +1,78 @@
+{
+  "host": "Windows 11 Pro, Intel Core i7-8700T",
+  "headless_brave_chromium_version": "158.0.8127.42",
+  "driver_viewport": "960x720",
+  "normalized_upload_bytes": 2928897,
+  "normalized_upload_sha256": "342653874182cd17b1c4938847e8bad7481fff89f42a77961981fb520c0de8f1",
+  "synthetic_input": {
+    "format": "metric OBD Auto Doctor CSV with two additional ignored columns",
+    "bytes": 7360095,
+    "data_rows": 160000,
+    "header": "Time,Engine RPM [RPM],Vehicle Speed Sensor [km/h],Engine Coolant Temperature [\u00b0C],GPS x,GPS y",
+    "row_pattern": "ASCII HH:mm:ss.SSS,812.01,0.04,104.99,6.5244,3.3792 with LF, starting 00:00:00.000 at 100 ms intervals"
+  },
+  "measurement": "Four uploads after guest template preparation. The harness intercepted the local import call and hashed its body. requestAnimationFrame and PerformanceObserver measured frame gaps and main-thread tasks through two frames after the local response. The timing excludes QNX execution.",
+  "measurements": {
+    "main_thread": {
+      "click_to_local_upload_ms": [
+        355.1,
+        345.6,
+        345.7,
+        355.1
+      ],
+      "median_click_to_local_upload_ms": 350.4,
+      "longest_frame_gap_ms": [
+        333.6,
+        333.7,
+        333.8,
+        333.7
+      ],
+      "median_longest_frame_gap_ms": 333.7,
+      "main_thread_long_tasks_ms": [
+        [
+          345
+        ],
+        [
+          347
+        ],
+        [
+          350
+        ],
+        [
+          356
+        ]
+      ]
+    },
+    "dedicated_worker": {
+      "click_to_local_upload_ms": [
+        413.4,
+        419.3,
+        393.6,
+        382.8
+      ],
+      "median_click_to_local_upload_ms": 403.5,
+      "longest_frame_gap_ms": [
+        17.1,
+        17.2,
+        16.9,
+        17.1
+      ],
+      "median_longest_frame_gap_ms": 17.1,
+      "main_thread_long_tasks_ms": [
+        [],
+        [],
+        [],
+        []
+      ]
+    }
+  },
+  "separate_native_qnx_8_x86_64_checks": {
+    "large_raw_import_signed_and_verified": true,
+    "normalized_file_accepted": true,
+    "private_clock_break_guidance_visible": true,
+    "malformed_csv_not_posted": true,
+    "failed_worker_not_posted": true,
+    "retry_after_worker_failure_succeeded": true,
+    "remaining_workers": 0
+  }
+}

@@ -163,4 +163,20 @@ const ObdCsv = (() => {
   return Object.freeze({reviewInput});
 })();
 
-if (typeof module !== "undefined" && module.exports) module.exports = ObdCsv;
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = ObdCsv;
+} else if (typeof WorkerGlobalScope !== "undefined") {
+  self.onmessage = async ({data: file}) => {
+    try {
+      const {payload, clockBreaks} = await ObdCsv.reviewInput(file);
+      if (typeof payload === "string") {
+        const bytes = new TextEncoder().encode(payload);
+        self.postMessage({payload: bytes, clockBreaks}, [bytes.buffer]);
+      } else {
+        self.postMessage({payload, clockBreaks});
+      }
+    } catch (error) {
+      self.postMessage({error: error.message || "Could not read the selected recording."});
+    }
+  };
+}
