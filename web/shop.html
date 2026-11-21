@@ -67,6 +67,12 @@
         <label for="issuer-file">Trusted issuer public key</label>
         <input id="issuer-file" type="file" accept=".json,application/json" aria-describedby="pin-fingerprint">
         <p id="pin-fingerprint" class="fingerprint" hidden></p>
+        <details class="issuer-enrollment" id="issuer-check">
+          <summary>Check a separate issuer fingerprint</summary>
+          <label for="expected-issuer">Expected SHA-256 fingerprint</label>
+          <input id="expected-issuer" type="text" maxlength="256" autocomplete="off" spellcheck="false" aria-describedby="expected-issuer-help">
+          <p id="expected-issuer-help" class="help input-note">Paste the full fingerprint you confirmed with the issuer.</p>
+        </details>
         <div id="request-selection">
           <label for="expected-request">Original shop request</label>
           <input id="expected-request" type="file" accept=".json,application/json" aria-describedby="expected-status">
@@ -82,6 +88,7 @@
           <h2 id="result-heading" tabindex="-1">Verification result</h2>
         </div>
         <p id="result" class="status" role="status">Waiting for a receipt and key.</p>
+        <p id="issuer-match" class="help" hidden>Issuer key matches the fingerprint you entered.</p>
         <p id="batch-warning" class="status bad" role="status" hidden></p>
         <ul id="batch-results" aria-label="Verification results by file" hidden></ul>
         <dl id="findings" hidden>
@@ -89,6 +96,7 @@
           <div id="moving-row"><dt>While moving</dt><dd id="moving"></dd></div>
         </dl>
         <p id="matched-request" class="help" hidden></p>
+        <p id="included-request-note" class="help" hidden>Use the work order’s original request to confirm a specific job.</p>
         <section id="evidence-details" class="evidence-details" aria-labelledby="evidence-heading" hidden>
           <h3 id="evidence-heading">How to read this finding</h3>
           <dl class="evidence-meta">

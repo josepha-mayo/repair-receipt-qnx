@@ -10,6 +10,8 @@ Open the downloaded HTML in a current Chromium browser. It contains four receipt
 2. Open **Download proof files**, then save the July 27 packet and the example issuer key. Under **Verification files**, load the packet and key and choose **Verify receipt**. The verifier confirms the signature and the request included in the packet.
 3. Under **Create a shop request**, choose **While moving only**, enter **95**, then select **Save request file**. This selects a fresh request with a new ID. Choose **Verify receipt** again to see the mismatch. Select **Clear original request** and verify again to return to checking the packet against its included request.
 
+Open **Check a separate issuer fingerprint** and paste `issuer.fingerprint` from the [published example evidence](replay/qnx-road-scope-receipts.json). Verify again and confirm that the supplied key matches it. Change any hexadecimal digit and verify to see the key comparison fail before the verifier displays a finding. For a real work order, confirm the full fingerprint with the issuer through a trusted channel and load the shop's independently saved request. The printout identifies which request was checked.
+
 ## 1. Compile and run
 
 Install QNX SDP 8.0, QEMU for x86-64 and 64-bit Python 3.10 or later. Open **Command Prompt** in the extracted source folder. The scripts load the default Windows SDK at `%USERPROFILE%\qnx800`. For an SDK installed elsewhere, run `call "C:\path\to\qnxsdp-env.bat"` with your SDK path in this prompt before building. [QNX SDP installation guide](https://www.qnx.com/developers/docs/8.0/com.qnx.doc.qnxsdp.quickstart/topic/install_host.html)

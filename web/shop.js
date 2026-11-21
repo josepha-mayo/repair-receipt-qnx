@@ -3,6 +3,7 @@
 const byId = id => document.getElementById(id);
 const receiptFile = byId("receipt-file");
 const issuerFile = byId("issuer-file");
+const expectedIssuer = byId("expected-issuer");
 const requestFile = byId("expected-request");
 const verifyButton = byId("verify");
 const result = byId("result");
@@ -32,25 +33,29 @@ function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   byId("intake-actions").hidden = !verifiedReceipt;
   byId("result-card").classList.toggle("verified-receipt", verifiedReceipt);
   byId("matched-request").hidden = true;
+  byId("included-request-note").hidden = true;
+  byId("issuer-match").hidden = true;
   byId("print-request").hidden = true;
   byId("print-digest").hidden = true;
   byId("print-issuer").hidden = true;
 }
 
-async function publicVerifier(issuer) {
+async function publicVerifier(issuer, expectedFingerprint = "") {
+  const expected = expectedFingerprint.replace(/\s+/g, "").toLowerCase();
+  if (expected && !/^[a-f0-9]{64}$/.test(expected)) {
+    throw new Error("Enter a full 64-character SHA-256 fingerprint.");
+  }
   const {key: rawKey} = await ShopRequest.readIssuer(issuer);
   const issuerFingerprint = await ShopRequest.fingerprint(rawKey);
+  if (expected && expected !== issuerFingerprint) {
+    throw new Error("Issuer fingerprint mismatch. Check the key file against the fingerprint you received separately.");
+  }
   try {
     const key = await crypto.subtle.importKey("raw", rawKey, "Ed25519", false, ["verify"]);
-    return {key, issuerFingerprint};
+    return {key, issuerFingerprint, fingerprintMatched: !!expected};
   } catch {
     throw new Error("This browser could not load the Ed25519 key. Try a current Chromium browser.");
   }
-}
-
-async function verify(receipt, issuer, ticket) {
-  const [evidence, verifier] = await Promise.all([ShopRequest.readEvidence(receipt), publicVerifier(issuer)]);
-  return verifyEvidence(evidence, verifier, ticket);
 }
 
 async function verifyEvidence(evidence, {key, issuerFingerprint}, ticket) {
@@ -145,6 +150,7 @@ function resetVerification() {
 for (const input of [receiptFile, issuerFile]) {
   input.addEventListener("change", resetVerification);
 }
+expectedIssuer.addEventListener("input", resetVerification);
 
 issuerFile.addEventListener("change", async () => {
   const version = ++keySelection;
@@ -203,8 +209,7 @@ byId("create-request").addEventListener("click", () => {
 
 byId("print-finding").addEventListener("click", () => window.print());
 
-async function verifyBatch(files, issuer, attempt) {
-  const verifier = await publicVerifier(issuer);
+async function verifyBatch(files, verifier, attempt) {
   const rows = document.createDocumentFragment();
   const requests = new Map();
   let verified = 0;
@@ -253,6 +258,7 @@ async function verifyBatch(files, issuer, attempt) {
   }
   const outcome = verified !== files.length ? "bad" : conflicts ? "" : "good";
   update(`Verified ${verified} of ${files.length} packets.`, outcome, false);
+  byId("issuer-match").hidden = !verifier.fingerprintMatched;
   if (conflicts) {
     const warning = byId("batch-warning");
     const subject = conflicts === 1 ? "One request has" : `${conflicts} requests have`;
@@ -268,17 +274,20 @@ verifyButton.addEventListener("click", async () => {
   const attempt = ++generation;
   const files = [...receiptFile.files];
   const issuer = issuerFile.files[0];
+  const ticket = expected;
   const batch = files.length > 1;
   const moveFocus = document.activeElement === verifyButton;
   verifyButton.disabled = true;
   update(batch ? "Checking each signature." : "Checking the signature.");
   try {
+    const verifier = await publicVerifier(issuer, expectedIssuer.value);
+    if (attempt !== generation) return;
     if (batch) {
-      await verifyBatch(files, issuer, attempt);
+      await verifyBatch(files, verifier, attempt);
       return;
     }
     const {claim, issuerFingerprint, receiptSha256, matchedIncludedRequest, driverStarted} =
-      await verify(files[0], issuer, expected);
+      await verifyEvidence(await ShopRequest.readEvidence(files[0]), verifier, ticket);
     if (attempt !== generation) return;
     for (const field of ["idle", "moving"]) {
       byId(field + "-row").hidden = !Object.hasOwn(claim, field);
@@ -292,8 +301,10 @@ verifyButton.addEventListener("click", async () => {
     const requestStatus = driverStarted ? " Driver-started review." :
       matchedIncludedRequest ? " Included request matched." : claim.request ? " Request matched." : "";
     update("Signature verified." + requestStatus, "good");
+    byId("issuer-match").hidden = !verifier.fingerprintMatched;
+    byId("included-request-note").hidden = !matchedIncludedRequest;
     const printIssuer = byId("print-issuer");
-    printIssuer.textContent = `Verified issuer SHA-256 ${issuerFingerprint}`;
+    printIssuer.textContent = `Issuer key SHA-256 ${issuerFingerprint}`;
     printIssuer.hidden = false;
     const printDigest = byId("print-digest");
     printDigest.textContent = `Receipt SHA-256 ${receiptSha256}`;
@@ -303,7 +314,8 @@ verifyButton.addEventListener("click", async () => {
       match.textContent = `${ShopRequest.scopes[claim.scope]} · Request ${claim.request.slice(-8)}`;
       match.hidden = false;
       const printRequest = byId("print-request");
-      printRequest.textContent = `Full request ID ${claim.request}`;
+      const requestSource = matchedIncludedRequest ? "Request included in the packet" : "Separate shop request";
+      printRequest.textContent = `${requestSource} · Full request ID ${claim.request}`;
       printRequest.hidden = false;
     }
   } catch (error) {

@@ -63,6 +63,8 @@ Live review diagnostics log event markers in place of the issuer public key, dri
 
 The shop can use [the one-file offline verifier](replay/verify-receipt.html) without a QNX installation. Open the signed receipt and a separately trusted issuer public key. For a shop-requested review, also open the original request to confirm the job and scope. The verifier checks the exact fields and Ed25519 signature. A driver-started receipt is labeled as such and can be verified with the trusted key on its own. To rebuild the standalone file, run `python pack_shop.py`.
 
+Under **Check a separate issuer fingerprint**, enter the full SHA-256 fingerprint you confirmed with the issuer. The offline verifier compares it with the loaded key for single receipts and packet batches. The printout identifies whether the request came from a separate shop file or from the packet itself.
+
 After verification, the shop can print the requested finding, test rule, input type, full request ID and verified issuer fingerprint for a work order. An unattended driver review expires after five minutes. The app clears the preview and coverage guidance at expiry. Sharing then requires a fresh review and approval.
 
 If the browser loses contact with the local app, it hides the finding and pauses approval and download while it checks the current review. A decision is sent once per explicit activation. If QNX is still waiting and the interruption leaves no focused control, the page returns focus to the receipt so the driver can review it and choose again. If QEMU exits during the preview, the app ends that review so the driver can start another. If the app itself restarts, open the new Driver link printed in the console.
