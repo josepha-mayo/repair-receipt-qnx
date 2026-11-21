@@ -87,6 +87,8 @@ dd { text-align: right; margin: 0; font-weight: 750; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
 .evidence-details { margin-top: 18px; }
 .evidence-details h3 { margin: 0 0 4px; font-size: .95rem; }
+#receipt-intake .help { margin-top: 4px; }
+#receipt-follow-up { align-items: baseline; }
 .evidence-meta { font-size: .86rem; color: var(--quiet); }
 .evidence-meta dd { max-width: 30ch; font-weight: 550; }
 #batch-results { list-style: none; margin: 0; padding: 0; }
@@ -142,11 +144,16 @@ footer { margin-top: 18px; }
   #check-startup { grid-column: 1 / -1; }
   .card { padding: 17px; }
 }
+@media (max-width: 420px) {
+  #result-card #findings dt { flex-shrink: 0; }
+  .evidence-meta div { display: block; }
+  .evidence-meta dd { max-width: none; margin-top: 3px; text-align: start; }
+}
 @media print {
   body { background: white; color: black; font-size: 11pt; }
   main { max-width: none; padding: 0; }
   main:has(#result-card) > :not(.workspace), main:has(#result-card) .workspace > :not(.verified-receipt),
-  #intake-actions, #filed-receipt-search {
+  #intake-actions, #filed-receipt-search, #receipt-follow-up {
     display: none !important;
   }
   .workspace { display: block; }
@@ -268,6 +275,14 @@ footer { margin-top: 18px; }
         </dl>
         <p id="matched-request" class="help" hidden></p>
         <p id="included-request-note" class="help" hidden>Use the work order’s original request to confirm a specific job.</p>
+        <section id="receipt-intake" class="evidence-details" aria-labelledby="receipt-intake-heading" hidden>
+          <h3 id="receipt-intake-heading">Where to start</h3>
+          <p id="receipt-intake-summary" class="help"></p>
+          <div id="receipt-follow-up" class="actions" hidden>
+            <button id="save-follow-up-request" class="secondary" type="button" aria-describedby="receipt-follow-up-note"></button>
+            <p id="receipt-follow-up-note" class="help">The new request uses the same test rule. Keep it with the work order.</p>
+          </div>
+        </section>
         <section id="evidence-details" class="evidence-details" aria-labelledby="evidence-heading" hidden>
           <h3 id="evidence-heading">How to read this finding</h3>
           <dl class="evidence-meta">
@@ -315,8 +330,9 @@ const ShopRequest = (() => {
   });
   const benchSource = "obd-bench/v1";
   const publishedSource = "published-road/v1";
+  const uploadedSource = "uploaded-csv/v1";
   const fileSources = Object.freeze({
-    "uploaded-csv/v1": "Uploaded CSV",
+    [uploadedSource]: "Uploaded CSV",
     "demo-fixture/v1": "Built-in demo recording",
     [publishedSource]: "Published road recording",
   });
@@ -324,6 +340,7 @@ const ShopRequest = (() => {
   const format = "repair-receipt-request/v1";
   const thresholdFormat = "repair-receipt-request/v2";
   const scopes = Object.freeze({idle: "At idle only", moving: "While moving only", both: "At idle and while moving"});
+  const conditions = Object.freeze({idle: "At idle", moving: "While moving"});
 
   function validThreshold(value) {
     return Number.isInteger(value) && value >= -40 && value <= 200;
@@ -343,6 +360,28 @@ const ShopRequest = (() => {
   function sourceLabel(source) {
     if (source === benchSource) return "Simulated OBD-II adapter via QNX";
     return Object.hasOwn(fileSources, source) ? fileSources[source] : "Recording source unspecified";
+  }
+
+  function intakeSummary(contexts) {
+    const filed = contexts.filter(({evidence}) => evidence);
+    if (!filed.length) return "";
+    const uploaded = filed.filter(({evidence}) => evidence.source === uploadedSource);
+    if (!uploaded.length) return "Use a recording from this vehicle to decide which condition to check first.";
+
+    const conditionText = items => items.map(({condition}) => conditions[condition].toLowerCase()).join(" and ");
+    const observed = uploaded.filter(({evidence}) => evidence.finding === "observed");
+    const belowRule = uploaded.filter(({evidence}) => evidence.finding === "not_observed");
+    const incomplete = uploaded.filter(({evidence}) => evidence.finding === "insufficient_evidence");
+    const summary = [];
+    if (observed.length) {
+      const first = observed.length === 1 && contexts.length > 1 ? " first" : "";
+      summary.push(`Confirm the data came from this vehicle. Review the complaint ${conditionText(observed)}${first}.`);
+    }
+    if (belowRule.length) summary.push(`No crossing met the test rule ${conditionText(belowRule)} in the reviewed data.`);
+    if (incomplete.length) summary.push(`Coverage was insufficient ${conditionText(incomplete)}.`);
+    const other = filed.filter(({evidence}) => evidence.source !== uploadedSource);
+    if (other.length) summary.push(`Use a recording from this vehicle to assess the complaint ${conditionText(other)}.`);
+    return summary.join(" ");
   }
 
   function create(scope, threshold = null, selectedRecipe = recipe) {
@@ -444,8 +483,9 @@ const ShopRequest = (() => {
     setTimeout(() => URL.revokeObjectURL(href), 1000);
   }
 
-  return Object.freeze({recipe, startupRecipe, legacyRecipe, recipes, benchSource, publishedSource, fileSources, packetFormat, scopes,
-    create, parse, load, rule, sourceLabel,
+  return Object.freeze({recipe, startupRecipe, legacyRecipe, recipes, benchSource, publishedSource, uploadedSource,
+    fileSources, packetFormat, scopes, conditions,
+    create, parse, load, rule, sourceLabel, intakeSummary,
     save, validThreshold, supportsThreshold,
     hexBytes, readIssuer, fingerprint, requestFingerprint, readEvidence});
 })();
@@ -600,6 +640,7 @@ let expected = null;
 let requestLoading = false;
 let requestError = "";
 let keySelection = 0;
+let followUp = null;
 
 function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   result.textContent = text;
@@ -610,6 +651,9 @@ function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   byId("batch-warning").hidden = true;
   byId("findings").hidden = !verifiedReceipt;
   byId("evidence-details").hidden = !verifiedReceipt;
+  byId("receipt-intake").hidden = true;
+  byId("receipt-follow-up").hidden = true;
+  followUp = null;
   byId("intake-actions").hidden = !verifiedReceipt;
   resultCard.classList.toggle("verified-receipt", verifiedReceipt);
   delete resultCard.dataset.receiptDigest;
@@ -802,12 +846,36 @@ byId("create-request").addEventListener("click", async () => {
 
 byId("print-finding").addEventListener("click", () => window.print());
 
+function showIntake(claim, jobConfirmed) {
+  const contexts = Object.keys(ShopRequest.conditions).filter(condition => Object.hasOwn(claim, condition))
+    .map(condition => ({condition, evidence: {finding: claim[condition], source: claim.source}}));
+  byId("receipt-intake-summary").textContent = ShopRequest.intakeSummary(contexts);
+  byId("receipt-intake").hidden = false;
+
+  if (!jobConfirmed || claim.source !== ShopRequest.uploadedSource || !ShopRequest.supportsThreshold(claim.recipe)) return;
+  const missing = contexts.filter(({evidence}) => evidence.finding === "insufficient_evidence");
+  if (!missing.length) return;
+  const scope = missing.length === 2 ? "both" : missing[0].condition;
+  followUp = ShopRequest.create(scope, claim.thresholdC ?? null, claim.recipe);
+  byId("save-follow-up-request").textContent = {
+    idle: "Save idle-only request",
+    moving: "Save moving-only request",
+    both: "Save request for idle and moving",
+  }[scope];
+}
+
+byId("save-follow-up-request").addEventListener("click", () => {
+  if (!followUp || byId("receipt-follow-up").hidden) return;
+  ShopRequest.save("repair-request.json", JSON.stringify(followUp));
+});
+
 function findFiledReceipt() {
   if (digestSearch.hidden) return;
   const input = receiptDigestInput.value.trim();
   const digest = input.replace(/^receipt\s+sha-256\s+/i, "").replace(/\s+/g, "").toLowerCase();
   const valid = sha256Hex.test(digest);
   const singleDigest = resultCard.dataset.receiptDigest;
+  byId("receipt-follow-up").hidden = !followUp || (input !== "" && (!valid || digest !== singleDigest));
   let matches = 0;
   let filename = "";
   for (const row of batchResults.hidden ? [] : batchResults.querySelectorAll("[data-receipt-digest]")) {
@@ -939,6 +1007,7 @@ verifyButton.addEventListener("click", async () => {
     const requestStatus = driverStarted ? " Driver-started review." :
       matchedIncludedRequest ? " Included request matched." : claim.request ? " Request matched." : "";
     update("Signature verified." + requestStatus, "good");
+    showIntake(claim, !!ticket && !driverStarted);
     resultCard.dataset.receiptDigest = receiptSha256;
     digestSearch.hidden = false;
     findFiledReceipt();

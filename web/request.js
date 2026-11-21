@@ -13,8 +13,9 @@ const ShopRequest = (() => {
   });
   const benchSource = "obd-bench/v1";
   const publishedSource = "published-road/v1";
+  const uploadedSource = "uploaded-csv/v1";
   const fileSources = Object.freeze({
-    "uploaded-csv/v1": "Uploaded CSV",
+    [uploadedSource]: "Uploaded CSV",
     "demo-fixture/v1": "Built-in demo recording",
     [publishedSource]: "Published road recording",
   });
@@ -22,6 +23,7 @@ const ShopRequest = (() => {
   const format = "repair-receipt-request/v1";
   const thresholdFormat = "repair-receipt-request/v2";
   const scopes = Object.freeze({idle: "At idle only", moving: "While moving only", both: "At idle and while moving"});
+  const conditions = Object.freeze({idle: "At idle", moving: "While moving"});
 
   function validThreshold(value) {
     return Number.isInteger(value) && value >= -40 && value <= 200;
@@ -41,6 +43,28 @@ const ShopRequest = (() => {
   function sourceLabel(source) {
     if (source === benchSource) return "Simulated OBD-II adapter via QNX";
     return Object.hasOwn(fileSources, source) ? fileSources[source] : "Recording source unspecified";
+  }
+
+  function intakeSummary(contexts) {
+    const filed = contexts.filter(({evidence}) => evidence);
+    if (!filed.length) return "";
+    const uploaded = filed.filter(({evidence}) => evidence.source === uploadedSource);
+    if (!uploaded.length) return "Use a recording from this vehicle to decide which condition to check first.";
+
+    const conditionText = items => items.map(({condition}) => conditions[condition].toLowerCase()).join(" and ");
+    const observed = uploaded.filter(({evidence}) => evidence.finding === "observed");
+    const belowRule = uploaded.filter(({evidence}) => evidence.finding === "not_observed");
+    const incomplete = uploaded.filter(({evidence}) => evidence.finding === "insufficient_evidence");
+    const summary = [];
+    if (observed.length) {
+      const first = observed.length === 1 && contexts.length > 1 ? " first" : "";
+      summary.push(`Confirm the data came from this vehicle. Review the complaint ${conditionText(observed)}${first}.`);
+    }
+    if (belowRule.length) summary.push(`No crossing met the test rule ${conditionText(belowRule)} in the reviewed data.`);
+    if (incomplete.length) summary.push(`Coverage was insufficient ${conditionText(incomplete)}.`);
+    const other = filed.filter(({evidence}) => evidence.source !== uploadedSource);
+    if (other.length) summary.push(`Use a recording from this vehicle to assess the complaint ${conditionText(other)}.`);
+    return summary.join(" ");
   }
 
   function create(scope, threshold = null, selectedRecipe = recipe) {
@@ -142,8 +166,9 @@ const ShopRequest = (() => {
     setTimeout(() => URL.revokeObjectURL(href), 1000);
   }
 
-  return Object.freeze({recipe, startupRecipe, legacyRecipe, recipes, benchSource, publishedSource, fileSources, packetFormat, scopes,
-    create, parse, load, rule, sourceLabel,
+  return Object.freeze({recipe, startupRecipe, legacyRecipe, recipes, benchSource, publishedSource, uploadedSource,
+    fileSources, packetFormat, scopes, conditions,
+    create, parse, load, rule, sourceLabel, intakeSummary,
     save, validThreshold, supportsThreshold,
     hexBytes, readIssuer, fingerprint, requestFingerprint, readEvidence});
 })();

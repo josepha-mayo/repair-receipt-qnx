@@ -28,6 +28,7 @@ let expected = null;
 let requestLoading = false;
 let requestError = "";
 let keySelection = 0;
+let followUp = null;
 
 function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   result.textContent = text;
@@ -38,6 +39,9 @@ function update(text, outcome = "", verifiedReceipt = outcome === "good") {
   byId("batch-warning").hidden = true;
   byId("findings").hidden = !verifiedReceipt;
   byId("evidence-details").hidden = !verifiedReceipt;
+  byId("receipt-intake").hidden = true;
+  byId("receipt-follow-up").hidden = true;
+  followUp = null;
   byId("intake-actions").hidden = !verifiedReceipt;
   resultCard.classList.toggle("verified-receipt", verifiedReceipt);
   delete resultCard.dataset.receiptDigest;
@@ -230,12 +234,36 @@ byId("create-request").addEventListener("click", async () => {
 
 byId("print-finding").addEventListener("click", () => window.print());
 
+function showIntake(claim, jobConfirmed) {
+  const contexts = Object.keys(ShopRequest.conditions).filter(condition => Object.hasOwn(claim, condition))
+    .map(condition => ({condition, evidence: {finding: claim[condition], source: claim.source}}));
+  byId("receipt-intake-summary").textContent = ShopRequest.intakeSummary(contexts);
+  byId("receipt-intake").hidden = false;
+
+  if (!jobConfirmed || claim.source !== ShopRequest.uploadedSource || !ShopRequest.supportsThreshold(claim.recipe)) return;
+  const missing = contexts.filter(({evidence}) => evidence.finding === "insufficient_evidence");
+  if (!missing.length) return;
+  const scope = missing.length === 2 ? "both" : missing[0].condition;
+  followUp = ShopRequest.create(scope, claim.thresholdC ?? null, claim.recipe);
+  byId("save-follow-up-request").textContent = {
+    idle: "Save idle-only request",
+    moving: "Save moving-only request",
+    both: "Save request for idle and moving",
+  }[scope];
+}
+
+byId("save-follow-up-request").addEventListener("click", () => {
+  if (!followUp || byId("receipt-follow-up").hidden) return;
+  ShopRequest.save("repair-request.json", JSON.stringify(followUp));
+});
+
 function findFiledReceipt() {
   if (digestSearch.hidden) return;
   const input = receiptDigestInput.value.trim();
   const digest = input.replace(/^receipt\s+sha-256\s+/i, "").replace(/\s+/g, "").toLowerCase();
   const valid = sha256Hex.test(digest);
   const singleDigest = resultCard.dataset.receiptDigest;
+  byId("receipt-follow-up").hidden = !followUp || (input !== "" && (!valid || digest !== singleDigest));
   let matches = 0;
   let filename = "";
   for (const row of batchResults.hidden ? [] : batchResults.querySelectorAll("[data-receipt-digest]")) {
@@ -367,6 +395,7 @@ verifyButton.addEventListener("click", async () => {
     const requestStatus = driverStarted ? " Driver-started review." :
       matchedIncludedRequest ? " Included request matched." : claim.request ? " Request matched." : "";
     update("Signature verified." + requestStatus, "good");
+    showIntake(claim, !!ticket && !driverStarted);
     resultCard.dataset.receiptDigest = receiptSha256;
     digestSearch.hidden = false;
     findFiledReceipt();

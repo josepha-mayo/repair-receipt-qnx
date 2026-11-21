@@ -134,6 +134,8 @@ Approve a July 27 receipt for **At idle only** at **95 °C**, then review a diff
 
 For a work-order trial, request both conditions at 95 °C. Upload July 27, approve, file and open **View work-order findings**. **Where to start** points to idle and flags incomplete moving coverage. Choose **Request moving-only follow-up** in that report and download the new request. Load it on the driver side, upload July 26 and file the returned receipt. Both conditions now have a threshold observation. The detailed findings show the two separate receipts. Use the recordings as example data for this exercise.
 
+To try the file-based workflow, open the original July 27 packet, issuer key and original shop request in the standalone verifier. **Where to start** gives the same guidance. Choose **Save moving-only request**. Open the downloaded file and check that it has a fresh ID, moving scope and the original 95 °C rule. Load it on the driver side and review July 26. Use the new request and issuer key to verify the returned moving-only packet offline.
+
 ### Request a startup window
 
 For the same July 27 CSV, create a separate request for both conditions at 95 °C. Under **Recording window**, choose **Allow 1 second for startup**. The driver preview reports that QNX excluded the first 0.21 s. It shows **Threshold observed** at idle and **Threshold not observed** while moving. The scope of that moving finding is the reviewed window. File it and open **View work-order findings**. Its summary points you to idle first and says no moving crossing met the rule in the reviewed data. Verify the packet offline with the original request and trusted issuer key. Change the request recipe to the entire-recording rule to see verification reject the mismatch.

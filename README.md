@@ -67,6 +67,8 @@ Live review diagnostics log event markers in place of the issuer public key, dri
 
 The shop can use [the one-file offline verifier](replay/verify-receipt.html) without a QNX installation. Open the signed receipt and a separately trusted issuer public key. For a shop-requested review, also open the original request to confirm the job and scope. The verifier checks the exact fields and Ed25519 signature. A driver-started receipt is labeled as such and can be verified with the trusted key on its own. To rebuild the standalone file, run `python pack_shop.py`.
 
+After verifying one receipt, **Where to start** shows which recorded condition met the test rule and which had inadequate coverage. If an uploaded recording had inadequate coverage and you matched the shop's original request separately, save a fresh request for just the missing coverage. It keeps the temperature threshold and recording window and carries its own request ID. Keep that file with the work order so you can verify the driver's next receipt.
+
 Under **Check a separate issuer fingerprint**, enter the full SHA-256 fingerprint you confirmed with the issuer. The offline verifier compares it with the loaded key for single receipts and packet batches. The printout identifies whether the request came from a separate shop file or from the packet itself.
 
 After verification, the shop can print the requested finding, test rule, input type, full request ID and verified issuer fingerprint for a work order. The driver has five minutes from the first consent preview to decide. The countdown comes from the local app and continues through a refresh of the same tab. The app clears the preview and coverage guidance at expiry. Sharing then requires a fresh review and approval.

@@ -15,7 +15,7 @@ const findings = {
   not_observed: "Threshold not observed",
   insufficient_evidence: "Insufficient evidence",
 };
-const conditions = {idle: "At idle", moving: "While moving"};
+const {conditions} = ShopRequest;
 const conditionNotes = {
   idle: "Uses engine-running samples at 0 km/h.",
   moving: "Uses engine-running samples above 0 km/h.",
@@ -473,28 +473,6 @@ function compareReadings(baseline, recheck) {
   return "Both receipts report that the test rule was not met.";
 }
 
-function intakeSummary(contexts) {
-  const filed = contexts.filter(({evidence}) => evidence);
-  if (!filed.length) return "";
-  const uploaded = filed.filter(({evidence}) => evidence.source === "uploaded-csv/v1");
-  if (!uploaded.length) return "Use a recording from this vehicle to decide which condition to check first.";
-
-  const conditionText = items => items.map(({condition}) => conditions[condition].toLowerCase()).join(" and ");
-  const observed = uploaded.filter(({evidence}) => evidence.finding === "observed");
-  const belowRule = uploaded.filter(({evidence}) => evidence.finding === "not_observed");
-  const incomplete = uploaded.filter(({evidence}) => evidence.finding === "insufficient_evidence");
-  const summary = [];
-  if (observed.length) {
-    const first = observed.length === 1 && contexts.length > 1 ? " first" : "";
-    summary.push(`Confirm the data came from this vehicle. Review the complaint ${conditionText(observed)}${first}.`);
-  }
-  if (belowRule.length) summary.push(`No crossing met the test rule ${conditionText(belowRule)} in the reviewed data.`);
-  if (incomplete.length) summary.push(`Coverage was insufficient ${conditionText(incomplete)}.`);
-  const other = filed.filter(({evidence}) => evidence.source !== "uploaded-csv/v1");
-  if (other.length) summary.push(`Use a recording from this vehicle to assess the complaint ${conditionText(other)}.`);
-  return summary.join(" ");
-}
-
 function showEarlierReceipts(receipts) {
   const history = byId("report-history");
   const list = byId("report-history-list");
@@ -549,7 +527,7 @@ function showWorkOrder(report) {
   byId("report-reference").textContent = report.workOrder
     ? `Work order ${report.workOrder}` : `Original request ${report.originalRequest.slice(-8)}`;
   const isRecheck = report.contexts.some(context => context.baseline);
-  const summary = withdrawn || isRecheck ? "" : intakeSummary(report.contexts);
+  const summary = withdrawn || isRecheck ? "" : ShopRequest.intakeSummary(report.contexts);
   byId("report-intake").hidden = !summary;
   byId("report-intake-summary").textContent = summary;
   byId("report-recheck-note").hidden = withdrawn || !isRecheck;
