@@ -104,6 +104,15 @@ function render() {
   byId("choose-recording").hidden = stage !== "expired";
   byId("actions").hidden = stage !== "review" || reconnecting;
   byId("reused-recording").hidden = stage !== "review" || !claim || !state.reusedRecording;
+  const previousRule = stage === "review" && claim && state.previousRecordingRule;
+  const previousRuleNote = byId("previous-recording-rule");
+  previousRuleNote.hidden = !previousRule;
+  let previousRuleText = "";
+  if (previousRule) {
+    const previousTest = previousRule.recipe === claim.recipe ? `${previousRule.thresholdC} °C` : ShopRequest.rule(previousRule);
+    previousRuleText = `Earlier receipt for these samples · ${ShopRequest.scopes[previousRule.scope]} · ${previousTest}`;
+  }
+  if (previousRuleNote.textContent !== previousRuleText) previousRuleNote.textContent = previousRuleText;
   byId("share").disabled = changing;
   byId("decline").disabled = changing;
   byId("findings").hidden = !claim;

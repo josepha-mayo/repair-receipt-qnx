@@ -11,12 +11,13 @@ import live
 
 
 class ConsentDeadline(unittest.TestCase):
-    def review_at(self, instant, action, *, prior_owner="driver", request_id="follow-up", startup_excluded_ms=None):
+    def review_at(self, instant, action, *, prior_owner="driver", request_id="follow-up", startup_excluded_ms=None,
+                  prior_rule=None, previous_rule=None):
         review = live.Review(None, Issuer(bytes(32)), Future)
         review.owner = "driver"
         review.state = {"stage": "booting", "job": "test-job"}
         digest = bytes(32)
-        review.last_import = (prior_owner, digest, "original")
+        review.recent_uploads[(prior_owner, digest)] = ("original", prior_rule)
         now = 0.0
         result = None
         notice = None
@@ -26,13 +27,16 @@ class ConsentDeadline(unittest.TestCase):
             self.assertEqual(timeout, live.CONSENT_SECONDS)
             notice = review.snapshot("driver").get("reusedRecording")
             self.assertEqual(review.snapshot("driver").get("startupExcludedMs"), startup_excluded_ms)
+            self.assertEqual(review.snapshot("driver").get("previousRecordingRule"), previous_rule)
+            self.assertNotIn("previousRecordingRule", review.snapshot("different-driver"))
             self.assertNotIn("startupExcludedMs", review.snapshot("different-driver"))
             now = instant
             result = action(review)
 
         review.response = SimpleNamespace(wait=arrive, set=lambda: None)
         with patch.object(live, "time", SimpleNamespace(monotonic=lambda: now)):
-            shared = review.wait_for_decision(b'{"idle":"insufficient_evidence"}',
+            preview = b'{"recipe":"coolant-duration-demo/v2","idle":"insufficient_evidence"}'
+            shared = review.wait_for_decision(preview,
                                               review.issuer.public_hex.encode("ascii"), Event(), {"idle": 1},
                                               (digest, request_id), startup_excluded_ms=startup_excluded_ms)
             return shared, result, review.snapshot("driver"), notice
@@ -52,6 +56,30 @@ class ConsentDeadline(unittest.TestCase):
                 _, _, _, notice = self.review_at(live.CONSENT_SECONDS - 1,
                     lambda review: review.decide("driver", "test-job", "decline"), **options)
                 self.assertIsNone(notice)
+
+    def test_previous_rule_is_private_and_cleared_on_decision_or_expiry(self):
+        prior = {"scope": "idle", "thresholdC": 95, "recipe": live.CURRENT_RECIPE}
+        for offset, choice in ((-1, "share"), (-1, "decline"), (0, "share")):
+            with self.subTest(offset=offset, choice=choice):
+                _, _, owner, _ = self.review_at(live.CONSENT_SECONDS + offset,
+                    lambda review: review.decide("driver", "test-job", choice), prior_rule=prior, previous_rule=prior)
+                self.assertNotIn("previousRecordingRule", owner)
+        for options in ({"prior_owner": "another-driver", "prior_rule": prior},
+                        {"prior_rule": {"scope": "both", "thresholdC": 105, "recipe": live.CURRENT_RECIPE}}):
+            with self.subTest(options=options):
+                self.review_at(live.CONSENT_SECONDS - 1,
+                    lambda review: review.decide("driver", "test-job", "decline"), **options)
+
+    def test_recent_upload_history_has_a_fixed_limit(self):
+        review = live.Review(None, Issuer(bytes(32)), Future)
+        review.owner = "driver"
+        claim = {"recipe": live.CURRENT_RECIPE}
+        keys = [index.to_bytes(32, "big") for index in range(live.RECENT_UPLOAD_LIMIT + 1)]
+        for digest in keys:
+            review._note_upload((digest, "request"), claim)
+        self.assertEqual(len(review.recent_uploads), live.RECENT_UPLOAD_LIMIT)
+        self.assertNotIn(("driver", keys[0]), review.recent_uploads)
+        self.assertIn(("driver", keys[-1]), review.recent_uploads)
 
     def test_startup_window_is_private_and_ends_with_consent(self):
         for duration in (0, 210):

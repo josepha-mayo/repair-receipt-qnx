@@ -9,5 +9,22 @@
   "recording_fingerprint_withheld_from_driver_state_response": true,
   "verification_packet_uses_standard_fields": true,
   "signed_follow_up_filed": true,
-  "tested_layout_width_px": 320
+  "tested_layout_width_px": 320,
+  "repeat_consent": {
+    "recording": "kit-july-27.csv",
+    "first_issued_rule": {
+      "scope": "idle",
+      "thresholdC": 95,
+      "recipe": "coolant-duration-demo/v2"
+    },
+    "different_recording_reviewed_before_renamed_upload": true,
+    "prior_rule_shown_before_scope_threshold_and_recipe_change": true,
+    "prior_rule_visible_after_owner_reload": true,
+    "other_session_using_same_bytes_had_no_prior_rule": true,
+    "prior_request_id_and_recording_digest_absent_from_preview_response": true,
+    "declining_a_changed_rule_preserved_the_last_issued_rule": true,
+    "same_rule_showed_only_the_reuse_notice": true,
+    "later_packet_verified_and_filed_with_only_new_scope_and_threshold": true,
+    "later_issuance_updated_the_rule_for_future_reviews": true
+  }
 }

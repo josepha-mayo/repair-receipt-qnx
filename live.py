@@ -1,6 +1,7 @@
 """Local browser workflow for a QNX-issued Repair Receipt."""
 
 import argparse
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from hashlib import sha256
@@ -23,7 +24,8 @@ import webbrowser
 from pack_shop import standalone
 from run_qnx import MAX_RECORDING, ROOT, build_template, review_native
 from shop_request import (
-    CURRENT_RECIPE, DEMO_SOURCE, PUBLISHED_SOURCE, STARTUP_RECIPE, UPLOADED_SOURCE, canonical, parse_request, verification_packet,
+    CURRENT_RECIPE, DEFAULT_THRESHOLD_C, DEMO_SOURCE, PUBLISHED_SOURCE, STARTUP_RECIPE, UPLOADED_SOURCE,
+    canonical, parse_request, verification_packet,
 )
 
 try:
@@ -35,6 +37,7 @@ except ModuleNotFoundError as error:
     raise SystemExit("Install the local app dependencies with: python -m pip install -r requirements-live.txt") from None
 
 CONSENT_SECONDS = 300
+RECENT_UPLOAD_LIMIT = 16
 ACTIVE_STAGES = {"booting", "review", "finishing"}
 SESSION_HEADER = "X-Repair-Session"
 SAMPLES = {"trip-a", "trip-b", "moving", "gap", "scope-control"}
@@ -82,6 +85,11 @@ def startup_check(qemu_path):
     return qemu, version
 
 
+def receipt_rule(claim):
+    return {"recipe": claim["recipe"], "scope": claim.get("scope", "both"),
+            "thresholdC": claim.get("thresholdC", DEFAULT_THRESHOLD_C)}
+
+
 class Review:
     def __init__(self, qemu, issuer, prepare):
         self.qemu = qemu
@@ -96,7 +104,7 @@ class Review:
         self.decision = None
         self.deadline = None
         self.worker = None
-        self.last_import = None
+        self.recent_uploads = OrderedDict()
 
     def owns_session(self, session):
         return session is not None and self.owner is not None and secrets.compare_digest(session, self.owner)
@@ -150,30 +158,41 @@ class Review:
         """Commit a decision with the review lock held."""
         self.decision = decision
         self.state["stage"] = "finishing"
-        self.state.pop("reusedRecording", None)
-        self.state.pop("startupExcludedMs", None)
+        self._clear_private_notes()
         if decision == "expired":
             for field in ("claim", "coverage", "issuer"):
                 self.state.pop(field, None)
         self.response.set()
+
+    def _clear_private_notes(self):
+        for field in ("reusedRecording", "previousRecordingRule", "startupExcludedMs"):
+            self.state.pop(field, None)
+
+    def _note_upload(self, import_review, claim):
+        digest, request_id = import_review
+        key = (self.owner, digest)
+        first_request, prior_rule = self.recent_uploads.setdefault(key, (request_id, None))
+        self.recent_uploads.move_to_end(key)
+        if len(self.recent_uploads) > RECENT_UPLOAD_LIMIT:
+            self.recent_uploads.popitem(last=False)
+        if first_request != request_id:
+            self.state["reusedRecording"] = True
+        if prior_rule and prior_rule != receipt_rule(claim):
+            self.state["previousRecordingRule"] = prior_rule
 
     def wait_for_decision(self, preview, issuer, guest_closed, coverage=None, import_review=None, *, startup_excluded_ms=None):
         if not secrets.compare_digest(self.issuer.public_hex.encode("ascii"), issuer):
             raise RuntimeError("The guest presented a key different from the enrolled issuer.")
         with self.lock:
             self.deadline = time.monotonic() + CONSENT_SECONDS
-            self.state.update(stage="review", claim=json.loads(preview), issuer=issuer.decode("ascii"))
+            claim = json.loads(preview)
+            self.state.update(stage="review", claim=claim, issuer=issuer.decode("ascii"))
             if coverage:
                 self.state["coverage"] = coverage
             if startup_excluded_ms is not None:
                 self.state["startupExcludedMs"] = startup_excluded_ms
             if import_review is not None:
-                current = (self.owner, *import_review)
-                # Keep the original request association while the same samples are reused.
-                if self.last_import is None or self.last_import[:2] != current[:2]:
-                    self.last_import = current
-                elif self.last_import[2] != current[2]:
-                    self.state["reusedRecording"] = True
+                self._note_upload(import_review, claim)
         self.response.wait(timeout=max(0, self.deadline - time.monotonic()))
         with self.lock:
             if guest_closed.is_set():
@@ -196,6 +215,7 @@ class Review:
             response.set()
 
         image = None
+        issued_rule = None
         try:
             image = template.result()
             import_review = None
@@ -212,6 +232,8 @@ class Review:
                 if receipt is not None:
                     self.issuer.verify_receipt(receipt)
                     result = {"stage": "shared", "receipt": receipt.decode("ascii")}
+                    if import_review is not None:
+                        issued_rule = receipt_rule(json.loads(receipt)["claim"])
                     if request is not None:
                         result["packet"] = verification_packet(request, result["receipt"], self.issuer.fingerprint)
         except ValueError:
@@ -224,7 +246,11 @@ class Review:
         if image is None:
             result = {"stage": "error", "message": "QNX preparation failed. Retry preparation from the recording panel."}
         with self.lock:
-            self.state.pop("startupExcludedMs", None)
+            self._clear_private_notes()
+            if issued_rule is not None:
+                key = (self.owner, import_review[0])
+                first_request, _ = self.recent_uploads[key]
+                self.recent_uploads[key] = (first_request, issued_rule)
             self.state.update(result)
 
     def close(self):

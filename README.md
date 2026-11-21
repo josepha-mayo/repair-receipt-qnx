@@ -47,7 +47,7 @@ After approving a shop-requested review, choose **Download verification packet**
 
 The driver session that starts a review can see the preview, decide and download the issued receipt. Refreshing that tab keeps the session when browser session storage is available. A separate driver session sees only that a review is active until it finishes or expires.
 
-When a new request uses the same normalized upload bytes as the driver's most recent upload, the consent preview identifies the match. The running app keeps one recent fingerprint in memory. The notice appears in the owning driver's preview. [Reused-recording check](replay/qnx-recording-reuse-proof.json)
+When a new request uses the same normalized upload bytes as an earlier recording, the consent preview identifies the match. If the new scope, threshold or recording rule differs from the last receipt issued for those samples, the driver sees that earlier rule before making a new decision. The app keeps up to 16 recent upload fingerprints and their receipt rules in memory. The notice belongs to the same driver session and the signed packet carries only the new findings and rule. [Reused-recording checks](replay/qnx-recording-reuse-proof.json)
 
 For an incomplete finding, **Recording guidance** explains which requested condition had gaps or too little continuous coverage. The driver sees this guidance in the local review. The shop receives the signed finding and test rule.
 
