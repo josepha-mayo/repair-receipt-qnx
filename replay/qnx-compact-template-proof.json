@@ -1,0 +1,106 @@
+{
+  "environment": "Windows, QNX SDP 8.0 x86-64 guest, QEMU with TCG",
+  "recording": "KIT July 27 normalized drive",
+  "scope": "both",
+  "threshold_c": 95,
+  "same_request_and_issuer": true,
+  "all_signed_receipts_verified_and_identical": true,
+  "summary": {
+    "compact-qemu": {
+      "trials": 3,
+      "median_image_build_seconds": 16.21,
+      "median_boot_to_preview_seconds": 2.206,
+      "median_cold_to_preview_seconds": 18.416,
+      "median_ifs_bytes": 10956108,
+      "median_qemu_disk_bytes": 69349888
+    },
+    "baseline": {
+      "trials": 3,
+      "median_image_build_seconds": 17.185,
+      "median_boot_to_preview_seconds": 2.524,
+      "median_cold_to_preview_seconds": 19.754,
+      "median_ifs_bytes": 10956584,
+      "median_qemu_disk_bytes": 157213184
+    }
+  },
+  "trials": [
+    {
+      "profile": "compact-qemu",
+      "options": [
+        "--boot-mode=qemu",
+        "--sshd-pregen=no",
+        "--usb=no",
+        "--data-size=8",
+        "--sys-size=0"
+      ],
+      "image_build_seconds": 16.289,
+      "boot_to_preview_seconds": 2.213,
+      "cold_to_preview_seconds": 18.502,
+      "ifs_bytes": 10956108,
+      "qemu_disk_bytes": 69349888,
+      "signed_receipt_sha256": "f0a83834e24aac11b7cc41f020811651b632a51e62f683fc544f00c6a13611ab"
+    },
+    {
+      "profile": "baseline",
+      "options": [],
+      "image_build_seconds": 17.185,
+      "boot_to_preview_seconds": 2.589,
+      "cold_to_preview_seconds": 19.775,
+      "ifs_bytes": 10956584,
+      "qemu_disk_bytes": 157213184,
+      "signed_receipt_sha256": "f0a83834e24aac11b7cc41f020811651b632a51e62f683fc544f00c6a13611ab"
+    },
+    {
+      "profile": "baseline",
+      "options": [],
+      "image_build_seconds": 17.046,
+      "boot_to_preview_seconds": 2.524,
+      "cold_to_preview_seconds": 19.569,
+      "ifs_bytes": 10956584,
+      "qemu_disk_bytes": 157213184,
+      "signed_receipt_sha256": "f0a83834e24aac11b7cc41f020811651b632a51e62f683fc544f00c6a13611ab"
+    },
+    {
+      "profile": "compact-qemu",
+      "options": [
+        "--boot-mode=qemu",
+        "--sshd-pregen=no",
+        "--usb=no",
+        "--data-size=8",
+        "--sys-size=0"
+      ],
+      "image_build_seconds": 16.21,
+      "boot_to_preview_seconds": 2.206,
+      "cold_to_preview_seconds": 18.416,
+      "ifs_bytes": 10956108,
+      "qemu_disk_bytes": 69349888,
+      "signed_receipt_sha256": "f0a83834e24aac11b7cc41f020811651b632a51e62f683fc544f00c6a13611ab"
+    },
+    {
+      "profile": "compact-qemu",
+      "options": [
+        "--boot-mode=qemu",
+        "--sshd-pregen=no",
+        "--usb=no",
+        "--data-size=8",
+        "--sys-size=0"
+      ],
+      "image_build_seconds": 16.076,
+      "boot_to_preview_seconds": 2.185,
+      "cold_to_preview_seconds": 18.261,
+      "ifs_bytes": 10956108,
+      "qemu_disk_bytes": 69349888,
+      "signed_receipt_sha256": "f0a83834e24aac11b7cc41f020811651b632a51e62f683fc544f00c6a13611ab"
+    },
+    {
+      "profile": "baseline",
+      "options": [],
+      "image_build_seconds": 17.238,
+      "boot_to_preview_seconds": 2.516,
+      "cold_to_preview_seconds": 19.754,
+      "ifs_bytes": 10956584,
+      "qemu_disk_bytes": 157213184,
+      "signed_receipt_sha256": "f0a83834e24aac11b7cc41f020811651b632a51e62f683fc544f00c6a13611ab"
+    }
+  ]
+}

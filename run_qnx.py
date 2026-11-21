@@ -22,6 +22,10 @@ ROOT = Path(__file__).resolve().parent
 FIXTURES = ("trip-a", "trip-b", "moving", "gap", "kit-obd", "scope-control")
 MAX_RECORDING = 4 * 1024 * 1024
 RECORDING_DOMAIN = b"Repair Receipt CSV stage v1"
+# QEMU loads the IFS separately, and recordings use a separate job disk.
+QEMU_TEMPLATE_OPTIONS = (
+    "--boot-mode=qemu", "--sshd-pregen=no", "--usb=no", "--data-size=8", "--sys-size=0",
+)
 PRIVATE_REVIEW_EVENTS = {
     b"RR_ISSUER_SETUP": b"RR_ISSUER_SETUP [private boot token]\n",
     b"RR_ISSUER ": b"RR_ISSUER [issuer key]\n",
@@ -132,9 +136,21 @@ def build_image(workspace, recording, boot_token=None, request=None, bench=False
              "--ssh-ident=none", "--noprompt", "--build"]
     if sys.platform == "win32":
         image = ["cmd", "/d", "/c", *image]
-    with (workspace / "image-build.log").open("wb") as log:
-        subprocess.run(image, cwd=workspace, stdin=subprocess.DEVNULL, stdout=log,
-                       stderr=subprocess.STDOUT, check=True, timeout=180)
+    options = QEMU_TEMPLATE_OPTIONS if template else ()
+    log_path = workspace / "image-build.log"
+    with log_path.open("wb") as log:
+        result = subprocess.run([*image, *options], cwd=workspace, stdin=subprocess.DEVNULL, stdout=log,
+                                stderr=subprocess.STDOUT, timeout=180)
+    if result.returncode and options:
+        output = log_path.read_bytes()
+        if any(f"Unknown option {option.partition('=')[0]}".encode("ascii") in output for option in options):
+            # Older builders can still prepare a guest with the SDK defaults.
+            with log_path.open("ab") as log:
+                log.write(b"\nRetrying with default QNX image options.\n")
+                log.flush()
+                result = subprocess.run(image, cwd=workspace, stdin=subprocess.DEVNULL, stdout=log,
+                                        stderr=subprocess.STDOUT, timeout=180)
+    result.check_returncode()
 
 
 def build_template(path, *, policy_binary=None):
