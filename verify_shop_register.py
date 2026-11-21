@@ -14,10 +14,12 @@ from zipfile import ZipFile
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from shop_register import INVALID_SAVED_RECEIPT, PAGE_SIZE, ReceiptConflict, RequestConflict, ShopRegister, check_receipt, read_receipt
+from shop_register import (
+    INVALID_SAVED_RECEIPT, PAGE_SIZE, ReceiptConflict, RequestConflict, ShopRegister, check_receipt, read_issuer, read_receipt,
+)
 from shop_request import (
     CURRENT_RECIPE, DEFAULT_THRESHOLD_C, PUBLISHED_SOURCE, RECIPE, STARTUP_RECIPE, canonical, guest_bytes,
-    parse_request, verification_packet,
+    UPLOADED_SOURCE, parse_request, verification_packet,
 )
 from verify_requests import BUNDLED_ROAD_PAIR, load_road_pair
 
@@ -60,6 +62,25 @@ def verify_archived_road_pair():
         assert record["normalized_qnx_input"]["bytes"] == native["normalized_bytes"]
         assert record["normalized_qnx_input"]["sha256"] == native["normalized_sha256"]
     print("Verified the bundled road inputs, archived signatures, request bindings and measured verification packet.")
+
+
+def verify_archived_startup_pair():
+    source = Path(__file__).resolve().parent / "replay" / "qnx-road-startup-receipts.json"
+    evidence = json.loads(source.read_text(encoding="utf-8"))
+    issuer = read_issuer(canonical(evidence["issuer"]))
+    fingerprint = sha256(issuer).hexdigest()
+    request_ids = set()
+    controls = ((CURRENT_RECIPE, "insufficient_evidence"), (STARTUP_RECIPE, "not_observed"))
+    for packet, (recipe, moving) in zip(evidence["packets"], controls, strict=True):
+        request = parse_request(canonical(packet["request"]))
+        assert request["scope"] == "both" and request["thresholdC"] == 95 and request["recipe"] == recipe
+        request_ids.add(request["id"])
+        receipt = packet["receipt"]
+        claim = check_receipt(receipt, read_receipt(receipt), request, issuer)
+        assert claim["source"] == UPLOADED_SOURCE and (claim["idle"], claim["moving"]) == ("observed", moving)
+        assert packet == verification_packet(request, receipt, fingerprint)
+    assert len(request_ids) == 2
+    print("Verified the archived startup comparison and its separate request bindings.")
 
 
 def sign(request, result, key):
@@ -495,4 +516,5 @@ with TemporaryDirectory(prefix="rr-register-concurrency-") as scratch:
     print("Verified matching, work-order evidence, full-scope rechecks, saved narrower rechecks, concurrency and backups.")
 
 verify_archived_road_pair()
+verify_archived_startup_pair()
 verify_create_retry()

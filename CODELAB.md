@@ -115,7 +115,7 @@ For the same July 27 CSV, create a separate request for both conditions at 95 °
 
 The allowance covers incomplete rows only before the first complete sample, and only when that sample arrives within 1 second. Any later gap still affects coverage. Follow-ups and rechecks inherit the selected rule.
 
-The release includes two QNX packets from the same July 27 recording. Extract `qnx-startup-window-packets.zip`, select both packet files in the offline verifier and load `issuer.json` as the example public key. Choose **Verify packets** to see both signed rules and their different moving findings. [Release downloads](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest)
+Open the offline verifier and choose **Compare startup rules** to verify both signatures and see their moving findings. Open **Download proof files** to save the two packets and example public key. The release also bundles those files in `qnx-startup-window-packets.zip` for batch verification. [Release downloads](https://github.com/josepha-mayo/repair-receipt-qnx/releases/latest)
 
 ```bat
 python verify_startup_window.py --qemu "C:\QNX\qemu\qemu-system-x86_64.exe"

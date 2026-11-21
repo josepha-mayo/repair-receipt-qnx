@@ -1,0 +1,32 @@
+{
+  "issuer": {
+    "format": "repair-receipt-issuer/v1",
+    "ed25519": "6a26c551b87952f88d3ef638604503aa239c54e0431096b87afcafa94118e4f8"
+  },
+  "packets": [
+    {
+      "format": "repair-receipt-verification/v1",
+      "request": {
+        "format": "repair-receipt-request/v2",
+        "recipe": "coolant-duration-demo/v2",
+        "scope": "both",
+        "id": "ff54c07e1fb735c1319de54c8c515c9e",
+        "thresholdC": 95
+      },
+      "receipt": "{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"uploaded-csv/v1\",\"request\":\"ff54c07e1fb735c1319de54c8c515c9e\",\"scope\":\"both\",\"idle\":\"observed\",\"moving\":\"insufficient_evidence\"},\"signature\":\"a41fe49da69cf9e66fe7740bdeb273d2dfb37d505f19d19feaec554ada9fcfae58ecbc912717b76acb54faae670ff33f0f9ad0c5dedc564b4860ed40c3f4b101\"}",
+      "fingerprint": "f25bf45983d1c758d0d02cc1f839ec3b9420eeb6f0e6423bf089e35cabcafdef"
+    },
+    {
+      "format": "repair-receipt-verification/v1",
+      "request": {
+        "format": "repair-receipt-request/v2",
+        "recipe": "coolant-startup-window/v3",
+        "scope": "both",
+        "id": "27014111db5da5e3c836208e08ff23d9",
+        "thresholdC": 95
+      },
+      "receipt": "{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-startup-window/v3\",\"thresholdC\":95,\"source\":\"uploaded-csv/v1\",\"request\":\"27014111db5da5e3c836208e08ff23d9\",\"scope\":\"both\",\"idle\":\"observed\",\"moving\":\"not_observed\"},\"signature\":\"c9906dc7284221927f34b278114229efb4913f7551e4eafab0ca7fc598a106d62337e467e20e2f33511ce3c76b8bbb06118670796e9b36a75b1f65f1545fd209\"}",
+      "fingerprint": "f25bf45983d1c758d0d02cc1f839ec3b9420eeb6f0e6423bf089e35cabcafdef"
+    }
+  ]
+}

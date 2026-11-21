@@ -125,6 +125,9 @@ footer { margin-top: 18px; }
   .workspace { grid-template-columns: minmax(0, 1fr); }
   .request-card { grid-template-columns: minmax(0, 1fr); }
   .request-actions { flex-wrap: wrap; }
+  .road-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .road-controls button { min-height: 44px; padding-inline: 6px; }
+  #check-startup { grid-column: 1 / -1; }
   .card { padding: 17px; }
 }
 @media print {

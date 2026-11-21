@@ -131,6 +131,9 @@ footer { margin-top: 18px; }
   .workspace { grid-template-columns: minmax(0, 1fr); }
   .request-card { grid-template-columns: minmax(0, 1fr); }
   .request-actions { flex-wrap: wrap; }
+  .road-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .road-controls button { min-height: 44px; padding-inline: 6px; }
+  #check-startup { grid-column: 1 / -1; }
   .card { padding: 17px; }
 }
 @media print {
@@ -162,18 +165,18 @@ footer { margin-top: 18px; }
       <p class="lede" id="shop-intro">Choose which operating condition you need to investigate. Verify the driver’s signed answer against that request.</p>
     </header>
     <section id="road-example" class="card road-example" aria-labelledby="road-heading" hidden>
-      <h2 id="road-heading">Two drives, one shop question</h2>
-      <p class="help">Each pair uses the same shop request, example issuer key, and 95 °C test threshold.</p>
-      <div class="actions">
+      <h2 id="road-heading">Signed road examples</h2>
+      <div class="actions road-controls">
         <button id="check-idle" type="button" aria-pressed="false">Check idle receipts</button>
         <button id="check-moving" class="secondary" type="button" aria-pressed="false">Check moving receipts</button>
+        <button id="check-startup" class="secondary" type="button" aria-pressed="false">Compare startup rules</button>
       </div>
       <p id="road-status" class="status" role="status"></p>
-      <dl id="road-findings" hidden>
-        <div><dt>KIT drive · 26 July 2017</dt><dd id="road-first"></dd></div>
-        <div><dt>KIT drive · 27 July 2017</dt><dd id="road-second"></dd></div>
-      </dl>
       <p id="road-source" class="help" hidden></p>
+      <dl id="road-findings" hidden>
+        <div><dt id="road-first-label"></dt><dd id="road-first"></dd></div>
+        <div><dt id="road-second-label"></dt><dd id="road-second"></dd></div>
+      </dl>
       <details id="road-downloads" class="issuer-enrollment" hidden>
         <summary>Download proof files</summary>
         <div class="actions">
@@ -284,7 +287,7 @@ footer { margin-top: 18px; }
       </li>
     </template>
   </main>
-<script id="road-evidence" type="application/json">{"issuer":{"key":"23df8bfee292ab0a1dcd8465b858647ef1ddf1c0a08823d18ebcadd02b6720cf","fingerprint":"5443292d71f03389baee52874f39d5e8aac27e66b1421b7a44f54437349acfb8","durable":false},"requests":{"idle":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"idle","id":"d4d02f7cd770ddf2448e70f682e5790d","thresholdC":95},"moving":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"moving","id":"75d8982265b83194097a355fed0f56c0","thresholdC":95}},"receipts":{"idle":["{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"d4d02f7cd770ddf2448e70f682e5790d\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"c28ea4ddbb0c2d036376cd0eaa1e5cabcfa29a5ec416f9f2d03c1e4f78f931be7481685ef59f44d2e08556c6105416057a5950af48c0164f40a653140538370e\"}","{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"d4d02f7cd770ddf2448e70f682e5790d\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"c28ea4ddbb0c2d036376cd0eaa1e5cabcfa29a5ec416f9f2d03c1e4f78f931be7481685ef59f44d2e08556c6105416057a5950af48c0164f40a653140538370e\"}"],"moving":["{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"75d8982265b83194097a355fed0f56c0\",\"scope\":\"moving\",\"moving\":\"observed\"},\"signature\":\"0c193af812850871f7d5cc096987f516b710a4714e05abedc31e3027a820d430a6a7d0cd2532fa8c3fa97e2820b30f8391d6bef49ffb5268f8988c0522ce8108\"}","{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"75d8982265b83194097a355fed0f56c0\",\"scope\":\"moving\",\"moving\":\"insufficient_evidence\"},\"signature\":\"40fdb2ca99ea5768904366cfe3e03ca7c1139ab2b5075b6eec4adadec82518f7163c025f5d9b4e25da2108998ac89306f8ec723c0b7814bfe0b48bf96b05bb0c\"}"]}}</script>
+<script id="road-evidence" type="application/json">{"issuer":{"key":"23df8bfee292ab0a1dcd8465b858647ef1ddf1c0a08823d18ebcadd02b6720cf","fingerprint":"5443292d71f03389baee52874f39d5e8aac27e66b1421b7a44f54437349acfb8","durable":false},"requests":{"idle":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"idle","id":"d4d02f7cd770ddf2448e70f682e5790d","thresholdC":95},"moving":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"moving","id":"75d8982265b83194097a355fed0f56c0","thresholdC":95}},"receipts":{"idle":["{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"d4d02f7cd770ddf2448e70f682e5790d\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"c28ea4ddbb0c2d036376cd0eaa1e5cabcfa29a5ec416f9f2d03c1e4f78f931be7481685ef59f44d2e08556c6105416057a5950af48c0164f40a653140538370e\"}","{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"d4d02f7cd770ddf2448e70f682e5790d\",\"scope\":\"idle\",\"idle\":\"observed\"},\"signature\":\"c28ea4ddbb0c2d036376cd0eaa1e5cabcfa29a5ec416f9f2d03c1e4f78f931be7481685ef59f44d2e08556c6105416057a5950af48c0164f40a653140538370e\"}"],"moving":["{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"75d8982265b83194097a355fed0f56c0\",\"scope\":\"moving\",\"moving\":\"observed\"},\"signature\":\"0c193af812850871f7d5cc096987f516b710a4714e05abedc31e3027a820d430a6a7d0cd2532fa8c3fa97e2820b30f8391d6bef49ffb5268f8988c0522ce8108\"}","{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"published-road/v1\",\"request\":\"75d8982265b83194097a355fed0f56c0\",\"scope\":\"moving\",\"moving\":\"insufficient_evidence\"},\"signature\":\"40fdb2ca99ea5768904366cfe3e03ca7c1139ab2b5075b6eec4adadec82518f7163c025f5d9b4e25da2108998ac89306f8ec723c0b7814bfe0b48bf96b05bb0c\"}"]},"startup":{"issuer":{"format":"repair-receipt-issuer/v1","ed25519":"6a26c551b87952f88d3ef638604503aa239c54e0431096b87afcafa94118e4f8"},"packets":[{"format":"repair-receipt-verification/v1","request":{"format":"repair-receipt-request/v2","recipe":"coolant-duration-demo/v2","scope":"both","id":"ff54c07e1fb735c1319de54c8c515c9e","thresholdC":95},"receipt":"{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-duration-demo/v2\",\"thresholdC\":95,\"source\":\"uploaded-csv/v1\",\"request\":\"ff54c07e1fb735c1319de54c8c515c9e\",\"scope\":\"both\",\"idle\":\"observed\",\"moving\":\"insufficient_evidence\"},\"signature\":\"a41fe49da69cf9e66fe7740bdeb273d2dfb37d505f19d19feaec554ada9fcfae58ecbc912717b76acb54faae670ff33f0f9ad0c5dedc564b4860ed40c3f4b101\"}","fingerprint":"f25bf45983d1c758d0d02cc1f839ec3b9420eeb6f0e6423bf089e35cabcafdef"},{"format":"repair-receipt-verification/v1","request":{"format":"repair-receipt-request/v2","recipe":"coolant-startup-window/v3","scope":"both","id":"27014111db5da5e3c836208e08ff23d9","thresholdC":95},"receipt":"{\"format\":\"repair-receipt/v5\",\"claim\":{\"recipe\":\"coolant-startup-window/v3\",\"thresholdC\":95,\"source\":\"uploaded-csv/v1\",\"request\":\"27014111db5da5e3c836208e08ff23d9\",\"scope\":\"both\",\"idle\":\"observed\",\"moving\":\"not_observed\"},\"signature\":\"c9906dc7284221927f34b278114229efb4913f7551e4eafab0ca7fc598a106d62337e467e20e2f33511ce3c76b8bbb06118670796e9b36a75b1f65f1545fd209\"}","fingerprint":"f25bf45983d1c758d0d02cc1f839ec3b9420eeb6f0e6423bf089e35cabcafdef"}]}}</script>
 <script>"use strict";
 
 const ShopRequest = (() => {
@@ -812,30 +815,28 @@ if (roadEvidence) {
   const roadFindings = byId("road-findings");
   const roadSource = byId("road-source");
   const downloads = byId("road-downloads");
-  const keyFile = {format: "repair-receipt-issuer/v1", ed25519: sample.issuer.key};
-  const controls = [byId("check-idle"), byId("check-moving")];
+  const controls = [[byId("check-idle"), "idle"], [byId("check-moving"), "moving"], [byId("check-startup"), "startup"]];
+  const saveButtons = [byId("save-road-first"), byId("save-road-second")];
   let verifiedPair = null;
   byId("shop-heading").textContent = "Verify a receipt.";
   byId("shop-intro").textContent = "Check the signed QNX example, or verify your own receipt and issuer key.";
   byId("verification-workspace").after(byId("create-request").closest("section"));
   byId("road-example").hidden = false;
-  for (const [index, id] of ["save-road-first", "save-road-second"].entries()) {
-    byId(id).addEventListener("click", () => {
+  for (const [index, button] of saveButtons.entries()) {
+    button.addEventListener("click", () => {
       if (!verifiedPair) return;
-      const {request, receipts, fingerprint} = verifiedPair;
-      const packet = {format: ShopRequest.packetFormat, request, receipt: receipts[index], fingerprint};
-      ShopRequest.save(`kit-2017-07-${26 + index}-${request.scope}-packet.json`, JSON.stringify(packet));
+      ShopRequest.save(verifiedPair.filenames[index], JSON.stringify(verifiedPair.packets[index]));
     });
   }
   byId("save-road-key").addEventListener("click", () => {
-    if (verifiedPair) ShopRequest.save("kit-example-issuer.json", JSON.stringify(keyFile));
+    if (verifiedPair) ShopRequest.save("kit-example-issuer.json", JSON.stringify(verifiedPair.keyFile));
   });
-  for (const [index, scope] of ["idle", "moving"].entries()) {
-    controls[index].addEventListener("click", async () => {
-      for (const control of controls) {
+  for (const [selected, mode] of controls) {
+    selected.addEventListener("click", async () => {
+      for (const [control] of controls) {
         control.disabled = true;
-        control.setAttribute("aria-pressed", String(control === controls[index]));
-        control.classList.toggle("secondary", control !== controls[index]);
+        control.setAttribute("aria-pressed", String(control === selected));
+        control.classList.toggle("secondary", control !== selected);
       }
       verifiedPair = null;
       roadFindings.hidden = true;
@@ -845,33 +846,55 @@ if (roadEvidence) {
       roadStatus.className = "status";
       roadStatus.textContent = "Verifying both receipts.";
       try {
+        const startup = mode === "startup";
+        const keyFile = startup ? sample.startup.issuer : {format: "repair-receipt-issuer/v1", ed25519: sample.issuer.key};
+        const packets = startup ? sample.startup.packets : sample.receipts[mode].map(receipt => ({
+          format: ShopRequest.packetFormat, request: sample.requests[mode], receipt,
+          fingerprint: sample.issuer.fingerprint,
+        }));
+        if (packets.length !== 2 || packets.some(packet => packet.format !== ShopRequest.packetFormat)) {
+          throw new Error("The example needs two verification packets.");
+        }
         const verifier = await publicVerifier(new Blob([JSON.stringify(keyFile)]));
-        if (verifier.issuerFingerprint !== sample.issuer.fingerprint) {
-          throw new Error("The example issuer fingerprint does not match its public key.");
+        const results = await Promise.all(packets.map(async packet => {
+          const input = new Blob([JSON.stringify(packet)]);
+          return verifyEvidence(await ShopRequest.readEvidence(input), verifier, null);
+        }));
+        const [a, b] = results.map(result => result.claim);
+        if (startup) {
+          if (a.recipe !== ShopRequest.recipe || b.recipe !== ShopRequest.startupRecipe || a.request === b.request ||
+              [a, b].some(claim => claim.scope !== "both" || claim.thresholdC !== 95 || claim.source !== "uploaded-csv/v1")) {
+            throw new Error("The startup comparison needs both road requests at 95 °C.");
+          }
+        } else if ([a, b].some(claim => claim.source !== ShopRequest.publishedSource || claim.scope !== mode ||
+                                       claim.thresholdC !== 95)) {
+          throw new Error("The example receipts must match the selected scope and published recording source.");
         }
-        const request = ShopRequest.parse(JSON.stringify(sample.requests[scope]));
-        const [first, second] = sample.receipts[scope];
-        const [a, b] = await Promise.all([first, second].map(receiptText =>
-          verifyEvidence({receiptText}, verifier, request)));
-        if (![a, b].every(result => result.claim.source === ShopRequest.publishedSource)) {
-          throw new Error("The example receipts must identify the published road recording source.");
-        }
-        byId("road-first").textContent = labels.get(a.claim[scope]);
-        byId("road-second").textContent = labels.get(b.claim[scope]);
+        const scope = startup ? "moving" : mode;
+        byId("road-first-label").textContent = startup ? "Entire recording" : "KIT drive · 26 July 2017";
+        byId("road-second-label").textContent = startup ? "Startup allowance" : "KIT drive · 27 July 2017";
+        byId("road-first").textContent = labels.get(a[scope]);
+        byId("road-second").textContent = labels.get(b[scope]);
+        const [first, second] = packets.map(packet => packet.receipt);
         roadStatus.classList.add("good");
-        roadStatus.textContent = first === second
+        roadStatus.textContent = startup ? "Both signatures verified." : first === second
           ? `Both signatures verified. The receipts are byte-for-byte identical (${first.length} bytes each).`
           : "Both signatures verified. The receipts differ.";
         roadFindings.hidden = false;
-        roadSource.textContent = `Signed input type · ${ShopRequest.sourceLabel(a.claim.source)}`;
+        roadSource.textContent = startup ? "July 27, 2017 · Moving finding · 95 °C"
+          : `Signed input type · ${ShopRequest.sourceLabel(a.source)} · 95 °C`;
         roadSource.hidden = false;
-        verifiedPair = {request, receipts: [first, second], fingerprint: verifier.issuerFingerprint};
+        const filenames = startup ? ["road-strict-scope.json", "road-startup-scope.json"]
+          : [26, 27].map(date => `kit-2017-07-${date}-${scope}-packet.json`);
+        verifiedPair = {keyFile, packets, filenames};
+        saveButtons[0].textContent = startup ? "Save entire-recording packet" : "Save July 26 packet";
+        saveButtons[1].textContent = startup ? "Save startup packet" : "Save July 27 packet";
         downloads.hidden = false;
       } catch (error) {
         roadStatus.classList.add("bad");
         roadStatus.textContent = error.message || "Could not verify the sample receipts.";
       } finally {
-        for (const control of controls) control.disabled = false;
+        for (const [control] of controls) control.disabled = false;
       }
     });
   }

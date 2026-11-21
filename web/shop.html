@@ -17,18 +17,18 @@
       <p class="lede" id="shop-intro">Choose which operating condition you need to investigate. Verify the driver’s signed answer against that request.</p>
     </header>
     <section id="road-example" class="card road-example" aria-labelledby="road-heading" hidden>
-      <h2 id="road-heading">Two drives, one shop question</h2>
-      <p class="help">Each pair uses the same shop request, example issuer key, and 95 °C test threshold.</p>
-      <div class="actions">
+      <h2 id="road-heading">Signed road examples</h2>
+      <div class="actions road-controls">
         <button id="check-idle" type="button" aria-pressed="false">Check idle receipts</button>
         <button id="check-moving" class="secondary" type="button" aria-pressed="false">Check moving receipts</button>
+        <button id="check-startup" class="secondary" type="button" aria-pressed="false">Compare startup rules</button>
       </div>
       <p id="road-status" class="status" role="status"></p>
-      <dl id="road-findings" hidden>
-        <div><dt>KIT drive · 26 July 2017</dt><dd id="road-first"></dd></div>
-        <div><dt>KIT drive · 27 July 2017</dt><dd id="road-second"></dd></div>
-      </dl>
       <p id="road-source" class="help" hidden></p>
+      <dl id="road-findings" hidden>
+        <div><dt id="road-first-label"></dt><dd id="road-first"></dd></div>
+        <div><dt id="road-second-label"></dt><dd id="road-second"></dd></div>
+      </dl>
       <details id="road-downloads" class="issuer-enrollment" hidden>
         <summary>Download proof files</summary>
         <div class="actions">
